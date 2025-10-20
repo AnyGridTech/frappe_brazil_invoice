@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-20 11:02:15.919672",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+"field_order": [
+  "details_section",
+  "serial_number",
+  "item_code",
+  "item_name",
+  "column_break_fatv",
+  "rate",
+  "quantity",
+  "ncm",
+  "tax_section",
+  "invoice_taxes",
+  "column_break_ptnc",
+  "rate_taxes"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "serial_number",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Serial No",
+   "options": "Serial No"
+  },
+  {
+   "fetch_from": "serial_number.item_code",
+   "fetch_if_empty": 1,
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Item"
+  },
+  {
+   "columns": 2,
+   "fetch_from": "serial_number.item_name",
+   "fetch_if_empty": 1,
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item Name",
+   "options": "Item"
+  },
+  {
+   "fieldname": "column_break_fatv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "item_code.valuation_rate",
+   "fetch_if_empty": 1,
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Rate"
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Quantity"
+  },
+  {
+   "fieldname": "tax_section",
+   "fieldtype": "Section Break",
+   "label": "Tax"
+  },
+  {
+   "fieldname": "invoice_taxes",
+   "fieldtype": "Data",
+   "label": "Invoice Taxes"
+  },
+  {
+   "fieldname": "column_break_ptnc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "rate_taxes",
+   "fieldtype": "Data",
+   "label": "Rate with Taxes"
+  },
+  {
+   "fieldname": "ncm",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "ncm"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-20 11:04:15.919672",
+ "modified_by": "Administrator",
+ "module": "Brazil Invoice",
+ "name": "Item Invoice",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
