@@ -4,31 +4,431 @@
  "creation": "2025-10-17 18:21:39.235303",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [
-  "section_break_utj9",
+"field_order": [
+  "icms_tab",
+  "section_break_aprs",
+  "origin_icms",
+  "mod_determ_bc",
+  "base_calc_icms_fcp",
+  "icms_value_fcp",
+  "column_break_lbxw",
+  "cst_icms",
+  "base_calc_icms",
+  "aliq_icms",
+  "aliq_fcp",
+  "column_break_gmdf",
+  "calcular_automaticamente_icms",
+  "adiciona_outras_despesas_icms",
+  "adiciona_frete_icms",
+  "adiciona_ipi_icms",
+  "adiciona_seguro_icms",
+  "aplicar_aliq_auto_icms",
+  "substitui\u00e7\u00e3o_tribut\u00e1ria_section",
+  "mod_base_calc_icms_trib",
+  "cest_icms_trib",
+  "base_icms_trib",
+  "column_break_igtf",
+  "mva_trib",
+  "credito_trib",
+  "reducao_trib",
+  "column_break_hloa",
+  "adiciona_outras_despesas_trib",
+  "adiciona_frete_trib",
+  "adiciona_ipi_trib",
+  "adiciona_seguro_trib",
+  "partilha_icms",
+  "valor_da_base_de_calculo_icms_no_destino",
+  "aliq_do_icms_do_estado_de_destino",
+  "aliq_do_icms_interestadual",
+  "column_break_ohwc",
+  "valor_da_base_de_calculo_fcp_na_uf_destino",
+  "valor_icms_inter_puf_de_destino_difal",
+  "aliq_fundo_pobre",
+  "ipi_tab",
+  "cst_ipi",
+  "base_de_calculo_ipi",
+  "valor_do_ipi",
+  "column_break_kfaj",
+  "cod_enquadramento",
+  "aliquota_ipi",
+  "calcular_automaticamente_ipi",
+  "cofins_tab",
+  "cst_cofins",
+  "base_de_calculo_cofins",
+  "valor_cofins",
+  "column_break_dgyl",
+  "aliquota_cofins",
+  "calcular_automaticamente_cofins",
+  "pis_tab",
+  "cst_pis",
+  "base_de_calculo_pis",
+  "valor_pis",
+  "column_break_otlg",
+  "aliquota_pis",
+  "calcular_automaticamente_pis",
+  "internal_tab",
   "amended_from"
  ],
  "fields": [
   {
-   "fieldname": "section_break_utj9",
-   "fieldtype": "Section Break"
+   "fieldname": "section_break_aprs",
+   "fieldtype": "Section Break",
+   "label": " ICMS Pr\u00f3prio"
   },
   {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
    "no_copy": 1,
-   "options": "Tax",
+   "options": "Taxes",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "origin_icms",
+   "fieldtype": "Select",
+   "label": "Origem",
+   "options": "0 - Nacional, exceto as indicadas nos c\u00f3digos 3, 4, 5 e 8;\n1 - Estrangeira - Importa\u00e7\u00e3o direta, exceto a indicada no c\u00f3digo 6;\n2 - Estrangeira - Adquirida no mercado interno, exceto a indicada no c\u00f3digo 7;\n3 - Nacional, mercadoria ou bem com Conte\u00fado de Importa\u00e7\u00e3o superior a 40% e inferior ou igual a 70%;\n4 - Nacional, cuja produ\u00e7\u00e3o tenha sido feita em conformidade com os processos produtivos b\u00e1sicos de que tratam as legisla\u00e7\u00f5es citadas nos Ajustes;\n5 - Nacional, mercadoria ou bem com Conte\u00fado de Importa\u00e7\u00e3o inferior ou igual a 40%;\n6 - Estrangeira - Importa\u00e7\u00e3o direta, sem similar nacional, constante em lista da CAMEX e g\u00e1s natural;\n7 - Estrangeira - Adquirida no mercado interno, sem similar nacional, constante em lista da CAMEX e g\u00e1s natural;\n8 - Nacional, mercadoria ou bem com Conte\u00fado de Importa\u00e7\u00e3o superior a 70%."
+  },
+  {
+   "fieldname": "mod_determ_bc",
+   "fieldtype": "Select",
+   "label": "Modalidade de determina\u00e7\u00e3o da B.C",
+   "options": "0 - Margem Valor Agregado (%)\n1 - Pauta (valor)\n2 - Pre\u00e7o Tabelado M\u00e1ximo (valor)\n3 - Valor da Opera\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "base_calc_icms_fcp",
+   "fieldtype": "Currency",
+   "label": "Base de C\u00e1lculo ICMS (FCP)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "icms_value_fcp",
+   "fieldtype": "Currency",
+   "label": "Valor ICMS (FCP)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_lbxw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cst_icms",
+   "fieldtype": "Select",
+   "label": "CST/CSOSN",
+   "options": "00 - Tributada integralmente\n02 - Tributa\u00e7\u00e3o monof\u00e1sica pr\u00f3pria sobre combust\u00edveis\n10 - Tributada com ICMS devido por substitui\u00e7\u00e3o tribut\u00e1ria, relativo \u00e0s opera\u00e7\u00f5es e presta\u00e7\u00f5es subsequentes\n15 - Tributa\u00e7\u00e3o monof\u00e1sica pr\u00f3pria e com responsabilidade pela reten\u00e7\u00e3o sobre combust\u00edveis\n20 - Tributada com redu\u00e7\u00e3o de base de c\u00e1lculo\n30 - Isenta ou n\u00e3o tributada com ICMS devido por substitui\u00e7\u00e3o tribut\u00e1ria\n40 - Isenta\n41 - N\u00e3o tributada\n50 - Suspens\u00e3o\n51 - Diferimento\n53 - Tributa\u00e7\u00e3o monof\u00e1sica sobre combust\u00edveis com recolhimento diferido\n60 - ICMS cobrado anteriormente por substitui\u00e7\u00e3o tribut\u00e1ria ou por antecipa\u00e7\u00e3o com encerramento de tributa\u00e7\u00e3o\n61 - Tributa\u00e7\u00e3o monof\u00e1sica sobre combust\u00edveis cobrada anteriormente\n70 - Tributada com redu\u00e7\u00e3o de base de c\u00e1lculo e com ICMS devido por substitui\u00e7\u00e3o tribut\u00e1ria relativo \u00e0s opera\u00e7\u00f5es e presta\u00e7\u00f5es subsequentes\n90 - Outras\n101 - Tributada pelo Simples Nacional com permiss\u00e3o de cr\u00e9dito\n102 - Tributada pelo Simples Nacional sem permiss\u00e3o de cr\u00e9dito\n103 - Isen\u00e7\u00e3o de ICMS no Simples Nacional para faixa de receita bruta\n201 - Tributada pelo Simples Nacional com permiss\u00e3o de cr\u00e9dito e com cobran\u00e7a do ICMS por ST\n202 - Tributada pelo Simples Nacional sem permiss\u00e3o de cr\u00e9dito e com cobran\u00e7a do ICMS por ST\n203 - Isen\u00e7\u00e3o do ICMS no Simples Nacional para faixa de receita bruta e com cobran\u00e7a do ICMS por ST\n300 - Imune\n400 - N\u00e3o tributada pelo Simples Nacional\n500 - ICMS cobrado anteriormente por substitui\u00e7\u00e3o tribut\u00e1ria (substitu\u00eddo) ou por antecipa\u00e7\u00e3o\n900 - Outros"
+  },
+  {
+   "fieldname": "base_calc_icms",
+   "fieldtype": "Currency",
+   "label": "Base de C\u00e1lculo",
+   "precision": "2"
+  },
+  {
+   "fieldname": "aliq_icms",
+   "fieldtype": "Float",
+   "label": "Al\u00edquota Interna %",
+   "precision": "2"
+  },
+  {
+   "fieldname": "aliq_fcp",
+   "fieldtype": "Float",
+   "label": "% aliq. (FCP)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "internal_tab",
+   "fieldtype": "Tab Break",
+   "label": "Internal"
+  },
+  {
+   "fieldname": "icms_tab",
+   "fieldtype": "Tab Break",
+   "label": "ICMS"
+  },
+  {
+   "fieldname": "column_break_gmdf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "calcular_automaticamente_icms",
+   "fieldtype": "Check",
+   "label": "Calcular automaticamente"
+  },
+  {
+   "default": "0",
+   "fieldname": "adiciona_outras_despesas_icms",
+   "fieldtype": "Check",
+   "label": " Adiciona Outras Despesas"
+  },
+  {
+   "default": "0",
+   "fieldname": "adiciona_frete_icms",
+   "fieldtype": "Check",
+   "label": "Adiciona Frete"
+  },
+  {
+   "default": "0",
+   "fieldname": "adiciona_ipi_icms",
+   "fieldtype": "Check",
+   "label": " Adiciona IPI"
+  },
+  {
+   "default": "0",
+   "fieldname": "adiciona_seguro_icms",
+   "fieldtype": "Check",
+   "label": "Adiciona Seguro"
+  },
+  {
+   "default": "0",
+   "fieldname": "aplicar_aliq_auto_icms",
+   "fieldtype": "Check",
+   "label": "Aplicar Aliq. Autom\u00e1tico"
+  },
+  {
+   "fieldname": "substitui\u00e7\u00e3o_tribut\u00e1ria_section",
+   "fieldtype": "Section Break",
+   "label": "Substitui\u00e7\u00e3o Tribut\u00e1ria"
+  },
+  {
+   "fieldname": "mod_base_calc_icms_trib",
+   "fieldtype": "Select",
+   "label": " Modalidade de determina\u00e7\u00e3o da Base de C\u00e1lculo ",
+   "options": "0 - Pre\u00e7o tabelado ou m\u00e1ximo suger\u00eddo\n1 - Lista Negativa (valor)\n2 - Lista Positiva (valor)\n3 - Lista Neutra (valor)\n4 - Margem Valor Agregado (%)\n5 - Pauta (valor)\n6 - Valor de Opera\u00e7\u00e3o"
+  },
+  {
+   "fieldname": "cest_icms_trib",
+   "fieldtype": "Data",
+   "label": "CEST"
+  },
+  {
+   "fieldname": "base_icms_trib",
+   "fieldtype": "Currency",
+   "label": "Base de C\u00e1lculo"
+  },
+  {
+   "fieldname": "column_break_igtf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "mva_trib",
+   "fieldtype": "Float",
+   "label": "MVA %",
+   "precision": "2"
+  },
+  {
+   "fieldname": "credito_trib",
+   "fieldtype": "Float",
+   "label": " Cr\u00e9dito %",
+   "precision": "2"
+  },
+  {
+   "fieldname": "reducao_trib",
+   "fieldtype": "Float",
+   "label": " Redu\u00e7\u00e3o %",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_hloa",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "adiciona_outras_despesas_trib",
+   "fieldtype": "Check",
+   "label": " Adiciona Outras Despesas"
+  },
+  {
+   "default": "0",
+   "fieldname": "adiciona_frete_trib",
+   "fieldtype": "Check",
+   "label": "Adiciona Frete"
+  },
+  {
+   "default": "0",
+   "fieldname": "adiciona_ipi_trib",
+   "fieldtype": "Check",
+   "label": " Adiciona IPI"
+  },
+  {
+   "default": "0",
+   "fieldname": "adiciona_seguro_trib",
+   "fieldtype": "Check",
+   "label": "Adiciona Seguro"
+  },
+  {
+   "fieldname": "partilha_icms",
+   "fieldtype": "Section Break",
+   "label": " Partilha do ICMS nas vendas interestaduais para n\u00e3o contribuintes"
+  },
+  {
+   "fieldname": "valor_da_base_de_calculo_icms_no_destino",
+   "fieldtype": "Currency",
+   "label": " Valor da base de c\u00e1lculo ICMS no destino",
+   "precision": "2"
+  },
+  {
+   "fieldname": "aliq_do_icms_do_estado_de_destino",
+   "fieldtype": "Currency",
+   "label": " Al\u00edq. do ICMS do Estado de Destino % ",
+   "precision": "2"
+  },
+  {
+   "fieldname": "aliq_do_icms_interestadual",
+   "fieldtype": "Currency",
+   "label": " Al\u00edq. do ICMS Interestadual %",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_ohwc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "valor_da_base_de_calculo_fcp_na_uf_destino",
+   "fieldtype": "Currency",
+   "label": " Valor da base de c\u00e1lculo FCP na UF destino",
+   "precision": "2"
+  },
+  {
+   "fieldname": "valor_icms_inter_puf_de_destino_difal",
+   "fieldtype": "Float",
+   "label": " Valor ICMS Inter. p/UF de destino (DIFAL)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "aliq_fundo_pobre",
+   "fieldtype": "Float",
+   "label": " Al\u00edq. Fundo de Combate \u00e0 Pobreza - FCP %",
+   "precision": "2"
+  },
+  {
+   "fieldname": "ipi_tab",
+   "fieldtype": "Tab Break",
+   "label": "IPI"
+  },
+  {
+   "fieldname": "cofins_tab",
+   "fieldtype": "Tab Break",
+   "label": "COFINS"
+  },
+  {
+   "fieldname": "cst_ipi",
+   "fieldtype": "Select",
+   "label": "CST",
+   "options": "00 - Entrada com recupera\u00e7\u00e3o de cr\u00e9dito\n01 - Entrada tributada com al\u00edquota zero\n02 - Entrada isenta\n03 - Entrada n\u00e3o-tributada\n04 - Entrada imune\n05 - Entrada com suspens\u00e3o\n49 - Outras entradas\n50 - Sa\u00edda tributada\n51 - Sa\u00edda tributada com al\u00edquota zero\n52 - Sa\u00edda isenta\n53 - Sa\u00edda n\u00e3o-tributada\n54 - Sa\u00edda imune\n55 - Sa\u00edda com suspens\u00e3o\n99 - Outras Sa\u00eddas"
+  },
+  {
+   "fieldname": "base_de_calculo_ipi",
+   "fieldtype": "Currency",
+   "label": "Base de C\u00e1lculo"
+  },
+  {
+   "fieldname": "valor_do_ipi",
+   "fieldtype": "Currency",
+   "label": "Valor do IPI"
+  },
+  {
+   "fieldname": "column_break_kfaj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cod_enquadramento",
+   "fieldtype": "Float",
+   "label": "C\u00f3digo de Enquadramento",
+   "precision": "0"
+  },
+  {
+   "fieldname": "aliquota_ipi",
+   "fieldtype": "Float",
+   "label": "Al\u00edquota %"
+  },
+  {
+   "default": "1",
+   "fieldname": "calcular_automaticamente_ipi",
+   "fieldtype": "Check",
+   "label": "Calcular Automaticamente"
+  },
+  {
+   "fieldname": "cst_cofins",
+   "fieldtype": "Select",
+   "label": "CST",
+   "options": "01 - Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota B\u00e1sica\n02 - Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota Diferenciada\n03 - Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota por Unidade de Medida de Produto\n04 - Opera\u00e7\u00e3o Tribut\u00e1vel Monof\u00e1sica - Revenda a Al\u00edquota Zero\n05 - Opera\u00e7\u00e3o Tribut\u00e1vel por Substitui\u00e7\u00e3o Tribut\u00e1ria\n06 - Opera\u00e7\u00e3o Tribut\u00e1vel a Al\u00edquota Zero\n07 - Opera\u00e7\u00e3o Isenta da Contribui\u00e7\u00e3o\n08 - Opera\u00e7\u00e3o sem Incid\u00eancia da Contribui\u00e7\u00e3o\n09 - Opera\u00e7\u00e3o com Suspens\u00e3o da Contribui\u00e7\u00e3o\n49 - Outras Opera\u00e7\u00f5es de Sa\u00edda\n50 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada Exclusivamente a Receita Tributada no Mercado Interno\n51 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada Exclusivamente a Receita N\u00e3o-Tributada no Mercado Interno\n52 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada a Receita de Exporta\u00e7\u00e3o\n53 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada a Receitas Tributadas e N\u00e3o-Tributadas no Mercado Interno\n54 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada a Receitas Tributadas no Mercado Interno e de Exporta\u00e7\u00e3o\n55 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada a Receitas Tributadas e N\u00e3o-Tributadas no Mercado Interno e de Exporta\u00e7\u00e3o\n60 - Cr\u00e9dito Presumido - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o Vinculada Exclusivamente a Receita Tributada no Mercado Interno\n61 - Cr\u00e9dito Presumido - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o Vinculada Exclusivamente a Receita N\u00e3o-Tributada no Mercado Interno"
+  },
+  {
+   "fieldname": "base_de_calculo_cofins",
+   "fieldtype": "Currency",
+   "label": "Base de C\u00e1lculo",
+   "precision": "2"
+  },
+  {
+   "fieldname": "valor_cofins",
+   "fieldtype": "Currency",
+   "label": "Valor COFINS",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_dgyl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "aliquota_cofins",
+   "fieldtype": "Float",
+   "label": "Al\u00edquota %",
+   "precision": "2"
+  },
+  {
+   "default": "1",
+   "fieldname": "calcular_automaticamente_cofins",
+   "fieldtype": "Check",
+   "label": "Calcular Automaticamente"
+  },
+  {
+   "fieldname": "pis_tab",
+   "fieldtype": "Tab Break",
+   "label": "PIS"
+  },
+  {
+   "fieldname": "cst_pis",
+   "fieldtype": "Select",
+   "label": "CST",
+   "options": "01 - Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota B\u00e1sica\n02 - Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota Diferenciada\n03 - Opera\u00e7\u00e3o Tribut\u00e1vel com Al\u00edquota por Unidade de Medida de Produto\n04 - Opera\u00e7\u00e3o Tribut\u00e1vel Monof\u00e1sica - Revenda \u00e0 Al\u00edquota Zero\n05 - Opera\u00e7\u00e3o Tribut\u00e1vel por Substitui\u00e7\u00e3o Tribut\u00e1ria\n06 - Opera\u00e7\u00e3o Tribut\u00e1vel a Al\u00edquota Zero\n07 - Opera\u00e7\u00e3o Isenta da Contribui\u00e7\u00e3o\n08 - Opera\u00e7\u00e3o sem Incid\u00eancia da Contribui\u00e7\u00e3o\n09 - Opera\u00e7\u00e3o com Suspens\u00e3o da Contribui\u00e7\u00e3o\n49 - Outras Opera\u00e7\u00f5es de Sa\u00edda\n50 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada Exclusivamente \u00e0 Receita Tributada no Mercado Interno\n51 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada Exclusivamente \u00e0 Receita N\u00e3o-Tributada no Mercado Interno\n52 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada Exclusivamente \u00e0 Receita de Exporta\u00e7\u00e3o\n53 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada a Receitas Tributadas e N\u00e3o-Tributadas no Mercado Interno\n54 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada a Receitas Tributadas no Mercado Interno e de Exporta\u00e7\u00e3o\n55 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada a Receitas N\u00e3o-Tributadas no Mercado Interno e de Exporta\u00e7\u00e3o\n56 - Opera\u00e7\u00e3o com Direito a Cr\u00e9dito - Vinculada a Receitas Tributadas e N\u00e3o-Tributadas no Mercado Interno e de Exporta\u00e7\u00e3o\n60 - Cr\u00e9dito Presumido - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o Vinculada Exclusivamente \u00e0 Receita Tributada no Mercado Interno\n61 - Cr\u00e9dito Presumido - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o Vinculada Exclusivamente \u00e0 Receita N\u00e3o-Tributada no Mercado Interno\n62 - Cr\u00e9dito Presumido - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o Vinculada Exclusivamente \u00e0 Receita de Exporta\u00e7\u00e3o\n63 - Cr\u00e9dito Presumido - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o Vinculada a Receitas Tributadas e N\u00e3o-Tributadas no Mercado Interno\n64 - Cr\u00e9dito Presumido - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o Vinculada a Receitas Tributadas no Mercado Interno e de Exporta\u00e7\u00e3o\n65 - Cr\u00e9dito Presumido - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o Vinculada a Receitas N\u00e3o-Tributadas no Mercado Interno e de Exporta\u00e7\u00e3o\n66 - Cr\u00e9dito Presumido - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o Vinculada a Receitas Tributadas e N\u00e3o-Tributadas no Mercado Interno e de Exporta\u00e7\u00e3o\n67 - Cr\u00e9dito Presumido - Outras Opera\u00e7\u00f5es\n70 - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o sem Direito a Cr\u00e9dito\n71 - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o com Isen\u00e7\u00e3o\n72 - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o com Suspens\u00e3o\n73 - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o a Al\u00edquota Zero\n74 - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o sem Incid\u00eancia da Contribui\u00e7\u00e3o\n75 - Opera\u00e7\u00e3o de Aquisi\u00e7\u00e3o por Substitui\u00e7\u00e3o Tribut\u00e1ria\n98 - Outras Opera\u00e7\u00f5es de Entrada\n99 - Outras Opera\u00e7\u00f5es"
+  },
+  {
+   "fieldname": "base_de_calculo_pis",
+   "fieldtype": "Currency",
+   "label": "Base de C\u00e1lculo",
+   "precision": "2"
+  },
+  {
+   "fieldname": "valor_pis",
+   "fieldtype": "Currency",
+   "label": "Valor COFINS",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_otlg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "aliquota_pis",
+   "fieldtype": "Float",
+   "label": "Al\u00edquota %",
+   "precision": "2"
+  },
+  {
+   "default": "1",
+   "fieldname": "calcular_automaticamente_pis",
+   "fieldtype": "Check",
+   "label": "Calcular Automaticamente"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-10-17 18:21:39.235303",
+ "modified": "2025-10-20 10:50:39.235303",
  "modified_by": "Administrator",
  "module": "Brazil Invoice",
  "name": "Tax",
