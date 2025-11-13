@@ -78,7 +78,7 @@
    "fieldtype": "Link",
    "label": "Amended From",
    "no_copy": 1,
-   "options": "Invoice",
+   "options": "Invoices",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
@@ -245,7 +245,7 @@
   {
    "fieldname": "invoices_table",
    "fieldtype": "Table",
-   "options": "Invoice Item"
+   "options": "Item Invoice"
   },
   {
    "fieldname": "endere\u00e7o_section",
@@ -377,14 +377,14 @@
    "fieldname": "tax_template",
    "fieldtype": "Link",
    "label": "Tax Template",
-   "options": "Taxes"
+   "options": "Tax"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-10-20 10:30:10.742310",
+ "modified": "2025-11-13 16:02:03.159080",
  "modified_by": "Administrator",
  "module": "Brazil Invoice",
  "name": "Invoices",
