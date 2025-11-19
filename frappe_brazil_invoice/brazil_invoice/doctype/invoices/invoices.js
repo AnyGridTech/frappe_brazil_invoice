@@ -59,6 +59,8 @@
               row.amount = row.amount ?? 1;
               row.rate = item.valuation_rate ?? 0;
               row.rate_taxes = item.valuation_rate ?? 0;
+              row.ncm = item.ncm;
+              row.description = item.description || "";
               frm.refresh_field("items");
               sumTotalItems(frm);
             }
@@ -81,6 +83,10 @@
         console.error("Failed to calculate taxes");
         return;
       }
+      row.ipi_rate = taxes.ipi;
+      row.icms_rate = taxes.icms;
+      row.pis_rate = taxes.pis;
+      row.cofins_rate = taxes.cofins;
       row.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + row.rate;
       frm.refresh_field("items");
       sumTotalItems(frm);

@@ -1,4 +1,5 @@
 import { FrappeDoc } from "@anygridtech/frappe-types/client/frappe/core";
+import { Item } from "@anygridtech/frappe-types/doctype/erpnext/Item";
 
 export interface InvoicesDoc extends FrappeDoc {
   operation_nature?: string;
@@ -37,7 +38,13 @@ export interface InvoicesDoc extends FrappeDoc {
   internal_tab?: string;
   amended_from?: string;
 }
-
+export interface Inverter extends Item {
+  ncm: string;
+  package_length: number;
+  package_width: number;
+  package_height: number;
+  weight_per_unit: number;
+}
 export interface InvoiceTaxesDoc extends FrappeDoc {
   base_calc_icms_fcp: number;
   icms_value_fcp: number;
@@ -103,4 +110,9 @@ export interface InvoiceItem  extends FrappeDoc {
   ncm: string;
   doctype: string;
   rate_taxes: number;
+  description: string;
+  ipi_rate: number;
+  pis_rate: number;
+  cofins_rate: number;
+  icms_rate: number;
 }
