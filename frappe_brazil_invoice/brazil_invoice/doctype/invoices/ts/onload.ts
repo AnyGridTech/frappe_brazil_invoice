@@ -1,25 +1,7 @@
-import {Inverter, InvoiceItem, InvoicesDoc, InvoiceTaxesDoc} from "./types/invoice";
-import { FrappeForm } from "@anygridtech/frappe-types/client/frappe/core";
-import { Item } from "@anygridtech/frappe-types/doctype/erpnext/Item";
+import { Inverter, InvoiceItem, InvoicesDoc } from "../../../../types/invoice";
+import { handleInvoiceTaxesChange, sumTotalItems } from "./tax";
 
 
-// frappe.ui.form.on<InvoicesDoc>("Invoice", "onload", async (form) => {
-  // const operationNatureToNamingSeries: Record<string, string> = {
-  //   "Retorno de Remessa para Conserto": "INV-WRN-RR-.YYYY.-",
-  //   "Remessa para Conserto": "INV-WRN-RE-.YYYY.-",
-  //   "Retorno de Troca em Garantia": "INV-WRN-TR-.YYYY.-",
-  //   "Troca em Garantia": "INV-WRN-TE-.YYYY.-",
-  //   Bonificação: "INV-WRN-BE-.YYYY.-",
-  //   "Devolução de Mercadoria de Bonificação": "INV-WRN-BR-.YYYY.-",
-  // };
-
-  // form.set_df_property(
-  //   "naming_series",
-  //   "options",
-  //   Object.values(operationNatureToNamingSeries)
-  // );
-
-// });
 
 frappe.ui.form.on<InvoicesDoc>("Invoice", "before_save", async (form) => {
   var clientType = form.doc.client_type;
@@ -38,17 +20,18 @@ frappe.ui.form.on<InvoicesDoc>("Invoice", "before_save", async (form) => {
 
 });
 
-frappe.ui.form.on<InvoicesDoc>("Invoice Item", {
+frappe.ui.form.on<InvoicesDoc>("Item Invoice", {
   refresh: function (frm) {
     // Refresh logic here if needed
     sumTotalItems(frm);
   },
 
   
-  serial_no: function (frm, cdt, cdn) {
+  serial_number: function (frm, cdt, cdn) {
     // Handle serial_no field change
+    console.log("Serial number changed event triggered");
     let row = frappe.get_doc<InvoiceItem>(cdt as string, cdn);
-    if (!row || row.serial_no.length < 1) {
+    if (!row || !row.serial_number || row.serial_number.length < 1) {
       return
     }
     frappe.call({
@@ -56,7 +39,7 @@ frappe.ui.form.on<InvoicesDoc>("Invoice Item", {
       args: {
         doctype: "Serial No",
         filters: {
-          name: row.serial_no
+          name: row.serial_number
         }
       },
       callback: function (response) {
@@ -80,7 +63,7 @@ frappe.ui.form.on<InvoicesDoc>("Invoice Item", {
             const item = response.message as Inverter;
             row.item_code = item.item_code;
             row.item_name = item.item_name;
-            row.amount = row.amount ?? 1;
+            row.quantity = row.quantity ?? 1;
             row.rate = item.valuation_rate ?? 0;
             row.rate_taxes = item.valuation_rate ?? 0;
             row.ncm = item.ncm;
@@ -92,29 +75,11 @@ frappe.ui.form.on<InvoicesDoc>("Invoice Item", {
       }
     });
     
-    console.log("Serial number changed:", row.serial_no);
+    console.log("Serial number changed:", row.serial_number);
   },
   invoice_taxes: async function (frm, cdt, cdn) {
-    const row = frappe.get_doc<InvoiceItem>(cdt as string, cdn);
-    if (!row) {
-      return;
-    }
-    if (row.invoice_taxes.length < 1) {
-      return;
-    }
-    const taxes = await taxescalc(row.invoice_taxes, row);
-    console.log(row.invoice_taxes);
-    if (!taxes) {
-      console.error("Failed to calculate taxes");
-      return;
-    }
-    row.ipi_rate = taxes.ipi;
-    row.icms_rate = taxes.icms;
-    row.pis_rate = taxes.pis;
-    row.cofins_rate = taxes.cofins;
-    row.rate_taxes = (taxes.ipi + taxes.icms + taxes.pis + taxes.cofins) + row.rate;
-    frm.refresh_field("items");
-    sumTotalItems(frm);
+    if (!cdt || !cdn) return;
+    await handleInvoiceTaxesChange(frm, cdt, cdn);
   },
   amount: function (frm, cdt, cdn) {
     const row = frappe.get_doc<InvoiceItem>(cdt as string, cdn);
@@ -127,87 +92,24 @@ frappe.ui.form.on<InvoicesDoc>("Invoice Item", {
   
 });
 
-
-function sumTotalItems(frm: FrappeForm<InvoicesDoc>) {
-  var total_rate = frm.doc.items.reduce(function (
-    sum: number,
-    item: InvoiceItem
-  ) {
-    return sum + ((item.rate * item.amount) || 0);
-  },
-  0);
-  var total_rate_with_taxes = frm.doc.items.reduce(function (
-    sum: number,
-    item: InvoiceItem
-  ) {
-    return sum + ((item.rate_taxes * item.amount) || 0);
-  }, 0);
-  frm.set_value("total", total_rate);
-  frm.set_value("total_impostos", total_rate_with_taxes);
-}
-
-async function taxescalc(name: string, InvoiceItem: InvoiceItem){
-  let doc: InvoiceTaxesDoc | undefined;
-  await frappe.call({
-    method: "frappe.client.get",
-    args: {
-      doctype: "Invoice Taxes",
-      name: name
-    },
-    callback: function(response) {
-      if (!response || !response.message) {
-        console.error("Failed to retrieve invoice tax document");
-      } else {
-        doc = response.message as InvoiceTaxesDoc;
-      }
-    }
-  });
-  if (!doc) {
-    console.error("Failed to retrieve invoice tax document");
-    return;
-  }
-  let ipi = calcSimpleTaxes(InvoiceItem.rate, doc?.aliquota_ipi ?? 0);
-  let icms = calcSimpleTaxes(InvoiceItem.rate, doc?.aliq_icms ?? 0);
-  if (doc.adiciona_ipi_icms == 1) {
-    icms += calcSimpleTaxes(InvoiceItem.rate, doc?.aliquota_ipi ?? 0);
-  }
-  let pis = calcSimpleTaxes(InvoiceItem.rate, doc?.aliquota_pis ?? 0);
-  let cofins = calcSimpleTaxes(InvoiceItem.rate, doc?.aliquota_cofins ?? 0)
-  console.log("Aliquotas: Ipi: %d, Icms: %d, Pis: %d, Cofins: %d", ipi, icms, pis, cofins);
-  console.log({ ipi, icms, pis, cofins });
-  return { ipi, icms, pis, cofins };
-}
-
 function cpfValid(strCPF: string): boolean {
-    var Soma;
-    var Resto;
-    Soma = 0;
-    var i;
+  var Soma;
+  var Resto;
+  Soma = 0;
+  var i;
   if (strCPF == "00000000000") return false;
 
-  for (i=1; i<=9; i++) Soma = Soma + parseInt(strCPF.substring(i-1, i)) * (11 - i);
+  for (i = 1; i <= 9; i++) Soma = Soma + parseInt(strCPF.substring(i - 1, i)) * (11 - i);
   Resto = (Soma * 10) % 11;
 
-    if ((Resto == 10) || (Resto == 11))  Resto = 0;
-    if (Resto != parseInt(strCPF.substring(9, 10)) ) return false;
+  if (Resto == 10 || Resto == 11) Resto = 0;
+  if (Resto != parseInt(strCPF.substring(9, 10))) return false;
 
   Soma = 0;
-    for (i = 1; i <= 10; i++) Soma = Soma + parseInt(strCPF.substring(i-1, i)) * (12 - i);
-    Resto = (Soma * 10) % 11;
+  for (i = 1; i <= 10; i++) Soma = Soma + parseInt(strCPF.substring(i - 1, i)) * (12 - i);
+  Resto = (Soma * 10) % 11;
 
-    if ((Resto == 10) || (Resto == 11))  Resto = 0;
-    if (Resto != parseInt(strCPF.substring(10, 11) ) ) return false;
-    return true;
+  if (Resto == 10 || Resto == 11) Resto = 0;
+  if (Resto != parseInt(strCPF.substring(10, 11))) return false;
+  return true;
 }
-
-//icms_ipi_pis can be calculated here
-function calcSimpleTaxes(value: number, tax: number){
-  return (value * tax) / 100;
-}
-
-// function difalCalc(baseCalc: number, aliquotaInternal: number, aliquotaInterState: number, icmsOrig: number): number {
-//   const icmsIntState = aliquotaInterState / 100; //icms do estado de origem
-//   const icmsInternal = aliquotaInternal / 100; //icms do estado de destino
-//   const difal = (((baseCalc - icmsOrig) / (1 - icmsInternal)) * icmsInternal) - baseCalc * icmsIntState
-//   return difal
-// }

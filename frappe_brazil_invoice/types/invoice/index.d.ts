@@ -97,22 +97,21 @@ export interface InvoiceTaxesDoc extends FrappeDoc {
   interstate_icms: number;
   standard_icms: number;
 }
-export interface InvoiceItem  extends FrappeDoc {
-  name: string;
-  docstatus: number;
-  idx: number;
-  serial_no: string;
-  item_code: string;
-  invoice_taxes: string;
-  item_name: string;
+export interface InvoiceItem extends FrappeDoc {
+  // Details Section
+  serial_number?: string;
+  item_code?: string;
+  item_name?: string;
   rate: number;
-  amount: number;
-  ncm: string;
-  doctype: string;
-  rate_taxes: number;
-  description: string;
+  quantity: number;
+  ncm?: string;
+  // Tax Section
+  invoice_taxes: string;
+  icms_rate: number;
   ipi_rate: number;
+  rate_taxes: number;
   pis_rate: number;
   cofins_rate: number;
-  icms_rate: number;
+  // Additional fields not in JSON but used in code
+  description: string;
 }

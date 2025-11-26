@@ -30,7 +30,7 @@
     "moduleDetection": "force"
   },
   "include": ["ts/**/*.ts", "**/ts/**/*.ts"],
-  "exclude": ["node_modules", "**/__bundle_entry__.ts"],
+  "exclude": ["node_modules", "**/__bundle_entry__.ts", "public/ts"],
   "watchOptions": {
     "watchFile": "fixedPollingInterval",
     "watchDirectory": "fixedPollingInterval",

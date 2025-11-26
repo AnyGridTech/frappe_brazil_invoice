@@ -2,6 +2,74 @@
 // For license information, please see license.txt
 "use strict";
 (() => {
+  // brazil_invoice/doctype/invoices/ts/tax.ts
+  function calcSimpleTaxes(value, tax) {
+    return value * tax / 100;
+  }
+  async function calculateItemTaxes(taxName, invoiceItem) {
+    let doc;
+    await frappe.call({
+      method: "frappe.client.get",
+      args: {
+        doctype: "Invoice Taxes",
+        name: taxName
+      },
+      callback: function(response) {
+        if (!response || !response.message) {
+          console.error("Failed to retrieve invoice tax document");
+        } else {
+          doc = response.message;
+        }
+      }
+    });
+    if (!doc) {
+      console.error("Failed to retrieve invoice tax document");
+      return;
+    }
+    let ipi = calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_ipi ?? 0);
+    let icms = calcSimpleTaxes(invoiceItem.rate, doc?.aliq_icms ?? 0);
+    if (doc.adiciona_ipi_icms == 1) {
+      icms += calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_ipi ?? 0);
+    }
+    let pis = calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_pis ?? 0);
+    let cofins = calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_cofins ?? 0);
+    console.log("Aliquotas: Ipi: %d, Icms: %d, Pis: %d, Cofins: %d", ipi, icms, pis, cofins);
+    console.log({ ipi, icms, pis, cofins });
+    return { ipi, icms, pis, cofins };
+  }
+  function sumTotalItems(frm) {
+    const totalRate = frm.doc.items.reduce(function(sum, item) {
+      return sum + (item.rate * item.quantity || 0);
+    }, 0);
+    const totalRateWithTaxes = frm.doc.items.reduce(function(sum, item) {
+      return sum + (item.rate_taxes * item.quantity || 0);
+    }, 0);
+    frm.set_value("total", totalRate);
+    frm.set_value("total_impostos", totalRateWithTaxes);
+  }
+  async function handleInvoiceTaxesChange(frm, cdt, cdn) {
+    const row = frappe.get_doc(cdt, cdn);
+    if (!row) {
+      return;
+    }
+    if (row.invoice_taxes.length < 1) {
+      return;
+    }
+    const taxes = await calculateItemTaxes(row.invoice_taxes, row);
+    console.log(row.invoice_taxes);
+    if (!taxes) {
+      console.error("Failed to calculate taxes");
+      return;
+    }
+    row.ipi_rate = taxes.ipi;
+    row.icms_rate = taxes.icms;
+    row.pis_rate = taxes.pis;
+    row.cofins_rate = taxes.cofins;
+    row.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + row.rate;
+    frm.refresh_field("items");
+    sumTotalItems(frm);
+  }
+
   // brazil_invoice/doctype/invoices/ts/onload.ts
   frappe.ui.form.on("Invoice", "before_save", async (form) => {
     var clientType = form.doc.client_type;
@@ -18,13 +86,14 @@
       }
     }
   });
-  frappe.ui.form.on("Invoice Item", {
+  frappe.ui.form.on("Item Invoice", {
     refresh: function(frm) {
       sumTotalItems(frm);
     },
-    serial_no: function(frm, cdt, cdn) {
+    serial_number: function(frm, cdt, cdn) {
+      console.log("Serial number changed event triggered");
       let row = frappe.get_doc(cdt, cdn);
-      if (!row || row.serial_no.length < 1) {
+      if (!row || !row.serial_number || row.serial_number.length < 1) {
         return;
       }
       frappe.call({
@@ -32,7 +101,7 @@
         args: {
           doctype: "Serial No",
           filters: {
-            name: row.serial_no
+            name: row.serial_number
           }
         },
         callback: function(response) {
@@ -56,7 +125,7 @@
               const item = response2.message;
               row.item_code = item.item_code;
               row.item_name = item.item_name;
-              row.amount = row.amount ?? 1;
+              row.quantity = row.quantity ?? 1;
               row.rate = item.valuation_rate ?? 0;
               row.rate_taxes = item.valuation_rate ?? 0;
               row.ncm = item.ncm;
@@ -67,29 +136,11 @@
           });
         }
       });
-      console.log("Serial number changed:", row.serial_no);
+      console.log("Serial number changed:", row.serial_number);
     },
     invoice_taxes: async function(frm, cdt, cdn) {
-      const row = frappe.get_doc(cdt, cdn);
-      if (!row) {
-        return;
-      }
-      if (row.invoice_taxes.length < 1) {
-        return;
-      }
-      const taxes = await taxescalc(row.invoice_taxes, row);
-      console.log(row.invoice_taxes);
-      if (!taxes) {
-        console.error("Failed to calculate taxes");
-        return;
-      }
-      row.ipi_rate = taxes.ipi;
-      row.icms_rate = taxes.icms;
-      row.pis_rate = taxes.pis;
-      row.cofins_rate = taxes.cofins;
-      row.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + row.rate;
-      frm.refresh_field("items");
-      sumTotalItems(frm);
+      if (!cdt || !cdn) return;
+      await handleInvoiceTaxesChange(frm, cdt, cdn);
     },
     amount: function(frm, cdt, cdn) {
       const row = frappe.get_doc(cdt, cdn);
@@ -100,50 +151,6 @@
       sumTotalItems(frm);
     }
   });
-  function sumTotalItems(frm) {
-    var total_rate = frm.doc.items.reduce(
-      function(sum, item) {
-        return sum + (item.rate * item.amount || 0);
-      },
-      0
-    );
-    var total_rate_with_taxes = frm.doc.items.reduce(function(sum, item) {
-      return sum + (item.rate_taxes * item.amount || 0);
-    }, 0);
-    frm.set_value("total", total_rate);
-    frm.set_value("total_impostos", total_rate_with_taxes);
-  }
-  async function taxescalc(name, InvoiceItem) {
-    let doc;
-    await frappe.call({
-      method: "frappe.client.get",
-      args: {
-        doctype: "Invoice Taxes",
-        name
-      },
-      callback: function(response) {
-        if (!response || !response.message) {
-          console.error("Failed to retrieve invoice tax document");
-        } else {
-          doc = response.message;
-        }
-      }
-    });
-    if (!doc) {
-      console.error("Failed to retrieve invoice tax document");
-      return;
-    }
-    let ipi = calcSimpleTaxes(InvoiceItem.rate, doc?.aliquota_ipi ?? 0);
-    let icms = calcSimpleTaxes(InvoiceItem.rate, doc?.aliq_icms ?? 0);
-    if (doc.adiciona_ipi_icms == 1) {
-      icms += calcSimpleTaxes(InvoiceItem.rate, doc?.aliquota_ipi ?? 0);
-    }
-    let pis = calcSimpleTaxes(InvoiceItem.rate, doc?.aliquota_pis ?? 0);
-    let cofins = calcSimpleTaxes(InvoiceItem.rate, doc?.aliquota_cofins ?? 0);
-    console.log("Aliquotas: Ipi: %d, Icms: %d, Pis: %d, Cofins: %d", ipi, icms, pis, cofins);
-    console.log({ ipi, icms, pis, cofins });
-    return { ipi, icms, pis, cofins };
-  }
   function cpfValid(strCPF) {
     var Soma;
     var Resto;
@@ -160,8 +167,5 @@
     if (Resto == 10 || Resto == 11) Resto = 0;
     if (Resto != parseInt(strCPF.substring(10, 11))) return false;
     return true;
-  }
-  function calcSimpleTaxes(value, tax) {
-    return value * tax / 100;
   }
 })();
