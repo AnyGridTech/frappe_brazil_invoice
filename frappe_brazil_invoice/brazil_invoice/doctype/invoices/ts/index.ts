@@ -1,5 +1,6 @@
 import { Inverter, InvoiceItem, InvoicesDoc } from "../../../../types/invoice";
 import { handleInvoiceTaxesChange, sumTotalItems, applyTaxTemplateToItems } from "./tax";
+import { setupCEPField, processCEPLookup } from "./cep";
 
 
 
@@ -21,8 +22,16 @@ frappe.ui.form.on<InvoicesDoc>("Invoices", "before_save", async (form) => {
 });
 
 frappe.ui.form.on<InvoicesDoc>("Invoices", {
+  onload: function (frm) {
+    setupCEPField(frm);
+  },
+  
   tax_template: async function (frm) {
     await applyTaxTemplateToItems(frm);
+  },
+  
+  delivery_cep: async function (frm) {
+    await processCEPLookup(frm);
   },
 });
 

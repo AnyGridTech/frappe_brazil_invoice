@@ -2,6 +2,110 @@
 // For license information, please see license.txt
 "use strict";
 (() => {
+  // brazil_invoice/doctype/invoices/ts/cep.ts
+  function formatCEP(cep) {
+    const cleaned = cep.replace(/\D/g, "");
+    if (cleaned.length === 8) {
+      return `${cleaned.slice(0, 5)}-${cleaned.slice(5)}`;
+    }
+    return cep;
+  }
+  async function fetchAddressFromCEP(cep) {
+    try {
+      const cleanedCEP = cep.replace(/\D/g, "");
+      if (cleanedCEP.length !== 8) {
+        return null;
+      }
+      const response = await fetch(`https://viacep.com.br/ws/${cleanedCEP}/json/`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch CEP data");
+      }
+      const data = await response.json();
+      if (data.erro) {
+        frappe.msgprint({
+          title: __("CEP Not Found"),
+          indicator: "orange",
+          message: __("The provided CEP was not found in the database")
+        });
+        return null;
+      }
+      return data;
+    } catch (error) {
+      console.error("Error fetching CEP:", error);
+      frappe.msgprint({
+        title: __("Error"),
+        indicator: "red",
+        message: __("Failed to fetch address data. Please check your internet connection.")
+      });
+      return null;
+    }
+  }
+  async function processCEPLookup(frm) {
+    if (!frm.doc.delivery_cep) return;
+    const cleanedCEP = frm.doc.delivery_cep.replace(/\D/g, "");
+    if (cleanedCEP.length !== 8) return;
+    const formattedCEP = formatCEP(frm.doc.delivery_cep);
+    if (frm.doc.delivery_cep !== formattedCEP) {
+      frm.doc.delivery_cep = formattedCEP;
+      frm.refresh_field("delivery_cep");
+    }
+    const addressData = await fetchAddressFromCEP(formattedCEP);
+    if (addressData) {
+      frm.doc.delivery_address = addressData.logradouro || "";
+      frm.doc.delivery_neighborhood = addressData.bairro || "";
+      frm.doc.city = addressData.localidade || "";
+      frm.doc.delivery_state = addressData.uf || "";
+      frm.doc.delivery_ibge = addressData.ibge || "";
+      frm.refresh_field("delivery_address");
+      frm.refresh_field("delivery_neighborhood");
+      frm.refresh_field("city");
+      frm.refresh_field("delivery_state");
+      frm.refresh_field("delivery_ibge");
+      frappe.show_alert({
+        message: __("Address filled successfully"),
+        indicator: "green"
+      }, 3);
+    }
+  }
+  function setupCEPField(frm) {
+    frm.set_query("delivery_state", function() {
+      return {
+        filters: {
+          country: "Brazil"
+        }
+      };
+    });
+    const cepField = frm.fields_dict["delivery_cep"];
+    if (cepField && cepField.$input) {
+      cepField.$input.on("keypress", function(e) {
+        if (e.keyCode === 8 || e.keyCode === 9 || e.keyCode === 27 || e.keyCode === 13 || e.keyCode === 46 || // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        e.keyCode === 65 && e.ctrlKey === true || e.keyCode === 67 && e.ctrlKey === true || e.keyCode === 86 && e.ctrlKey === true || e.keyCode === 88 && e.ctrlKey === true) {
+          return;
+        }
+        if (e.which < 48 || e.which > 57) {
+          e.preventDefault();
+        }
+      });
+      cepField.$input.on("paste", function() {
+        setTimeout(function() {
+          if (cepField.$input) {
+            const pastedValue = cepField.$input.val();
+            const cleanedValue = pastedValue.replace(/\D/g, "");
+            cepField.$input.val(cleanedValue);
+            frm.doc.delivery_cep = cleanedValue;
+            frm.refresh_field("delivery_cep");
+          }
+        }, 10);
+      });
+      cepField.$input.on("input", function() {
+        const cleanedCEP = frm.doc.delivery_cep ? frm.doc.delivery_cep.replace(/\D/g, "") : "";
+        if (cleanedCEP.length === 8) {
+          processCEPLookup(frm);
+        }
+      });
+    }
+  }
+
   // brazil_invoice/doctype/invoices/ts/tax.ts
   function calcSimpleTaxes(value, tax) {
     return value * tax / 100;
@@ -113,8 +217,14 @@
     }
   });
   frappe.ui.form.on("Invoices", {
+    onload: function(frm) {
+      setupCEPField(frm);
+    },
     tax_template: async function(frm) {
       await applyTaxTemplateToItems(frm);
+    },
+    delivery_cep: async function(frm) {
+      await processCEPLookup(frm);
     }
   });
   frappe.ui.form.on("Item Invoice", {
