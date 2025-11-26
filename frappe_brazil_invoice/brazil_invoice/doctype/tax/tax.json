@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "format:TX-{####}",
  "creation": "2025-10-17 18:21:39.235303",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -428,10 +429,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-13 15:59:58.326593",
+ "modified": "2025-11-26 17:49:28.734134",
  "modified_by": "Administrator",
  "module": "Brazil Invoice",
  "name": "Tax",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
