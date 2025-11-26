@@ -227,7 +227,7 @@
   },
   {
    "fieldname": "total",
-   "fieldtype": "Data",
+   "fieldtype": "Currency",
    "label": "Total"
   },
   {
@@ -236,7 +236,7 @@
   },
   {
    "fieldname": "total_tax",
-   "fieldtype": "Data",
+   "fieldtype": "Currency",
    "label": "Total + Impostos"
   },
   {
@@ -386,7 +386,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-25 18:17:46.879335",
+ "modified": "2025-11-26 18:01:54.394673",
  "modified_by": "Administrator",
  "module": "Brazil Invoice",
  "name": "Invoices",
