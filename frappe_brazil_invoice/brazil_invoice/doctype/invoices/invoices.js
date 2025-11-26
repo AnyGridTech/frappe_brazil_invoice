@@ -39,15 +39,14 @@
   }
   function sumTotalItems(frm) {
     const totalRate = frm.doc.invoices_table.reduce(function(sum, item) {
-      return sum + (item.rate * item.quantity || 0);
+      return sum + (item.rate || 0) * (item.quantity || 0);
     }, 0);
-    const totalTax = frm.doc.invoices_table.reduce(function(sum, item) {
-      const itemTotal = item.rate * item.quantity || 0;
-      const itemTotalWithTax = item.rate_taxes * item.quantity || 0;
-      return sum + (itemTotalWithTax - itemTotal);
+    const totalWithTax = frm.doc.invoices_table.reduce(function(sum, item) {
+      const itemTotalWithTax = (item.rate_taxes || 0) * (item.quantity || 0);
+      return sum + itemTotalWithTax;
     }, 0);
     frm.set_value("total", totalRate);
-    frm.set_value("total_tax", totalTax);
+    frm.set_value("total_tax", totalWithTax);
   }
   async function applyTaxTemplateToItems(frm) {
     if (!frm.doc.tax_template || frm.doc.tax_template.length < 1) {
@@ -162,7 +161,7 @@
               row.rate_taxes = item.valuation_rate ?? 0;
               row.ncm = item.ncm;
               row.description = item.description || "";
-              frm.refresh_field("items");
+              frm.refresh_field("invoices_table");
               sumTotalItems(frm);
             }
           });
@@ -179,7 +178,7 @@
       if (!row) {
         return;
       }
-      frm.refresh_field("items");
+      frm.refresh_field("invoices_table");
       sumTotalItems(frm);
     }
   });

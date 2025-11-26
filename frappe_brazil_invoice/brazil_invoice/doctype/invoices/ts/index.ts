@@ -74,7 +74,7 @@ frappe.ui.form.on<InvoicesDoc>("Item Invoice", {
             row.rate_taxes = item.valuation_rate ?? 0;
             row.ncm = item.ncm;
             row.description = item.description || "";
-            frm.refresh_field("items");
+            frm.refresh_field("invoices_table");
             sumTotalItems(frm);
           }
         });
@@ -92,7 +92,7 @@ frappe.ui.form.on<InvoicesDoc>("Item Invoice", {
     if (!row) {
       return;
     }
-    frm.refresh_field("items");
+    frm.refresh_field("invoices_table");
     sumTotalItems(frm);
   },
   
