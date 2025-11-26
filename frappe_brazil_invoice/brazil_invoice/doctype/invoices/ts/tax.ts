@@ -1,4 +1,5 @@
-import { InvoiceItem, InvoicesDoc, InvoiceTaxesDoc } from "../../../../types/invoice";
+import { InvoiceItem, InvoicesDoc } from "../../../../types/invoice";
+import {TaxDoc } from "../../../../types/tax";
 import { FrappeForm } from "@anygridtech/frappe-types/client/frappe/core";
 
 /**
@@ -15,19 +16,19 @@ export async function calculateItemTaxes(
   taxName: string,
   invoiceItem: InvoiceItem
 ): Promise<{ ipi: number; icms: number; pis: number; cofins: number } | undefined> {
-  let doc: InvoiceTaxesDoc | undefined;
+  let doc: TaxDoc | undefined;
 
   await frappe.call({
     method: "frappe.client.get",
     args: {
-      doctype: "Invoice Taxes",
+      doctype: "Tax",
       name: taxName,
     },
     callback: function (response) {
       if (!response || !response.message) {
         console.error("Failed to retrieve invoice tax document");
       } else {
-        doc = response.message as InvoiceTaxesDoc;
+        doc = response.message as TaxDoc;
       }
     },
   });
@@ -55,19 +56,58 @@ export async function calculateItemTaxes(
 }
 
 /**
- * Sum total of all items in the invoice
+ * Sum total of all invoices_table in the invoice
  */
 export function sumTotalItems(frm: FrappeForm<InvoicesDoc>) {
-  const totalRate = frm.doc.items.reduce(function (sum: number, item: InvoiceItem) {
+  const totalRate = frm.doc.invoices_table.reduce(function (sum: number, item: InvoiceItem) {
     return sum + (item.rate * item.quantity || 0);
   }, 0);
 
-  const totalRateWithTaxes = frm.doc.items.reduce(function (sum: number, item: InvoiceItem) {
-    return sum + (item.rate_taxes * item.quantity || 0);
+  const totalTax = frm.doc.invoices_table.reduce(function (sum: number, item: InvoiceItem) {
+    const itemTotal = item.rate * item.quantity || 0;
+    const itemTotalWithTax = item.rate_taxes * item.quantity || 0;
+    return sum + (itemTotalWithTax - itemTotal);
   }, 0);
 
   frm.set_value("total", totalRate);
-  frm.set_value("total_impostos", totalRateWithTaxes);
+  frm.set_value("total_tax", totalTax);
+}
+
+/**
+ * Apply tax template to all invoices_table in the invoice
+ */
+export async function applyTaxTemplateToItems(frm: FrappeForm<InvoicesDoc>) {
+  if (!frm.doc.tax_template || frm.doc.tax_template.length < 1) {
+    console.log("No tax template selected");
+    return;
+  }
+
+  if (!frm.doc.invoices_table || frm.doc.invoices_table.length < 1) {
+    console.log("No invoices_table to apply tax template");
+    return;
+  }
+
+  // Apply the tax template to each item
+  for (const item of frm.doc.invoices_table) {
+    item.invoice_taxes = frm.doc.tax_template;
+    
+    // Calculate taxes for this item
+    const taxes = await calculateItemTaxes(item.invoice_taxes, item);
+    
+    if (!taxes) {
+      console.error("Failed to calculate taxes for item:", item.name);
+      continue;
+    }
+
+    item.ipi_rate = taxes.ipi;
+    item.icms_rate = taxes.icms;
+    item.pis_rate = taxes.pis;
+    item.cofins_rate = taxes.cofins;
+    item.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + item.rate;
+  }
+
+  frm.refresh_field("invoices_table");
+  sumTotalItems(frm);
 }
 
 /**
@@ -101,7 +141,7 @@ export async function handleInvoiceTaxesChange(
   row.cofins_rate = taxes.cofins;
   row.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + row.rate;
 
-  frm.refresh_field("items");
+  frm.refresh_field("invoices_table");
   sumTotalItems(frm);
 }
 

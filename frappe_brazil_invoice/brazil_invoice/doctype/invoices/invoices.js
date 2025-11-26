@@ -11,7 +11,7 @@
     await frappe.call({
       method: "frappe.client.get",
       args: {
-        doctype: "Invoice Taxes",
+        doctype: "Tax",
         name: taxName
       },
       callback: function(response) {
@@ -38,14 +38,41 @@
     return { ipi, icms, pis, cofins };
   }
   function sumTotalItems(frm) {
-    const totalRate = frm.doc.items.reduce(function(sum, item) {
+    const totalRate = frm.doc.invoices_table.reduce(function(sum, item) {
       return sum + (item.rate * item.quantity || 0);
     }, 0);
-    const totalRateWithTaxes = frm.doc.items.reduce(function(sum, item) {
-      return sum + (item.rate_taxes * item.quantity || 0);
+    const totalTax = frm.doc.invoices_table.reduce(function(sum, item) {
+      const itemTotal = item.rate * item.quantity || 0;
+      const itemTotalWithTax = item.rate_taxes * item.quantity || 0;
+      return sum + (itemTotalWithTax - itemTotal);
     }, 0);
     frm.set_value("total", totalRate);
-    frm.set_value("total_impostos", totalRateWithTaxes);
+    frm.set_value("total_tax", totalTax);
+  }
+  async function applyTaxTemplateToItems(frm) {
+    if (!frm.doc.tax_template || frm.doc.tax_template.length < 1) {
+      console.log("No tax template selected");
+      return;
+    }
+    if (!frm.doc.invoices_table || frm.doc.invoices_table.length < 1) {
+      console.log("No invoices_table to apply tax template");
+      return;
+    }
+    for (const item of frm.doc.invoices_table) {
+      item.invoice_taxes = frm.doc.tax_template;
+      const taxes = await calculateItemTaxes(item.invoice_taxes, item);
+      if (!taxes) {
+        console.error("Failed to calculate taxes for item:", item.name);
+        continue;
+      }
+      item.ipi_rate = taxes.ipi;
+      item.icms_rate = taxes.icms;
+      item.pis_rate = taxes.pis;
+      item.cofins_rate = taxes.cofins;
+      item.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + item.rate;
+    }
+    frm.refresh_field("invoices_table");
+    sumTotalItems(frm);
   }
   async function handleInvoiceTaxesChange(frm, cdt, cdn) {
     const row = frappe.get_doc(cdt, cdn);
@@ -66,12 +93,12 @@
     row.pis_rate = taxes.pis;
     row.cofins_rate = taxes.cofins;
     row.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + row.rate;
-    frm.refresh_field("items");
+    frm.refresh_field("invoices_table");
     sumTotalItems(frm);
   }
 
-  // brazil_invoice/doctype/invoices/ts/onload.ts
-  frappe.ui.form.on("Invoice", "before_save", async (form) => {
+  // brazil_invoice/doctype/invoices/ts/index.ts
+  frappe.ui.form.on("Invoices", "before_save", async (form) => {
     var clientType = form.doc.client_type;
     if (clientType === "PF") {
       if (!cpfValid(form.doc.client_id_number || "")) {
@@ -84,6 +111,11 @@
         frappe.msgprint("CNPJ Inv\xE1lido");
         frappe.validated = false;
       }
+    }
+  });
+  frappe.ui.form.on("Invoices", {
+    tax_template: async function(frm) {
+      await applyTaxTemplateToItems(frm);
     }
   });
   frappe.ui.form.on("Item Invoice", {

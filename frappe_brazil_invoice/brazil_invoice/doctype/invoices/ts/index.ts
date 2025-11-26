@@ -1,9 +1,9 @@
 import { Inverter, InvoiceItem, InvoicesDoc } from "../../../../types/invoice";
-import { handleInvoiceTaxesChange, sumTotalItems } from "./tax";
+import { handleInvoiceTaxesChange, sumTotalItems, applyTaxTemplateToItems } from "./tax";
 
 
 
-frappe.ui.form.on<InvoicesDoc>("Invoice", "before_save", async (form) => {
+frappe.ui.form.on<InvoicesDoc>("Invoices", "before_save", async (form) => {
   var clientType = form.doc.client_type;
   if (clientType === "PF") {
     if (!cpfValid(form.doc.client_id_number || "")) {
@@ -18,6 +18,12 @@ frappe.ui.form.on<InvoicesDoc>("Invoice", "before_save", async (form) => {
     }
   }
 
+});
+
+frappe.ui.form.on<InvoicesDoc>("Invoices", {
+  tax_template: async function (frm) {
+    await applyTaxTemplateToItems(frm);
+  },
 });
 
 frappe.ui.form.on<InvoicesDoc>("Item Invoice", {

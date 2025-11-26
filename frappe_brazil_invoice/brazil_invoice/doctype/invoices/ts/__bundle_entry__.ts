@@ -1,2 +1,3 @@
 import "./__bundle_entry__";
-import "./onload";
+import "./index";
+import "./tax";
