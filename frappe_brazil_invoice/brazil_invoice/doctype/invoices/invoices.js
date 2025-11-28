@@ -220,6 +220,60 @@
     onload: function(frm) {
       setupCEPField(frm);
     },
+    refresh: function(frm) {
+      if (frm.doc.docstatus === 1 && !frm.doc.invoice_id) {
+        frm.add_custom_button(__("Create NFe Invoice"), function() {
+          frappe.call({
+            method: "frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.create_nfe_invoice",
+            args: {
+              invoice_name: frm.doc.name
+            },
+            freeze: true,
+            callback: function(r) {
+              if (r.message && r.message.success) {
+                frm.reload_doc();
+              }
+            }
+          });
+        }, __("Actions"));
+      }
+      if (frm.doc.invoice_id) {
+        frm.add_custom_button(__("Check NFe Status"), function() {
+          frappe.call({
+            method: "frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.get_invoice_status",
+            args: {
+              invoice_name: frm.doc.name
+            },
+            callback: function(r) {
+              if (r.message && r.message.success) {
+                const data = r.message.data;
+                frappe.msgprint({
+                  title: __("Invoice Status"),
+                  indicator: "blue",
+                  message: `
+                  <p><strong>ID:</strong> ${data.id || "N/A"}</p>
+                  <p><strong>Status:</strong> ${data.status || "N/A"}</p>
+                  <p><strong>Environment:</strong> ${data.environment || "N/A"}</p>
+                  <p><strong>Flow Status:</strong> ${data.flowStatus || "N/A"}</p>
+                `
+                });
+              } else {
+                frappe.msgprint({
+                  title: __("Error"),
+                  indicator: "red",
+                  message: r.message.message || __("Failed to get invoice status")
+                });
+              }
+            }
+          });
+        }, __("Actions"));
+        if (frm.doc.invoice_link) {
+          frm.add_custom_button(__("View NFe PDF"), function() {
+            window.open(frm.doc.invoice_link, "_blank");
+          }, __("Actions"));
+        }
+      }
+    },
     tax_template: async function(frm) {
       await applyTaxTemplateToItems(frm);
     },
