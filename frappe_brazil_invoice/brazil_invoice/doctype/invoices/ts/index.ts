@@ -32,7 +32,7 @@ frappe.ui.form.on<InvoicesDoc>("Invoices", {
       // Only show button if document is submitted and invoice not yet created
       frm.add_custom_button(__('Create NFe Invoice'), function() {
         frappe.call({
-          method: 'frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.create_nfe_invoice',
+          method: 'frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.process_invoice',
           args: {
             invoice_name: frm.doc.name
           },
