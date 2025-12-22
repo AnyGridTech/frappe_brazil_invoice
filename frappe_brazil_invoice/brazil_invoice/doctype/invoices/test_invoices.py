@@ -145,8 +145,10 @@ class TestInvoiceAPI(FrappeTestCase):
 
         docname = result.get("docname")
         invoice = frappe.get_doc("Invoices", docname)
-        invoice.invoice_status = "Submitted"
+        invoice.invoice_status = "Processing"
+        invoice.save()
         invoice.invoice_link = f"https://example.com/invoices/{docname}.pdf"
+        invoice.invoice_status = "Submitted"
         invoice.save()
         invoice.submit()
         frappe.db.commit()
@@ -251,12 +253,6 @@ class TestInvoiceAPI(FrappeTestCase):
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
 
-        print("\n=== Test Summary: test_create_invoice_with_all_fields ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
-
     def test_create_invoice_missing_required_fields(self):
         """Test invoice creation fails when required fields are missing"""
         result = create_invoice_with_token()
@@ -343,8 +339,10 @@ class TestInvoiceAPI(FrappeTestCase):
         )
         docname = create_result.get("docname")
         invoice = frappe.get_doc("Invoices", docname)
-        invoice.invoice_status = "Submitted"
+        invoice.invoice_status = "Processing"
+        invoice.save()
         invoice.invoice_link = f"https://example.com/invoices/{docname}.pdf"
+        invoice.invoice_status = "Submitted"
         invoice.save()
         invoice.submit()
         frappe.db.commit()
@@ -768,13 +766,6 @@ class TestInvoiceAPI(FrappeTestCase):
         invoice.submit()
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_create_invoice_with_json_string_items ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
 
     def test_get_invoice_details_success(self):
         """Test retrieving invoice details successfully"""
@@ -1022,8 +1013,10 @@ class TestInvoiceAPI(FrappeTestCase):
         # Submit the successfully created invoices
         for invoice_info in result.get("created_invoices"):
             invoice = frappe.get_doc("Invoices", invoice_info["docname"])
-            invoice.invoice_status = "Submitted"
+            invoice.invoice_status = "Processing"
+            invoice.save()
             invoice.invoice_link = f"https://example.com/invoices/{invoice.name}.pdf"
+            invoice.invoice_status = "Submitted"
             invoice.save()
             invoice.submit()
         frappe.db.commit()
@@ -1252,13 +1245,6 @@ class TestInvoiceTaxes(FrappeTestCase):
         invoice.submit()
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_invoice_with_icms_tax ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
 
     def test_invoice_with_iss_tax(self):
         """Test invoice creation with ISS tax (service tax)"""
@@ -1307,13 +1293,6 @@ class TestInvoiceTaxes(FrappeTestCase):
         invoice.submit()
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_invoice_with_iss_tax ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
 
     def test_invoice_with_ipi_tax(self):
         """Test invoice creation with IPI tax (industrial products)"""
@@ -1359,13 +1338,6 @@ class TestInvoiceTaxes(FrappeTestCase):
         invoice.submit()
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_invoice_with_ipi_tax ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
 
     def test_invoice_with_pis_cofins_tax(self):
         """Test invoice creation with PIS/COFINS taxes"""
@@ -1417,13 +1389,6 @@ class TestInvoiceTaxes(FrappeTestCase):
         invoice.submit()
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_invoice_with_pis_cofins_tax ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
 
     def test_invoice_with_multiple_taxes(self):
         """Test invoice with multiple tax types combined"""
@@ -1479,13 +1444,6 @@ class TestInvoiceTaxes(FrappeTestCase):
         invoice.submit()
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_invoice_with_multiple_taxes ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
 
     def test_invoice_tax_exempt(self):
         """Test invoice for tax-exempt transactions"""
@@ -1533,13 +1491,6 @@ class TestInvoiceTaxes(FrappeTestCase):
         invoice.submit()
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_invoice_tax_exempt ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
 
     def test_invoice_with_tax_template(self):
         """Test invoice using tax template field (without template validation)"""
@@ -1590,13 +1541,6 @@ class TestInvoiceTaxes(FrappeTestCase):
             invoice.submit()
             frappe.db.commit()
             self.assertEqual(invoice.docstatus, 1)
-            
-            # Test Summary Table
-            print("\n=== Test Summary: test_invoice_with_tax_template ===")
-            print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-            print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-            print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-            print("="*45)
 
     def test_interstate_icms_different_rates(self):
         """Test ICMS with different interstate rates"""
@@ -1656,13 +1600,6 @@ class TestInvoiceTaxes(FrappeTestCase):
             invoice.submit()
             frappe.db.commit()
             self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_interstate_icms_different_rates ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print("Multiple invoices - All Submitted with PDF URLs")
-        print("="*45)
 
     def test_invoice_with_tax_and_freight(self):
         """Test invoice with taxes calculated including freight"""
@@ -1717,13 +1654,6 @@ class TestInvoiceTaxes(FrappeTestCase):
         invoice.submit()
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_invoice_with_tax_and_freight ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
 
     def test_invoice_simples_nacional(self):
         """Test invoice for Simples Nacional taxpayers (simplified tax regime)"""
@@ -1772,13 +1702,6 @@ class TestInvoiceTaxes(FrappeTestCase):
         invoice.submit()
         frappe.db.commit()
         self.assertEqual(invoice.docstatus, 1)
-        
-        # Test Summary Table
-        print("\n=== Test Summary: test_invoice_simples_nacional ===")
-        print(f"{'Invoice':<20} | {'Status':<12} | {'Has PDF':<8}")
-        print(f"{'-'*20}-+-{'-'*12}-+-{'-'*8}")
-        print(f"{docname:<20} | {'Submitted':<12} | {'Yes':<8}")
-        print("="*45)
 
     def test_bulk_invoices_with_different_taxes(self):
         """Test bulk creation with different tax scenarios"""
@@ -2094,10 +2017,28 @@ def create_serial_number(item_code, serial_no=None):
     if frappe.db.exists("Serial No", serial_no):
         return frappe.get_doc("Serial No", serial_no)
     
+    # Get a valid company
+    company = frappe.db.get_single_value("Global Defaults", "default_company")
+    if not company or not frappe.db.exists("Company", company):
+        # Try to get any company
+        company = frappe.db.get_value("Company", filters={}, fieldname="name")
+        if not company:
+            # Create a test company if none exists
+            test_company = frappe.get_doc({
+                "doctype": "Company",
+                "company_name": "Test Company",
+                "abbr": "TC",
+                "default_currency": "BRL",
+                "country": "Brazil"
+            })
+            test_company.insert(ignore_permissions=True)
+            company = test_company.name
+    
     serial = frappe.get_doc({
         "doctype": "Serial No",
         "serial_no": serial_no,
         "item_code": item_code,
+        "company": company,
         "status": "Active"
     })
     serial.insert(ignore_permissions=True)
@@ -2105,7 +2046,7 @@ def create_serial_number(item_code, serial_no=None):
     return serial
 
 
-def get_or_create_item(item_code, item_name=None, rate=None, ncm_code=None, description=None):
+def get_or_create_item(item_code, item_name=None, rate=None, ncm_code=None, description=None, item_group="Products"):
     """Get existing item or create if it doesn't exist"""
     if frappe.db.exists("Item", item_code):
         return frappe.get_doc("Item", item_code)
@@ -2114,7 +2055,7 @@ def get_or_create_item(item_code, item_name=None, rate=None, ncm_code=None, desc
     if not item_name or not rate:
         raise ValueError(f"Item {item_code} does not exist and item_name/rate not provided")
     
-    return create_test_item(item_code, item_name, rate, ncm_code, description)
+    return create_test_item(item_code, item_name, rate, ncm_code, description, item_group)
 
 
 class TestInvoiceScenarios(FrappeTestCase):
@@ -2764,6 +2705,15 @@ class TestInvoiceWorkflowStatuses(FrappeTestCase):
 
     def create_test_invoice(self, **kwargs):
         """Helper method to create a test invoice"""
+        # Create test item if not exists
+        item = create_test_item(
+            item_code="ITEM-WORKFLOW-TEST",
+            item_name="Workflow Test Product",
+            rate=1000.00,
+            ncm_code="8471.30.12",
+            description="Workflow Test Product"
+        )
+        
         defaults = {
             "client_name": "Test Workflow Client",
             "client_id_number": "12345678901234",
@@ -2773,7 +2723,18 @@ class TestInvoiceWorkflowStatuses(FrappeTestCase):
             "city": "São Paulo",
             "delivery_state": "SP",
             "total": 1000.00,
-            "total_tax": 180.00
+            "total_tax": 180.00,
+            "invoices_table": [
+                {
+                    "item_code": item.item_code,
+                    "item_name": item.item_name,
+                    "description": item.description,
+                    "quantity": 1,
+                    "rate": 1000.00,
+                    "amount": 1000.00,
+                    "ncm": "8471.30.12"
+                }
+            ]
         }
         defaults.update(kwargs)
         result = create_invoice_with_token(**defaults)
