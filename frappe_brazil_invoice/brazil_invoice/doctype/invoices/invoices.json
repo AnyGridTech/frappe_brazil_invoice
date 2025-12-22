@@ -7,6 +7,9 @@
  "engine": "InnoDB",
  "field_order": [
   "section_break_xrur",
+  "invoice_status",
+  "status_reason",
+  "column_break_status",
   "operation_type",
   "client_type",
   "freight_modality",
@@ -72,7 +75,25 @@
  "fields": [
   {
    "fieldname": "section_break_xrur",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Status & Operation"
+  },
+  {
+   "fieldname": "invoice_status",
+   "fieldtype": "Link",
+   "label": "Status",
+   "options": "Workflow State",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status_reason",
+   "fieldtype": "Small Text",
+   "label": "Status Reason",
+   "description": "Reason for current status (e.g., rejection reason, contingency details)"
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "amended_from",

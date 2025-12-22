@@ -1,0 +1,51 @@
+[
+  {
+    "doctype": "Workflow State",
+    "name": "Created",
+    "workflow_state_name": "Created",
+    "icon": "file",
+    "style": "Info"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Processing",
+    "workflow_state_name": "Processing",
+    "icon": "cog",
+    "style": "Warning"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Contingency",
+    "workflow_state_name": "Contingency",
+    "icon": "exclamation-sign",
+    "style": "Warning"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Submitted",
+    "workflow_state_name": "Submitted",
+    "icon": "ok-sign",
+    "style": "Success"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Rejected",
+    "workflow_state_name": "Rejected",
+    "icon": "ban-circle",
+    "style": "Danger"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Cancelled",
+    "workflow_state_name": "Cancelled",
+    "icon": "remove",
+    "style": "Danger"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Unused",
+    "workflow_state_name": "Unused",
+    "icon": "trash",
+    "style": "Inverse"
+  }
+]

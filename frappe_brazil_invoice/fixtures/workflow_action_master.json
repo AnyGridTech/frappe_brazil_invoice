@@ -1,0 +1,32 @@
+[
+  {
+    "doctype": "Workflow Action Master",
+    "name": "Process",
+    "workflow_action_name": "Process"
+  },
+  {
+    "doctype": "Workflow Action Master",
+    "name": "Submit",
+    "workflow_action_name": "Submit"
+  },
+  {
+    "doctype": "Workflow Action Master",
+    "name": "Reject",
+    "workflow_action_name": "Reject"
+  },
+  {
+    "doctype": "Workflow Action Master",
+    "name": "Move to Contingency",
+    "workflow_action_name": "Move to Contingency"
+  },
+  {
+    "doctype": "Workflow Action Master",
+    "name": "Mark as Unused",
+    "workflow_action_name": "Mark as Unused"
+  },
+  {
+    "doctype": "Workflow Action Master",
+    "name": "Cancel",
+    "workflow_action_name": "Cancel"
+  }
+]

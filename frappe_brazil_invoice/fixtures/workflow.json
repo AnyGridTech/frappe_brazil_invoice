@@ -1,0 +1,114 @@
+[
+  {
+    "doctype": "Workflow",
+    "name": "Invoice Workflow",
+    "workflow_name": "Invoice Workflow",
+    "document_type": "Invoices",
+    "is_active": 1,
+    "override_status": 0,
+    "send_email_alert": 0,
+    "workflow_state_field": "invoice_status",
+    "states": [
+      {
+        "doctype": "Workflow Document State",
+        "state": "Created",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Processing",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Contingency",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Submitted",
+        "doc_status": "1",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Rejected",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Cancelled",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Unused",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      }
+    ],
+    "transitions": [
+      {
+        "doctype": "Workflow Transition",
+        "state": "Created",
+        "action": "Process",
+        "next_state": "Processing",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Submit",
+        "next_state": "Submitted",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Move to Contingency",
+        "next_state": "Contingency",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Contingency",
+        "action": "Submit",
+        "next_state": "Submitted",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Created",
+        "action": "Mark as Unused",
+        "next_state": "Unused",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Reject",
+        "next_state": "Rejected",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Mark as Unused",
+        "next_state": "Unused",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      }
+    ]
+  }
+]

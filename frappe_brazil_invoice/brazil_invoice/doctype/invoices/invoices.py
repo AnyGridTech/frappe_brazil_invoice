@@ -8,8 +8,29 @@ import requests
 import json
 
 class Invoices(Document):
+	def validate(self):
+		"""Ensure invoice has items and prevent status changes without items"""
+		# Must have at least one item row
+		if not self.invoices_table or len(self.invoices_table) == 0:
+			frappe.throw(_("Invoice must include at least one item (invoices_table)."))
+
+		# Guard status changes that require items
+		restricted_statuses = {"Created", "Processing", "Submitted"}
+		if getattr(self, "invoice_status", None) in restricted_statuses:
+			# Redundant due to above, but explicit for clarity
+			if not self.invoices_table or len(self.invoices_table) == 0:
+				frappe.throw(_("Cannot set status to {0} without invoice items").format(self.invoice_status))
 	def on_update(self):
 		frappe.log_error(f"Invoice document updated: {self.name}")
+	
+	def before_submit(self):
+		"""Validate invoice has PDF URL before submission"""
+		if not self.invoice_link:
+			frappe.throw(_("Cannot submit invoice without PDF URL. Please ensure the invoice has been processed and invoice_link field is set."))
+	
+	def on_submit(self):
+		# Chama o endpoint ou funcao da logistica (proxima etapa)
+		frappe.log_error(f"Invoice document submitted: {self.name}")
 
 @frappe.whitelist()
 def process_invoice(invoice_name):
@@ -216,6 +237,34 @@ def create_invoice(
 				"docname": None
 			}
 		
+		# Validate items presence (string or list)
+		parsed_items = None
+		if invoices_table:
+			if isinstance(invoices_table, str):
+				try:
+					parsed_items = json.loads(invoices_table)
+				except json.JSONDecodeError:
+					return {
+						"success": False,
+						"message": "invoices_table must be JSON list when provided as string",
+						"docname": None
+					}
+			elif isinstance(invoices_table, list):
+				parsed_items = invoices_table
+			else:
+				return {
+					"success": False,
+					"message": "invoices_table must be a list of items",
+					"docname": None
+				}
+
+		if not parsed_items or len(parsed_items) == 0:
+			return {
+				"success": False,
+				"message": "Cannot create invoice without items (invoices_table).",
+				"docname": None
+			}
+
 		# Create new Invoice document
 		invoice_doc = frappe.new_doc("Invoices")
 		
@@ -308,14 +357,20 @@ def create_invoice(
 			invoice_doc.nf_de_retorno = nf_de_retorno
 			
 		# Add invoice items (child table)
-		if invoices_table:
-			if isinstance(invoices_table, str):
-				invoices_table = json.loads(invoices_table)
-			
-			for item in invoices_table:
-				invoice_doc.append("invoices_table", item)
+		for item in parsed_items:
+			invoice_doc.append("invoices_table", item)
 		
 		# Insert the document (creates in Draft state)
+		# Tag with test run token if present so summaries can scope to current run
+		try:
+			token = getattr(frappe.flags, "TEST_RUN_TOKEN", None)
+		except Exception:
+			token = None
+		if token:
+			marker = f"[TEST_RUN:{token}]"
+			invoice_doc.status_reason = f"{(getattr(invoice_doc, 'status_reason', '') or '').strip()} {marker}".strip()
+			invoice_doc.additional_information = f"{(getattr(invoice_doc, 'additional_information', '') or '').strip()} {marker}".strip()
+
 		invoice_doc.insert(ignore_permissions=False)
 		
 		# Commit the transaction
