@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:TX-{####}",
+ "autoname": "format:TAX-{YYYY}-{MM}-{DD}-{####}",
  "creation": "2025-10-17 18:21:39.235303",
  "doctype": "DocType",
  "engine": "InnoDB",

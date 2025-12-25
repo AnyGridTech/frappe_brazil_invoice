@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:INV-{YYYY}-{####}",
+ "autoname": "format:INV-{YYYY}-{MM}-{DD}-{####}",
  "creation": "2025-10-17 18:20:18.734937",
  "doctype": "DocType",
  "engine": "InnoDB",
