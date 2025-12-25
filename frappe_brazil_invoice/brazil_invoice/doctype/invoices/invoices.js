@@ -130,13 +130,13 @@
       console.error("Failed to retrieve invoice tax document");
       return;
     }
-    let ipi = calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_ipi ?? 0);
-    let icms = calcSimpleTaxes(invoiceItem.rate, doc?.aliq_icms ?? 0);
-    if (doc.adiciona_ipi_icms == 1) {
-      icms += calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_ipi ?? 0);
+    let ipi = calcSimpleTaxes(invoiceItem.rate, doc?.ipi_rate ?? 0);
+    let icms = calcSimpleTaxes(invoiceItem.rate, doc?.icms_rate ?? 0);
+    if (doc.add_ipi_icms == 1) {
+      icms += calcSimpleTaxes(invoiceItem.rate, doc?.ipi_rate ?? 0);
     }
-    let pis = calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_pis ?? 0);
-    let cofins = calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_cofins ?? 0);
+    let pis = calcSimpleTaxes(invoiceItem.rate, doc?.pis_rate ?? 0);
+    let cofins = calcSimpleTaxes(invoiceItem.rate, doc?.cofins_rate ?? 0);
     console.log("Aliquotas: Ipi: %d, Icms: %d, Pis: %d, Cofins: %d", ipi, icms, pis, cofins);
     console.log({ ipi, icms, pis, cofins });
     return { ipi, icms, pis, cofins };

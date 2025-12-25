@@ -283,12 +283,12 @@ def create_invoice(
 		if client_phone:
 			invoice_doc.client_phone = client_phone
 		invoice_doc.client_id_number = client_id_number
-		if contribuinte_icms:
-			invoice_doc.contribuinte_icms = contribuinte_icms
-		if inscricao_estadual:
-			invoice_doc.inscricao_estadual = inscricao_estadual
-			
-		# Set delivery information
+	if icms_taxpayer:
+		invoice_doc.icms_taxpayer = icms_taxpayer
+	if state_registration:
+		invoice_doc.state_registration = state_registration
+		
+	# Set delivery information
 		if delivery_supervisor:
 			invoice_doc.delivery_supervisor = delivery_supervisor
 		if delivery_cep:

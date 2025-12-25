@@ -15,58 +15,58 @@
   "column_break_lbxw",
   "cst_icms",
   "base_calc_icms",
-  "aliq_icms",
-  "aliq_fcp",
+  "icms_rate",
+  "fcp_rate",
   "column_break_gmdf",
-  "calcular_automaticamente_icms",
-  "adiciona_outras_despesas_icms",
-  "adiciona_frete_icms",
-  "adiciona_ipi_icms",
-  "adiciona_seguro_icms",
-  "aplicar_aliq_auto_icms",
+  "calculate_automatically_icms",
+  "add_other_expenses_icms",
+  "add_freight_icms",
+  "add_ipi_icms",
+  "add_insurance_icms",
+  "apply_auto_rate_icms",
   "substitui\u00e7\u00e3o_tribut\u00e1ria_section",
   "mod_base_calc_icms_trib",
   "cest_icms_trib",
   "base_icms_trib",
   "column_break_igtf",
   "mva_trib",
-  "credito_trib",
-  "reducao_trib",
+  "credit_trib",
+  "reduction_trib",
   "column_break_hloa",
-  "adiciona_outras_despesas_trib",
-  "adiciona_frete_trib",
-  "adiciona_ipi_trib",
-  "adiciona_seguro_trib",
-  "partilha_icms",
-  "valor_da_base_de_calculo_icms_no_destino",
-  "aliq_do_icms_do_estado_de_destino",
-  "aliq_do_icms_interestadual",
+  "add_other_expenses_trib",
+  "add_freight_trib",
+  "add_ipi_trib",
+  "add_insurance_trib",
+  "icms_sharing",
+  "icms_calc_base_value_at_destination",
+  "icms_rate_destination_state",
+  "interstate_icms_rate",
   "column_break_ohwc",
-  "valor_da_base_de_calculo_fcp_na_uf_destino",
-  "valor_icms_inter_puf_de_destino_difal",
-  "aliq_fundo_pobre",
+  "fcp_calc_base_value_destination_state",
+  "interstate_icms_value_destination_difal",
+  "poverty_fund_rate",
   "ipi_tab",
   "cst_ipi",
-  "base_de_calculo_ipi",
-  "valor_do_ipi",
+  "ipi_calculation_base",
+  "ipi_value",
   "column_break_kfaj",
-  "cod_enquadramento",
-  "aliquota_ipi",
-  "calcular_automaticamente_ipi",
+  "framework_code",
+  "ipi_rate",
+  "calculate_automatically_ipi",
   "cofins_tab",
   "cst_cofins",
-  "base_de_calculo_cofins",
-  "valor_cofins",
+  "cofins_calculation_base",
+  "cofins_value",
   "column_break_dgyl",
-  "aliquota_cofins",
-  "calcular_automaticamente_cofins",
+  "cofins_rate",
+  "calculate_automatically_cofins",
   "pis_tab",
   "cst_pis",
-  "base_de_calculo_pis",
-  "valor_pis",
+  "pis_calculation_base",
+  "pis_value",
   "column_break_otlg",
-  "aliquota_pis",
-  "calcular_automaticamente_pis",
+  "pis_rate",
+  "calculate_automatically_pis",
   "internal_tab",
   "amended_from"
  ],
@@ -127,13 +127,13 @@
    "precision": "2"
   },
   {
-   "fieldname": "aliq_icms",
+   "fieldname": "icms_rate",
    "fieldtype": "Float",
    "label": "Internal Rate %",
    "precision": "2"
   },
   {
-   "fieldname": "aliq_fcp",
+   "fieldname": "fcp_rate",
    "fieldtype": "Float",
    "label": "% Rate (FCP)",
    "precision": "2"
@@ -154,37 +154,37 @@
   },
   {
    "default": "1",
-   "fieldname": "calcular_automaticamente_icms",
+   "fieldname": "calculate_automatically_icms",
    "fieldtype": "Check",
    "label": "Calculate Automatically"
   },
   {
    "default": "0",
-   "fieldname": "adiciona_outras_despesas_icms",
+   "fieldname": "add_other_expenses_icms",
    "fieldtype": "Check",
    "label": " Add Other Expenses"
   },
   {
    "default": "0",
-   "fieldname": "adiciona_frete_icms",
+   "fieldname": "add_freight_icms",
    "fieldtype": "Check",
    "label": "Add Freight"
   },
   {
    "default": "0",
-   "fieldname": "adiciona_ipi_icms",
+   "fieldname": "add_ipi_icms",
    "fieldtype": "Check",
    "label": " Add IPI"
   },
   {
    "default": "0",
-   "fieldname": "adiciona_seguro_icms",
+   "fieldname": "add_insurance_icms",
    "fieldtype": "Check",
    "label": "Add Insurance"
   },
   {
    "default": "0",
-   "fieldname": "aplicar_aliq_auto_icms",
+   "fieldname": "apply_auto_rate_icms",
    "fieldtype": "Check",
    "label": "Apply Automatic Rate"
   },
@@ -220,13 +220,13 @@
    "precision": "2"
   },
   {
-   "fieldname": "credito_trib",
+   "fieldname": "credit_trib",
    "fieldtype": "Float",
    "label": " Credit %",
    "precision": "2"
   },
   {
-   "fieldname": "reducao_trib",
+   "fieldname": "reduction_trib",
    "fieldtype": "Float",
    "label": " Reduction %",
    "precision": "2"
@@ -237,47 +237,47 @@
   },
   {
    "default": "0",
-   "fieldname": "adiciona_outras_despesas_trib",
+   "fieldname": "add_other_expenses_trib",
    "fieldtype": "Check",
    "label": " Add Other Expenses"
   },
   {
    "default": "0",
-   "fieldname": "adiciona_frete_trib",
+   "fieldname": "add_freight_trib",
    "fieldtype": "Check",
    "label": "Add Freight"
   },
   {
    "default": "0",
-   "fieldname": "adiciona_ipi_trib",
+   "fieldname": "add_ipi_trib",
    "fieldtype": "Check",
    "label": " Add IPI"
   },
   {
    "default": "0",
-   "fieldname": "adiciona_seguro_trib",
+   "fieldname": "add_insurance_trib",
    "fieldtype": "Check",
    "label": "Add Insurance"
   },
   {
-   "fieldname": "partilha_icms",
+   "fieldname": "icms_sharing",
    "fieldtype": "Section Break",
    "label": " ICMS Sharing for Interstate Sales to Non-Taxpayers"
   },
   {
-   "fieldname": "valor_da_base_de_calculo_icms_no_destino",
+   "fieldname": "icms_calc_base_value_at_destination",
    "fieldtype": "Currency",
    "label": " ICMS Calculation Base Value at Destination",
    "precision": "2"
   },
   {
-   "fieldname": "aliq_do_icms_do_estado_de_destino",
+   "fieldname": "icms_rate_destination_state",
    "fieldtype": "Currency",
    "label": " ICMS Rate of Destination State % ",
    "precision": "2"
   },
   {
-   "fieldname": "aliq_do_icms_interestadual",
+   "fieldname": "interstate_icms_rate",
    "fieldtype": "Currency",
    "label": " Interstate ICMS Rate %",
    "precision": "2"
@@ -287,19 +287,19 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "valor_da_base_de_calculo_fcp_na_uf_destino",
+   "fieldname": "fcp_calc_base_value_destination_state",
    "fieldtype": "Currency",
    "label": " FCP Calculation Base Value at Destination State",
    "precision": "2"
   },
   {
-   "fieldname": "valor_icms_inter_puf_de_destino_difal",
+   "fieldname": "interstate_icms_value_destination_difal",
    "fieldtype": "Float",
    "label": " Interstate ICMS Value to Destination State (DIFAL)",
    "precision": "2"
   },
   {
-   "fieldname": "aliq_fundo_pobre",
+   "fieldname": "poverty_fund_rate",
    "fieldtype": "Float",
    "label": " Poverty Combat Fund Rate - FCP %",
    "precision": "2"
@@ -321,12 +321,12 @@
    "options": "00 - Entry with credit recovery\n01 - Entry taxed with zero rate\n02 - Entry exempt\n03 - Entry non-taxed\n04 - Entry immune\n05 - Entry with suspension\n49 - Other entries\n50 - Exit taxed\n51 - Exit taxed with zero rate\n52 - Exit exempt\n53 - Exit non-taxed\n54 - Exit immune\n55 - Exit with suspension\n99 - Other Exits"
   },
   {
-   "fieldname": "base_de_calculo_ipi",
+   "fieldname": "ipi_calculation_base",
    "fieldtype": "Currency",
    "label": "Calculation Base"
   },
   {
-   "fieldname": "valor_do_ipi",
+   "fieldname": "ipi_value",
    "fieldtype": "Currency",
    "label": "IPI Value"
   },
@@ -335,19 +335,19 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "cod_enquadramento",
+   "fieldname": "framework_code",
    "fieldtype": "Float",
    "label": "Framework Code",
    "precision": "0"
   },
   {
-   "fieldname": "aliquota_ipi",
+   "fieldname": "ipi_rate",
    "fieldtype": "Float",
    "label": "Rate %"
   },
   {
    "default": "1",
-   "fieldname": "calcular_automaticamente_ipi",
+   "fieldname": "calculate_automatically_ipi",
    "fieldtype": "Check",
    "label": "Calculate Automatically"
   },
@@ -358,13 +358,13 @@
    "options": "01 - Taxable Operation with Basic Rate\n02 - Taxable Operation with Differentiated Rate\n03 - Taxable Operation with Rate per Product Unit of Measure\n04 - Single-Phase Taxable Operation - Resale at Zero Rate\n05 - Taxable Operation by Tax Substitution\n06 - Taxable Operation at Zero Rate\n07 - Operation Exempt from Contribution\n08 - Operation without Incidence of Contribution\n09 - Operation with Contribution Suspension\n49 - Other Exit Operations\n50 - Operation with Right to Credit - Exclusively Linked to Taxed Revenue in Domestic Market\n51 - Operation with Right to Credit - Exclusively Linked to Non-Taxed Revenue in Domestic Market\n52 - Operation with Right to Credit - Linked to Export Revenue\n53 - Operation with Right to Credit - Linked to Taxed and Non-Taxed Revenues in Domestic Market\n54 - Operation with Right to Credit - Linked to Taxed Revenues in Domestic Market and Export\n55 - Operation with Right to Credit - Linked to Taxed and Non-Taxed Revenues in Domestic Market and Export\n60 - Presumed Credit - Acquisition Operation Exclusively Linked to Taxed Revenue in Domestic Market\n61 - Presumed Credit - Acquisition Operation Exclusively Linked to Non-Taxed Revenue in Domestic Market"
   },
   {
-   "fieldname": "base_de_calculo_cofins",
+   "fieldname": "cofins_calculation_base",
    "fieldtype": "Currency",
    "label": "Calculation Base",
    "precision": "2"
   },
   {
-   "fieldname": "valor_cofins",
+   "fieldname": "cofins_value",
    "fieldtype": "Currency",
    "label": "COFINS Value",
    "precision": "2"
@@ -374,14 +374,14 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "aliquota_cofins",
+   "fieldname": "cofins_rate",
    "fieldtype": "Float",
    "label": "Rate %",
    "precision": "2"
   },
   {
    "default": "1",
-   "fieldname": "calcular_automaticamente_cofins",
+   "fieldname": "calculate_automatically_cofins",
    "fieldtype": "Check",
    "label": "Calculate Automatically"
   },
@@ -397,13 +397,13 @@
    "options": "01 - Taxable Operation with Basic Rate\n02 - Taxable Operation with Differentiated Rate\n03 - Taxable Operation with Rate per Product Unit of Measure\n04 - Single-Phase Taxable Operation - Resale at Zero Rate\n05 - Taxable Operation by Tax Substitution\n06 - Taxable Operation at Zero Rate\n07 - Operation Exempt from Contribution\n08 - Operation without Incidence of Contribution\n09 - Operation with Contribution Suspension\n49 - Other Exit Operations\n50 - Operation with Right to Credit - Exclusively Linked to Taxed Revenue in Domestic Market\n51 - Operation with Right to Credit - Exclusively Linked to Non-Taxed Revenue in Domestic Market\n52 - Operation with Right to Credit - Exclusively Linked to Export Revenue\n53 - Operation with Right to Credit - Linked to Taxed and Non-Taxed Revenues in Domestic Market\n54 - Operation with Right to Credit - Linked to Taxed Revenues in Domestic Market and Export\n55 - Operation with Right to Credit - Linked to Non-Taxed Revenues in Domestic Market and Export\n56 - Operation with Right to Credit - Linked to Taxed and Non-Taxed Revenues in Domestic Market and Export\n60 - Presumed Credit - Acquisition Operation Exclusively Linked to Taxed Revenue in Domestic Market\n61 - Presumed Credit - Acquisition Operation Exclusively Linked to Non-Taxed Revenue in Domestic Market\n62 - Presumed Credit - Acquisition Operation Exclusively Linked to Export Revenue\n63 - Presumed Credit - Acquisition Operation Linked to Taxed and Non-Taxed Revenues in Domestic Market\n64 - Presumed Credit - Acquisition Operation Linked to Taxed Revenues in Domestic Market and Export\n65 - Presumed Credit - Acquisition Operation Linked to Non-Taxed Revenues in Domestic Market and Export\n66 - Presumed Credit - Acquisition Operation Linked to Taxed and Non-Taxed Revenues in Domestic Market and Export\n67 - Presumed Credit - Other Operations\n70 - Acquisition Operation without Right to Credit\n71 - Acquisition Operation with Exemption\n72 - Acquisition Operation with Suspension\n73 - Acquisition Operation at Zero Rate\n74 - Acquisition Operation without Incidence of Contribution\n75 - Acquisition Operation by Tax Substitution\n98 - Other Entry Operations\n99 - Other Operations"
   },
   {
-   "fieldname": "base_de_calculo_pis",
+   "fieldname": "pis_calculation_base",
    "fieldtype": "Currency",
    "label": "Calculation Base",
    "precision": "2"
   },
   {
-   "fieldname": "valor_pis",
+   "fieldname": "pis_value",
    "fieldtype": "Currency",
    "label": "PIS Value",
    "precision": "2"
@@ -413,14 +413,14 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "aliquota_pis",
+   "fieldname": "pis_rate",
    "fieldtype": "Float",
    "label": "Rate %",
    "precision": "2"
   },
   {
    "default": "1",
-   "fieldname": "calcular_automaticamente_pis",
+   "fieldname": "calculate_automatically_pis",
    "fieldtype": "Check",
    "label": "Calculate Automatically"
   }

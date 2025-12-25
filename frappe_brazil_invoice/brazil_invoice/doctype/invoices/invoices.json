@@ -21,12 +21,12 @@
   "section_break_goab",
   "client_name",
   "client_email",
-  "contribuinte_icms",
+  "icms_taxpayer",
   "column_break_wxky",
   "client_phone",
   "client_id_number",
-  "inscricao_estadual",
-  "produto_section",
+  "state_registration",
+  "product_section",
   "tax_template",
   "invoices_table",
   "section_break_jxvl",
@@ -37,9 +37,9 @@
   "carrier",
   "product_gross_weight",
   "product_net_weight",
-  "dados_adicionais_section",
+  "additional_data_section",
   "additional_information",
-  "totais_section",
+  "totals_section",
   "total_freight",
   "total_discount",
   "column_break_zeka",
@@ -49,7 +49,7 @@
   "total",
   "column_break_bjbb",
   "total_tax",
-  "endere\u00e7o_section",
+  "address_section",
   "delivery_supervisor",
   "delivery_cep",
   "delivery_address",
@@ -61,7 +61,7 @@
   "city",
   "delivery_number_address",
   "delivery_complement",
-  "eventos_sefaz_section",
+  "sefaz_events_section",
   "invoice_id",
   "invoice_serie",
   "column_break_pbac",
@@ -204,7 +204,7 @@
    "label": "Net Weight"
   },
   {
-   "fieldname": "dados_adicionais_section",
+   "fieldname": "additional_data_section",
    "fieldtype": "Section Break",
    "label": "Additional Data"
   },
@@ -214,7 +214,7 @@
    "label": "Additional Information"
   },
   {
-   "fieldname": "totais_section",
+   "fieldname": "totals_section",
    "fieldtype": "Section Break",
    "label": "Totals"
   },
@@ -261,7 +261,7 @@
    "label": "Total + Taxes"
   },
   {
-   "fieldname": "produto_section",
+   "fieldname": "product_section",
    "fieldtype": "Section Break",
    "label": "Product"
   },
@@ -271,7 +271,7 @@
    "options": "Item Invoice"
   },
   {
-   "fieldname": "endere\u00e7o_section",
+   "fieldname": "address_section",
    "fieldtype": "Section Break",
    "label": "Address"
   },
@@ -331,7 +331,7 @@
    "label": "Complement"
   },
   {
-   "fieldname": "eventos_sefaz_section",
+   "fieldname": "sefaz_events_section",
    "fieldtype": "Section Break",
    "label": "Sefaz Events"
   },
@@ -380,13 +380,13 @@
    "label": "Internal"
   },
   {
-   "fieldname": "contribuinte_icms",
+   "fieldname": "icms_taxpayer",
    "fieldtype": "Select",
    "label": "ICMS Taxpayer",
    "options": "Non-Taxpayer\nTaxpayer\nExempt Taxpayer"
   },
   {
-   "fieldname": "inscricao_estadual",
+   "fieldname": "state_registration",
    "fieldtype": "Data",
    "label": "State Registration (IE)"
   },
