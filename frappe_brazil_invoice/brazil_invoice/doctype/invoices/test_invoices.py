@@ -235,7 +235,72 @@ serial_no_array = [
 
 tax_array = [
     {
-        
+        "template_name": "Troca em Garantia",
+        "is_template": 1,
+        # ICMS - Non-taxed (warranty exchange)
+        "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8;",
+        "cst_icms": "41 - Not taxed",
+        "base_calc_icms": 0.00,
+        "icms_rate": 0.00,
+        "fcp_rate": 0.00,
+        "calculate_automatically_icms": 1,
+        "add_other_expenses_icms": 0,
+        "add_freight_icms": 0,
+        "add_ipi_icms": 0,
+        "add_insurance_icms": 0,
+        "apply_auto_rate_icms": 0,
+        # IPI - Exit non-taxed
+        "cst_ipi": "53 - Exit non-taxed",
+        "ipi_calculation_base": 0.00,
+        "ipi_rate": 0.00,
+        "ipi_value": 0.00,
+        "calculate_automatically_ipi": 1,
+        # COFINS - Operation without incidence
+        "cst_cofins": "08 - Operation without Incidence of Contribution",
+        "cofins_calculation_base": 0.00,
+        "cofins_rate": 0.00,
+        "cofins_value": 0.00,
+        "calculate_automatically_cofins": 1,
+        # PIS - Operation without incidence
+        "cst_pis": "08 - Operation without Incidence of Contribution",
+        "pis_calculation_base": 0.00,
+        "pis_rate": 0.00,
+        "pis_value": 0.00,
+        "calculate_automatically_pis": 1
+    },
+    {
+        "template_name": "Reparo em Garantia",
+        "is_template": 1,
+        # ICMS - Suspension (warranty repair)
+        "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8;",
+        "cst_icms": "50 - Suspension",
+        "base_calc_icms": 0.00,
+        "icms_rate": 0.00,
+        "fcp_rate": 0.00,
+        "calculate_automatically_icms": 1,
+        "add_other_expenses_icms": 0,
+        "add_freight_icms": 0,
+        "add_ipi_icms": 0,
+        "add_insurance_icms": 0,
+        "apply_auto_rate_icms": 0,
+        # IPI - Exit with suspension
+        "cst_ipi": "55 - Exit with suspension",
+        "ipi_calculation_base": 0.00,
+        "ipi_rate": 0.00,
+        "ipi_value": 0.00,
+        "calculate_automatically_ipi": 1,
+        # COFINS - Operation with suspension
+        "cst_cofins": "09 - Operation with Contribution Suspension",
+        "cofins_calculation_base": 0.00,
+        "cofins_rate": 0.00,
+        "cofins_value": 0.00,
+        "calculate_automatically_cofins": 1,
+        # PIS - Operation with suspension
+        "cst_pis": "09 - Operation with Contribution Suspension",
+        "pis_calculation_base": 0.00,
+        "pis_rate": 0.00,
+        "pis_value": 0.00,
+        "calculate_automatically_pis": 1
     }
 ]
 
