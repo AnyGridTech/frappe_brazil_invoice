@@ -109,7 +109,8 @@
    "fieldname": "operation_type",
    "fieldtype": "Select",
    "label": "Operation Type",
-   "options": "\nShipment for Repair\nReturn from Repair Shipment\nWarranty Exchange\nReturn from Warranty Exchange\nBonus\nReturn of Bonus Merchandise"
+   "options": "\nShipment for Repair\nReturn from Repair Shipment\nWarranty Exchange\nReturn from Warranty Exchange\nBonus\nReturn of Bonus Merchandise",
+   "read_only_depends_on": "eval:doc.tax_template"
   },
   {
    "fieldname": "freight_modality",

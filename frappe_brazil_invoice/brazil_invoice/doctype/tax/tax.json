@@ -70,6 +70,7 @@
   "internal_tab",
   "is_template",
   "template_name",
+  "operation_type",
   "amended_from"
  ],
  "fields": [
@@ -89,6 +90,13 @@
    "fieldtype": "Data",
    "label": "Template Name",
    "depends_on": "eval:doc.is_template == 1"
+  },
+  {
+   "fieldname": "operation_type",
+   "fieldtype": "Data",
+   "label": "Operation Type",
+   "depends_on": "eval:doc.is_template == 1",
+   "mandatory_depends_on": "eval:doc.is_template == 1"
   },
   {
    "fieldname": "amended_from",

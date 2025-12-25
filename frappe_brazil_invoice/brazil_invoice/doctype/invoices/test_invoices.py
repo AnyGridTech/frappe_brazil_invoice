@@ -187,6 +187,10 @@ def generate_random_address():
     street_names = ["das Flores", "do Comércio", "Principal", "Central", "dos Estados", "Brasil", 
                     "Independência", "República", "Paulista", "Atlântica", "Ipiranga"]
     
+    # Brazilian first and last names for delivery supervisor
+    first_names = ["João", "Maria", "José", "Ana", "Paulo", "Carlos", "Pedro", "Lucas", "Rafael", "Fernanda"]
+    last_names = ["Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Costa", "Pereira", "Almeida", "Nascimento"]
+    
     # Select random city
     city_data = random.choice(cities_data)
     
@@ -199,6 +203,9 @@ def generate_random_address():
     street_name = random.choice(street_names)
     address_number = str(random.randint(1, 9999))
     
+    # Generate random responsible person name
+    responsible = f"{random.choice(first_names)} {random.choice(last_names)}"
+    
     return {
         "city": city_data["city"],
         "state": city_data["state"],
@@ -207,7 +214,8 @@ def generate_random_address():
         "neighborhood": random.choice(city_data["neighborhood"]),
         "address": f"{street_type} {street_name}",
         "address_number": address_number,
-        "phone": phone_number
+        "phone": phone_number,
+        "responsible": responsible
     }
 
 def print_invoice_details(invoice, tax_doc=None, show_items=True):
@@ -354,6 +362,7 @@ tax_array = [
     {
         "template_name": "Remessa em Garantia",
         "is_template": 1,
+        "operation_type": "Warranty Exchange",
         # ICMS - Fully taxed (warranty exchange must have ICMS highlighted)
         # Same rate and base as original operation - will be calculated automatically
         "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8;",
@@ -383,6 +392,7 @@ tax_array = [
     {
         "template_name": "Remessa para Conserto",
         "is_template": 1,
+        "operation_type": "Shipment for Repair",
         # ICMS - Not taxed (repair shipment without tax highlight)
         # CFOP 5.915 - Remessa de mercadoria para conserto
         "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8;",
@@ -416,6 +426,33 @@ tax_array = [
         "calculate_automatically_pis": 0  # No automatic calculation for non-taxed
     }
 ]
+
+        test_carriers = [
+            {
+                "fantasy_name": "Transportadora Teste",
+                "company_name": "Transportadora Teste Ltda",
+                "cnpj": "12.345.678/0001-90",
+                "cep": "01310-100",
+                "address": "Avenida Paulista",
+                "address_number": "1000",
+                "state": "SP",
+                "city": "São Paulo",
+                "neighborhood": "Bela Vista",
+                "ibge": "3550308"
+            },
+            {
+                "fantasy_name": "Transportadora RJ",
+                "company_name": "Transportadora RJ Ltda",
+                "cnpj": "98.765.432/0001-10",
+                "cep": "20040-020",
+                "address": "Avenida Rio Branco",
+                "address_number": "156",
+                "state": "RJ",
+                "city": "Rio de Janeiro",
+                "neighborhood": "Centro",
+                "ibge": "3304557"
+            }
+        ]
 
 class TestInvoices(FrappeTestCase):
 	"""Test cases for Invoice doctype"""
@@ -481,32 +518,6 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
                 tax_doc.insert(ignore_permissions=True)
         
         # Create test carriers
-        test_carriers = [
-            {
-                "fantasy_name": "Transportadora Teste",
-                "company_name": "Transportadora Teste Ltda",
-                "cnpj": "12.345.678/0001-90",
-                "cep": "01310-100",
-                "address": "Avenida Paulista",
-                "address_number": "1000",
-                "state": "SP",
-                "city": "São Paulo",
-                "neighborhood": "Bela Vista",
-                "ibge": "3550308"
-            },
-            {
-                "fantasy_name": "Transportadora RJ",
-                "company_name": "Transportadora RJ Ltda",
-                "cnpj": "98.765.432/0001-10",
-                "cep": "20040-020",
-                "address": "Avenida Rio Branco",
-                "address_number": "156",
-                "state": "RJ",
-                "city": "Rio de Janeiro",
-                "neighborhood": "Centro",
-                "ibge": "3304557"
-            }
-        ]
         for carrier_data in test_carriers:
             if not frappe.db.exists("Carrier", {"fantasy_name": carrier_data["fantasy_name"]}):
                 carrier_doc = frappe.get_doc({
@@ -537,7 +548,6 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         
         # Create invoice with tax template that has automatic ICMS and IPI calculation
         result = create_test_invoice_with_token(
-            operation_type="Warranty Exchange",
             client_type="Company",
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Test Customer Ltda",
@@ -546,7 +556,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             client_id_number="12.345.678/0001-90",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="123456789",
-            delivery_supervisor="John Silva",
+            delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
             delivery_neighborhood=address_data["neighborhood"],
@@ -624,7 +634,6 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         
         # Create invoice
         result = create_test_invoice_with_token(
-            operation_type="Bonus",
             client_type="Company",
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Direct Item Test Company",
@@ -633,7 +642,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             client_id_number="11.222.333/0001-44",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="999888777",
-            delivery_supervisor="Maria Santos",
+            delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
             delivery_neighborhood=address_data["neighborhood"],
@@ -699,7 +708,6 @@ class TestResponsibleValidation(FrappeTestCase):
         
         # Create an invoice without delivery_supervisor (will be in Draft status)
         result = create_test_invoice_with_token(
-            operation_type="Bonus",
             client_type="Company",
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Test No Responsible Company",
@@ -759,7 +767,6 @@ class TestResponsibleValidation(FrappeTestCase):
         
         # Create invoice with responsible field
         result = create_test_invoice_with_token(
-            operation_type="Bonus",
             client_type="Company",
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Test Responsible Change Company",
@@ -768,7 +775,7 @@ class TestResponsibleValidation(FrappeTestCase):
             client_id_number="88.777.666/0001-22",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="888777666",
-            delivery_supervisor="Initial Responsible",
+            delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
             delivery_neighborhood=address_data["neighborhood"],
@@ -794,7 +801,7 @@ class TestResponsibleValidation(FrappeTestCase):
         
         # Fetch the invoice and verify responsible field is set
         invoice = frappe.get_doc("Invoices", invoice_name)
-        self.assertEqual(invoice.delivery_supervisor, "Initial Responsible")
+        self.assertEqual(invoice.delivery_supervisor, address_data["responsible"])
         initial_status = invoice.invoice_status
         
         # Try to clear the responsible field
@@ -874,7 +881,6 @@ class TestInvoiceProcessing(FrappeTestCase):
         
         # Create invoice
         result = create_test_invoice_with_token(
-            operation_type="Bonus",
             client_type="Company",
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Multi Item Test Company A",
@@ -883,7 +889,7 @@ class TestInvoiceProcessing(FrappeTestCase):
             client_id_number="22.333.444/0001-55",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="111222333",
-            delivery_supervisor="Carlos Oliveira",
+            delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
             delivery_neighborhood=address_data["neighborhood"],
@@ -994,7 +1000,6 @@ class TestInvoiceProcessing(FrappeTestCase):
         
         # Create invoice
         result = create_test_invoice_with_token(
-            operation_type="Bonus",
             client_type="Company",
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Multi Item Test Company B",
@@ -1003,7 +1008,7 @@ class TestInvoiceProcessing(FrappeTestCase):
             client_id_number="33.444.555/0001-66",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="444555666",
-            delivery_supervisor="Ana Rodrigues",
+            delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
             delivery_neighborhood=address_data["neighborhood"],

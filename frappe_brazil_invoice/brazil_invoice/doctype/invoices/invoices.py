@@ -10,7 +10,10 @@ from . import nfeio
 
 class Invoices(Document):
 	def before_save(self):
-		"""Calculate total before saving the document"""
+		"""Actions before saving the document"""
+		# Set operation_type from tax template if tax_template is selected
+		self.set_operation_type_from_template()
+		# Calculate total and product fields
 		self.calculate_total()
 	
 	def validate(self):
@@ -115,6 +118,21 @@ class Invoices(Document):
 		if self.invoice_status in statuses_requiring_responsible:
 			if not self.delivery_supervisor or not self.delivery_supervisor.strip():
 				frappe.throw(_("Responsible field is mandatory for invoice status '{0}'. Please specify who is responsible for this invoice.").format(self.invoice_status))
+	
+	def set_operation_type_from_template(self):
+		"""Set operation_type automatically from tax template
+		
+		When a tax_template is selected, fetch its operation_type and set it
+		on the invoice. This makes operation_type read-only when template is selected.
+		"""
+		if self.tax_template:
+			try:
+				tax_doc = frappe.get_doc("Tax", self.tax_template)
+				if tax_doc.get("operation_type"):
+					self.operation_type = tax_doc.operation_type
+			except Exception:
+				# If tax template doesn't exist or has no operation_type, continue
+				pass
 	
 	def calculate_total(self):
 		"""Calculate invoice total and product summary automatically
