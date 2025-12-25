@@ -566,7 +566,6 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             total_discount=0.00,
             total_insurance=10.00,
             other_expenses=5.00,
-            total=item["rate"] + 50.00 + 10.00 + 5.00,  # item value + freight + insurance + other
             tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
             invoice_items_table=invoice_items
         )
@@ -657,7 +656,6 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             total_discount=0.00,
             total_insurance=0.00,
             other_expenses=0.00,
-            total=item["rate"] * 2,  # 2 items
             tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
             invoice_items_table=invoice_items
         )
@@ -736,7 +734,6 @@ class TestResponsibleValidation(FrappeTestCase):
             total_discount=0.00,
             total_insurance=0.00,
             other_expenses=0.00,
-            total=100.00,
             tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
             invoice_items_table=[{"item_code": "TEST_INVERTER_001", "quantity": 1}]
         )
@@ -800,7 +797,6 @@ class TestResponsibleValidation(FrappeTestCase):
             total_discount=0.00,
             total_insurance=0.00,
             other_expenses=0.00,
-            total=100.00,
             tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
             invoice_items_table=[{"item_code": "TEST_INVERTER_001", "quantity": 1}]
         )
@@ -921,7 +917,6 @@ class TestInvoiceProcessing(FrappeTestCase):
             total_discount=discount,
             total_insurance=insurance,
             other_expenses=other,
-            total=expected_total,
             tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
             invoice_items_table=invoice_items
         )
@@ -1046,7 +1041,6 @@ class TestInvoiceProcessing(FrappeTestCase):
             total_discount=discount,
             total_insurance=insurance,
             other_expenses=other,
-            total=expected_total,
             tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
             invoice_items_table=invoice_items
         )

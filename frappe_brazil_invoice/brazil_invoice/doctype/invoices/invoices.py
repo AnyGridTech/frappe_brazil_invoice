@@ -9,6 +9,10 @@ import json
 from . import nfeio
 
 class Invoices(Document):
+	def before_save(self):
+		"""Calculate total before saving the document"""
+		self.calculate_total()
+	
 	def validate(self):
 		"""Ensure invoice has items and prevent status changes without items"""
 		# Process invoice items to auto-fill from serial numbers
@@ -111,6 +115,25 @@ class Invoices(Document):
 		if self.invoice_status in statuses_requiring_responsible:
 			if not self.delivery_supervisor or not self.delivery_supervisor.strip():
 				frappe.throw(_("Responsible field is mandatory for invoice status '{0}'. Please specify who is responsible for this invoice.").format(self.invoice_status))
+	
+	def calculate_total(self):
+		"""Calculate invoice total automatically
+		
+		Formula: total = sum(items.amount) + freight + insurance + other_expenses - discount
+		"""
+		from frappe.utils import flt
+		
+		# Calculate sum of all item amounts
+		items_total = sum(flt(item.amount) for item in (self.invoice_items_table or []))
+		
+		# Add additional charges and subtract discounts
+		self.total = (
+			items_total
+			+ flt(self.total_freight)
+			+ flt(self.total_insurance)
+			+ flt(self.other_expenses)
+			- flt(self.total_discount)
+		)
 	
 	def calculate_automatic_taxes(self):
 		"""Calculate ICMS and IPI automatically based on tax template using NFe.io API"""
@@ -266,7 +289,6 @@ def create_invoice(
 	total_discount=None,
 	total_insurance=None,
 	other_expenses=None,
-	total=None,
 	total_tax=None,
 	tax_template=None,
 	invoice_items_table=None,
@@ -313,9 +335,11 @@ def create_invoice(
 		total_discount (float): Total discount value
 		total_insurance (float): Total insurance value
 		other_expenses (float): Other expenses
-		total (float): Total invoice value
 		total_tax (float): Total tax value
 		tax_template (str): Tax template name or ID
+		
+	Note:
+		total (float): Calculated automatically from items and additional charges
 		invoice_items_table (list): List of invoice items (child table)
 		nf_ref_serie (str): Reference NF series
 		nf_ref_num (str): Reference NF number
@@ -435,7 +459,7 @@ def create_invoice(
 		if additional_information:
 			invoice_doc.additional_information = additional_information
 			
-		# Set totals
+		# Set totals (total field is calculated automatically)
 		if total_freight:
 			invoice_doc.total_freight = total_freight
 		if total_discount:
@@ -444,8 +468,6 @@ def create_invoice(
 			invoice_doc.total_insurance = total_insurance
 		if other_expenses:
 			invoice_doc.other_expenses = other_expenses
-		if total:
-			invoice_doc.total = total
 		if total_tax:
 			invoice_doc.total_tax = total_tax
 			
