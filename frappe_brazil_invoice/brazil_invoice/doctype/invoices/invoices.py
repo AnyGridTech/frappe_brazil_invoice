@@ -716,3 +716,25 @@ def bulk_process_invoices(invoice_names):
 			"processed_invoices": [],
 			"failed_invoices": []
 		}
+
+@frappe.whitelist()
+def get_tax_template_query(doctype, txt, searchfield, start, page_len, filters):
+	"""
+	Custom query for tax_template field - only show templates
+	Returns tax records where is_template = 1 and displays template_name
+	"""
+	return frappe.db.sql("""
+		SELECT name, template_name
+		FROM `tabTax`
+		WHERE is_template = 1
+			AND (name LIKE %(txt)s OR template_name LIKE %(txt)s)
+		ORDER BY
+			CASE WHEN name LIKE %(txt)s THEN 0 ELSE 1 END,
+			template_name
+		LIMIT %(start)s, %(page_len)s
+	""", {
+		'txt': '%' + txt + '%',
+		'start': start,
+		'page_len': page_len
+	})
+

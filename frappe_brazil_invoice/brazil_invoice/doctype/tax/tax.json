@@ -68,6 +68,8 @@
   "pis_rate",
   "calculate_automatically_pis",
   "internal_tab",
+  "is_template",
+  "template_name",
   "amended_from"
  ],
  "fields": [
@@ -75,6 +77,18 @@
    "fieldname": "section_break_aprs",
    "fieldtype": "Section Break",
    "label": " Own ICMS"
+  },
+  {
+   "fieldname": "is_template",
+   "fieldtype": "Check",
+   "label": "Is Template",
+   "default": "0"
+  },
+  {
+   "fieldname": "template_name",
+   "fieldtype": "Data",
+   "label": "Template Name",
+   "depends_on": "eval:doc.is_template == 1"
   },
   {
    "fieldname": "amended_from",

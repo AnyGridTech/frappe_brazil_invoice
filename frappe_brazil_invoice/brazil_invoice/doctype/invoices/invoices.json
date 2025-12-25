@@ -400,7 +400,8 @@
    "fieldname": "tax_template",
    "fieldtype": "Link",
    "label": "Tax Template",
-   "options": "Tax"
+   "options": "Tax",
+   "get_query": "frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.get_tax_template_query"
   }
  ],
  "grid_page_length": 50,
