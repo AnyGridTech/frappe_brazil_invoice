@@ -28,7 +28,7 @@
   "state_registration",
   "product_section",
   "tax_template",
-  "invoices_table",
+  "invoice_items_table",
   "section_break_jxvl",
   "product_brand",
   "product_quantity",
@@ -266,7 +266,7 @@
    "label": "Product"
   },
   {
-   "fieldname": "invoices_table",
+   "fieldname": "invoice_items_table",
    "fieldtype": "Table",
    "options": "Item Invoice"
   },

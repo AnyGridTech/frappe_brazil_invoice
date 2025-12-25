@@ -142,10 +142,10 @@
     return { ipi, icms, pis, cofins };
   }
   function sumTotalItems(frm) {
-    const totalRate = frm.doc.invoices_table.reduce(function(sum, item) {
+    const totalRate = frm.doc.invoice_items_table.reduce(function(sum, item) {
       return sum + (item.rate || 0) * (item.quantity || 0);
     }, 0);
-    const totalWithTax = frm.doc.invoices_table.reduce(function(sum, item) {
+    const totalWithTax = frm.doc.invoice_items_table.reduce(function(sum, item) {
       const itemTotalWithTax = (item.rate_taxes || 0) * (item.quantity || 0);
       return sum + itemTotalWithTax;
     }, 0);
@@ -157,11 +157,11 @@
       console.log("No tax template selected");
       return;
     }
-    if (!frm.doc.invoices_table || frm.doc.invoices_table.length < 1) {
-      console.log("No invoices_table to apply tax template");
+    if (!frm.doc.invoice_items_table || frm.doc.invoice_items_table.length < 1) {
+      console.log("No invoice_items_table to apply tax template");
       return;
     }
-    for (const item of frm.doc.invoices_table) {
+    for (const item of frm.doc.invoice_items_table) {
       item.invoice_taxes = frm.doc.tax_template;
       const taxes = await calculateItemTaxes(item.invoice_taxes, item);
       if (!taxes) {
@@ -174,7 +174,7 @@
       item.cofins_rate = taxes.cofins;
       item.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + item.rate;
     }
-    frm.refresh_field("invoices_table");
+    frm.refresh_field("invoice_items_table");
     sumTotalItems(frm);
   }
   async function handleInvoiceTaxesChange(frm, cdt, cdn) {
@@ -196,7 +196,7 @@
     row.pis_rate = taxes.pis;
     row.cofins_rate = taxes.cofins;
     row.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + row.rate;
-    frm.refresh_field("invoices_table");
+    frm.refresh_field("invoice_items_table");
     sumTotalItems(frm);
   }
 
@@ -325,7 +325,7 @@
               row.rate_taxes = item.valuation_rate ?? 0;
               row.ncm = item.ncm;
               row.description = item.description || "";
-              frm.refresh_field("invoices_table");
+              frm.refresh_field("invoice_items_table");
               sumTotalItems(frm);
             }
           });
@@ -342,7 +342,7 @@
       if (!row) {
         return;
       }
-      frm.refresh_field("invoices_table");
+      frm.refresh_field("invoice_items_table");
       sumTotalItems(frm);
     }
   });

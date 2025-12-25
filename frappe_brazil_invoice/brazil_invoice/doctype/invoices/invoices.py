@@ -11,14 +11,14 @@ class Invoices(Document):
 	def validate(self):
 		"""Ensure invoice has items and prevent status changes without items"""
 		# Must have at least one item row
-		if not self.invoices_table or len(self.invoices_table) == 0:
-			frappe.throw(_("Invoice must include at least one item (invoices_table)."))
+		if not self.invoice_items_table or len(self.invoice_items_table) == 0:
+			frappe.throw(_("Invoice must include at least one item (invoice_items_table)."))
 
 		# Guard status changes that require items
 		restricted_statuses = {"Created", "Processing", "Submitted"}
 		if getattr(self, "invoice_status", None) in restricted_statuses:
 			# Redundant due to above, but explicit for clarity
-			if not self.invoices_table or len(self.invoices_table) == 0:
+			if not self.invoice_items_table or len(self.invoice_items_table) == 0:
 				frappe.throw(_("Cannot set status to {0} without invoice items").format(self.invoice_status))
 	def on_update(self):
 		frappe.log_error(f"Invoice document updated: {self.name}")
@@ -162,7 +162,7 @@ def create_invoice(
 	total=None,
 	total_tax=None,
 	tax_template=None,
-	invoices_table=None,
+	invoice_items_table=None,
 	nf_ref_serie=None,
 	nf_ref_num=None,
 	nf_ref_access_key=None,
@@ -209,7 +209,7 @@ def create_invoice(
 		total (float): Total invoice value
 		total_tax (float): Total tax value
 		tax_template (str): Tax template name or ID
-		invoices_table (list): List of invoice items (child table)
+		invoice_items_table (list): List of invoice items (child table)
 		nf_ref_serie (str): Reference NF series
 		nf_ref_num (str): Reference NF number
 		nf_ref_access_key (str): Reference NF access key
@@ -239,29 +239,29 @@ def create_invoice(
 		
 		# Validate items presence (string or list)
 		parsed_items = None
-		if invoices_table:
-			if isinstance(invoices_table, str):
+		if invoice_items_table:
+			if isinstance(invoice_items_table, str):
 				try:
-					parsed_items = json.loads(invoices_table)
+					parsed_items = json.loads(invoice_items_table)
 				except json.JSONDecodeError:
 					return {
 						"success": False,
-						"message": "invoices_table must be JSON list when provided as string",
+						"message": "invoice_items_table must be JSON list when provided as string",
 						"docname": None
 					}
-			elif isinstance(invoices_table, list):
-				parsed_items = invoices_table
+			elif isinstance(invoice_items_table, list):
+				parsed_items = invoice_items_table
 			else:
 				return {
 					"success": False,
-					"message": "invoices_table must be a list of items",
+					"message": "invoice_items_table must be a list of items",
 					"docname": None
 				}
 
 		if not parsed_items or len(parsed_items) == 0:
 			return {
 				"success": False,
-				"message": "Cannot create invoice without items (invoices_table).",
+				"message": "Cannot create invoice without items (invoice_items_table).",
 				"docname": None
 			}
 
@@ -358,7 +358,7 @@ def create_invoice(
 			
 		# Add invoice items (child table)
 		for item in parsed_items:
-			invoice_doc.append("invoices_table", item)
+			invoice_doc.append("invoice_items_table", item)
 		
 		# Insert the document (creates in Draft state)
 		# Tag with test run token if present so summaries can scope to current run
