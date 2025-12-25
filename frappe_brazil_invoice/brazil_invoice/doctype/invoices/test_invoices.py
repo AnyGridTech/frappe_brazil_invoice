@@ -136,6 +136,123 @@ def generate_random_serial_number():
     
     return f"{prefix}{suffix}"
 
+def generate_random_address():
+    """Generate random address and contact information for testing
+    
+    Returns:
+        dict: Dictionary with random address, phone, and location data
+    """
+    import random
+    
+    # Brazilian cities with their data
+    cities_data = [
+        {
+            "city": "São Paulo",
+            "state": "SP",
+            "cep": "01310-100",
+            "ibge": "3550308",
+            "neighborhood": ["Bela Vista", "Centro", "Jardins", "Pinheiros", "Vila Mariana"]
+        },
+        {
+            "city": "Rio de Janeiro",
+            "state": "RJ",
+            "cep": "20040-020",
+            "ibge": "3304557",
+            "neighborhood": ["Centro", "Copacabana", "Ipanema", "Leblon", "Botafogo"]
+        },
+        {
+            "city": "Belo Horizonte",
+            "state": "MG",
+            "cep": "30130-010",
+            "ibge": "3106200",
+            "neighborhood": ["Centro", "Savassi", "Lourdes", "Funcionários", "Pampulha"]
+        },
+        {
+            "city": "Curitiba",
+            "state": "PR",
+            "cep": "80010-010",
+            "ibge": "4106902",
+            "neighborhood": ["Centro", "Batel", "Água Verde", "Portão", "Bacacheri"]
+        },
+        {
+            "city": "Porto Alegre",
+            "state": "RS",
+            "cep": "90010-150",
+            "ibge": "4314902",
+            "neighborhood": ["Centro", "Moinhos de Vento", "Petrópolis", "Auxiliadora", "Tristeza"]
+        }
+    ]
+    
+    street_types = ["Rua", "Avenida", "Travessa", "Alameda", "Praça"]
+    street_names = ["das Flores", "do Comércio", "Principal", "Central", "dos Estados", "Brasil", 
+                    "Independência", "República", "Paulista", "Atlântica", "Ipiranga"]
+    
+    # Select random city
+    city_data = random.choice(cities_data)
+    
+    # Generate random phone number in format +55-11977747309
+    area_code = random.choice(["11", "21", "31", "41", "51", "85", "71", "81"])
+    phone_number = f"+55-{area_code}{random.randint(900000000, 999999999)}"
+    
+    # Generate random address
+    street_type = random.choice(street_types)
+    street_name = random.choice(street_names)
+    address_number = str(random.randint(1, 9999))
+    
+    return {
+        "city": city_data["city"],
+        "state": city_data["state"],
+        "cep": city_data["cep"],
+        "ibge": city_data["ibge"],
+        "neighborhood": random.choice(city_data["neighborhood"]),
+        "address": f"{street_type} {street_name}",
+        "address_number": address_number,
+        "phone": phone_number
+    }
+
+def print_invoice_details(invoice, tax_doc=None, show_items=True):
+    """Print formatted invoice details
+    
+    Args:
+        invoice: Invoice document
+        tax_doc: Tax template document (optional)
+        show_items: Whether to show detailed item information (default: True)
+    """
+    print(f"✓ Invoice created successfully: {invoice.name}")
+    print(f"  - Client: {invoice.client_name}")
+    print(f"  - Status: {invoice.invoice_status}")
+    print(f"  - Brand: {invoice.product_brand}")
+    print(f"  - Tax Template: {invoice.tax_template}")
+    
+    if show_items and invoice.invoice_items_table:
+        print(f"  - Items ({len(invoice.invoice_items_table)}):")
+        for idx, item in enumerate(invoice.invoice_items_table, 1):
+            print(f"    {idx}. {item.item_name}")
+            print(f"       - Code: {item.item_code}")
+            print(f"       - Quantity: {item.quantity}")
+            print(f"       - Rate: R$ {item.rate:.2f}")
+            print(f"       - Amount: R$ {item.amount:.2f}")
+            if hasattr(item, 'serial_number') and item.serial_number:
+                print(f"       - Serial: {item.serial_number}")
+    else:
+        print(f"  - Items: {len(invoice.invoice_items_table) if invoice.invoice_items_table else 0}")
+    
+    print(f"  - Total Product Value: R$ {sum(item.amount for item in invoice.invoice_items_table):.2f}")
+    print(f"  - Freight: R$ {float(invoice.total_freight or 0):.2f}")
+    print(f"  - Insurance: R$ {float(invoice.total_insurance or 0):.2f}")
+    print(f"  - Other Expenses: R$ {float(invoice.other_expenses or 0):.2f}")
+    print(f"  - Discount: R$ {float(invoice.total_discount or 0):.2f}")
+    print(f"  - Total: R$ {float(invoice.total or 0):.2f}")
+    print(f"  - Gross Weight: {float(invoice.product_gross_weight or 0)} kg")
+    print(f"  - Net Weight: {float(invoice.product_net_weight or 0)} kg")
+    
+    if tax_doc:
+        print(f"  - Tax Details:")
+        print(f"    - ICMS Base: R$ {tax_doc.base_calc_icms if tax_doc.base_calc_icms else 0:.2f}")
+        print(f"    - ICMS Rate: {tax_doc.icms_rate if tax_doc.icms_rate else 0}%")
+        print(f"    - IPI Base: R$ {tax_doc.ipi_calculation_base if tax_doc.ipi_calculation_base else 0:.2f}")
+        print(f"    - IPI Rate: {tax_doc.ipi_rate if tax_doc.ipi_rate else 0}%")
+
 # =============================================================================
 # Support Arrays
 # =============================================================================
@@ -422,7 +539,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Test Customer Ltda",
             client_email="customer@test.com",
-            client_phone="+5511987654321",
+            client_phone="+55-11987654321",
             client_id_number="12.345.678/0001-90",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="123456789",
@@ -433,7 +550,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             city="São Paulo",
             delivery_number_address="1000",
             delivery_ibge="3550308",
-            delivery_phone="+5511912345678",
+            delivery_phone="+55-11912345678",
             product_brand="Growatt",
             product_quantity="1",
             product_type="Inversor Solar",
@@ -478,17 +595,8 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         self.assertIsNotNone(tax_doc.ipi_calculation_base, "IPI calculation base should be set")
         self.assertIsNotNone(tax_doc.ipi_rate, "IPI rate should be set")
         
-        # Display invoice details
-        print(f"✓ Invoice created successfully: {invoice_name}")
-        print(f"  - Client: {invoice.client_name}")
-        print(f"  - Brand: {invoice.product_brand}")
-        print(f"  - Tax Template: {invoice.tax_template}")
-        print(f"  - Items: {len(invoice.invoice_items_table)}")
-        print(f"  - Total: {invoice.total}")
-        print(f"  - ICMS Base: {tax_doc.base_calc_icms if tax_doc.base_calc_icms else 0}")
-        print(f"  - ICMS Rate: {tax_doc.icms_rate if tax_doc.icms_rate else 0}%")
-        print(f"  - IPI Base: {tax_doc.ipi_calculation_base if tax_doc.ipi_calculation_base else 0}")
-        print(f"  - IPI Rate: {tax_doc.ipi_rate if tax_doc.ipi_rate else 0}%")
+        # Display invoice details using helper function
+        print_invoice_details(invoice, tax_doc, show_items=False)
         print(f"⚠ Note: Tax values calculated automatically when NFe.io API is configured")
     
     def test_create_invoice_with_item_code_only(self):
@@ -518,7 +626,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Direct Item Test Company",
             client_email="itemtest@test.com",
-            client_phone="+5511999888777",
+            client_phone="+55-11999888777",
             client_id_number="11.222.333/0001-44",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="999888777",
@@ -529,7 +637,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             city="São Paulo",
             delivery_number_address="100",
             delivery_ibge="3550308",
-            delivery_phone="+5511912345678",
+            delivery_phone="+55-11912345678",
             product_brand="Growatt",
             product_quantity="2",
             product_type="Inversor Solar",
@@ -570,15 +678,294 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         # Verify no serial number is set
         self.assertIsNone(invoice_item.serial_number)
         
-        print(f"✓ Invoice created successfully with item_code only: {invoice_name}")
-        print(f"  - Item Code: {invoice_item.item_code}")
-        print(f"  - Item Name: {invoice_item.item_name} (auto-filled)")
-        print(f"  - Quantity: {invoice_item.quantity}")
-        print(f"  - Rate: {invoice_item.rate} (auto-filled)")
-        print(f"  - NCM: {invoice_item.ncm} (auto-filled)")
-        print(f"  - Amount: {invoice_item.amount} (auto-calculated)")
-        print(f"  - Serial Number: None (not required)")
+        # Display invoice details using helper function
+        print_invoice_details(invoice, show_items=True)
         print(f"✓ Auto-fill from item_code works correctly!")
+
+
+# =============================================================================
+# Final Summary Test - Overall Invoice Statistics
+        print("="*80 + "\n")
+
+
+# =============================================================================
+# Processing Status Tests - Invoices with Multiple Items
+# =============================================================================
+
+class TestInvoiceProcessing(FrappeTestCase):
+    """Test invoices in Processing status with multiple items"""
+    
+    @classmethod
+    def setUpClass(cls):
+        """Set up test data for processing status tests"""
+        frappe.set_user("Administrator")
+        
+        # Create all test items (we'll use multiple items per invoice)
+        for item_data in items_array:
+            create_test_item(
+                item_code=item_data["item_code"],
+                item_name=item_data["item_name"],
+                rate=item_data["rate"],
+                ncm_code=item_data["ncm_code"],
+                description=item_data["description"]
+            )
+        
+        # Create all test serial numbers
+        for serial_data in serial_no_array:
+            create_test_serial_no(
+                item_code=serial_data["item_code"],
+                serial_no=serial_data["serial_no"]
+            )
+        
+        frappe.db.commit()
+    
+    def test_create_invoice_processing_with_2_items(self):
+        """Test creating a Processing invoice with 2 items
+        
+        This tests multi-item invoice creation with proper weight and amount calculations.
+        """
+        frappe.set_user("Administrator")
+        
+        # Use items 0 and 1 from arrays
+        items_to_use = [
+            {"serial_no": serial_no_array[0]["serial_no"], "item": items_array[0]},
+            {"serial_no": serial_no_array[1]["serial_no"], "item": items_array[1]}
+        ]
+        
+        # Prepare invoice items with serial numbers
+        invoice_items = [
+            {"serial_number": item_data["serial_no"]} 
+            for item_data in items_to_use
+        ]
+        
+        # Calculate expected totals
+        expected_product_total = sum(item["item"]["rate"] for item in items_to_use)
+        expected_gross_weight = 12.5  # Total weight for 2 items
+        expected_net_weight = 11.8
+        freight = 75.00
+        insurance = 15.00
+        other = 8.00
+        discount = 0.00
+        expected_total = expected_product_total + freight + insurance + other - discount
+        
+        # Generate random address data
+        address_data = generate_random_address()
+        
+        # Create invoice
+        result = create_test_invoice_with_token(
+            operation_type="Bonus",
+            client_type="Company",
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name="Multi Item Test Company A",
+            client_email="multiitem.a@test.com",
+            client_phone=address_data["phone"],
+            client_id_number="22.333.444/0001-55",
+            contribuinte_icms="Taxpayer",
+            inscricao_estadual="111222333",
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Growatt",
+            product_quantity="2",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
+            product_gross_weight=expected_gross_weight,
+            product_net_weight=expected_net_weight,
+            additional_information="Processing invoice with 2 items",
+            total_freight=freight,
+            total_discount=discount,
+            total_insurance=insurance,
+            other_expenses=other,
+            total=expected_total,
+            tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
+            invoice_items_table=invoice_items
+        )
+        
+        # Verify invoice was created
+        self.assertTrue(result.get("success"), f"Invoice creation failed: {result.get('message')}")
+        invoice_name = result.get("docname")
+        self.assertIsNotNone(invoice_name)
+        
+        # Fetch and verify invoice
+        invoice = frappe.get_doc("Invoices", invoice_name)
+        
+        # Update status to Processing
+        invoice.invoice_status = "Processing"
+        invoice.save()
+        frappe.db.commit()
+        
+        # Verify item count
+        self.assertEqual(len(invoice.invoice_items_table), 2, "Should have exactly 2 items")
+        
+        # Verify each item was auto-filled correctly
+        for idx, item in enumerate(invoice.invoice_items_table):
+            expected_item = items_to_use[idx]["item"]
+            self.assertEqual(item.item_code, expected_item["item_code"])
+            self.assertEqual(item.item_name, expected_item["item_name"])
+            self.assertEqual(item.quantity, 1, "Quantity must be 1 when serial number provided")
+            self.assertEqual(item.rate, expected_item["rate"])
+            self.assertEqual(item.amount, expected_item["rate"] * 1)
+            self.assertEqual(item.ncm, expected_item["ncm_code"])
+        
+        # Verify totals
+        actual_product_total = sum(item.amount for item in invoice.invoice_items_table)
+        self.assertEqual(actual_product_total, expected_product_total, 
+                        "Total product amount should match sum of item amounts")
+        
+        # Verify weights
+        self.assertEqual(float(invoice.product_gross_weight), expected_gross_weight)
+        self.assertEqual(float(invoice.product_net_weight), expected_net_weight)
+        
+        # Verify final total
+        self.assertEqual(invoice.total, expected_total, 
+                        "Invoice total should match expected calculation")
+        
+        # Display invoice details
+        tax_doc = frappe.get_doc("Tax", invoice.tax_template)
+        print("\n" + "="*80)
+        print("PROCESSING INVOICE TEST - 2 ITEMS".center(80))
+        print("="*80)
+        print_invoice_details(invoice, tax_doc, show_items=True)
+        print(f"\n✓ All calculations verified correctly!")
+        print(f"  - Product Total: R$ {actual_product_total:.2f} (Expected: R$ {expected_product_total:.2f})")
+        print(f"  - Invoice Total: R$ {invoice.total:.2f} (Expected: R$ {expected_total:.2f})")
+        print("="*80 + "\n")
+    
+    def test_create_invoice_processing_with_3_items(self):
+        """Test creating a Processing invoice with 3 items
+        
+        This tests multi-item invoice with more complex calculations.
+        """
+        frappe.set_user("Administrator")
+        
+        # Use items 2, 3, and 4 from arrays (using item_code only, no serial numbers)
+        items_to_use = [
+            {"item": items_array[2], "quantity": 2},  # TEST_INVERTER_003 x2
+            {"item": items_array[3], "quantity": 3},  # TEST_SUPPLY_001 x3
+            {"item": items_array[4], "quantity": 1}   # TEST_SUPPLY_002 x1
+        ]
+        
+        # Prepare invoice items with item_code and quantity
+        invoice_items = [
+            {
+                "item_code": item_data["item"]["item_code"],
+                "quantity": item_data["quantity"]
+            }
+            for item_data in items_to_use
+        ]
+        
+        # Calculate expected totals
+        expected_product_total = sum(
+            item["item"]["rate"] * item["quantity"] 
+            for item in items_to_use
+        )
+        expected_gross_weight = 28.5  # Total weight for 3 different items (6 total units)
+        expected_net_weight = 27.2
+        freight = 120.00
+        insurance = 25.00
+        other = 12.50
+        discount = 10.00
+        expected_total = expected_product_total + freight + insurance + other - discount
+        
+        # Generate random address data
+        address_data = generate_random_address()
+        
+        # Create invoice
+        result = create_test_invoice_with_token(
+            operation_type="Bonus",
+            client_type="Company",
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name="Multi Item Test Company B",
+            client_email="multiitem.b@test.com",
+            client_phone=address_data["phone"],
+            client_id_number="33.444.555/0001-66",
+            contribuinte_icms="Taxpayer",
+            inscricao_estadual="444555666",
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Growatt",
+            product_quantity="6",  # Total quantity across all items
+            product_type="Mixed Products",
+            carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora RJ"}, "name"),
+            product_gross_weight=expected_gross_weight,
+            product_net_weight=expected_net_weight,
+            additional_information="Processing invoice with 3 different items (6 total units)",
+            total_freight=freight,
+            total_discount=discount,
+            total_insurance=insurance,
+            other_expenses=other,
+            total=expected_total,
+            tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
+            invoice_items_table=invoice_items
+        )
+        
+        # Verify invoice was created
+        self.assertTrue(result.get("success"), f"Invoice creation failed: {result.get('message')}")
+        invoice_name = result.get("docname")
+        self.assertIsNotNone(invoice_name)
+        
+        # Fetch and verify invoice
+        invoice = frappe.get_doc("Invoices", invoice_name)
+        
+        # Update status to Processing
+        invoice.invoice_status = "Processing"
+        invoice.save()
+        frappe.db.commit()
+        
+        # Verify item count
+        self.assertEqual(len(invoice.invoice_items_table), 3, "Should have exactly 3 items")
+        
+        # Verify each item was auto-filled correctly
+        for idx, item in enumerate(invoice.invoice_items_table):
+            expected_item = items_to_use[idx]["item"]
+            expected_qty = items_to_use[idx]["quantity"]
+            self.assertEqual(item.item_code, expected_item["item_code"])
+            self.assertEqual(item.item_name, expected_item["item_name"])
+            self.assertEqual(item.quantity, expected_qty)
+            self.assertEqual(item.rate, expected_item["rate"])
+            self.assertEqual(item.amount, expected_item["rate"] * expected_qty)
+            self.assertEqual(item.ncm, expected_item["ncm_code"])
+        
+        # Verify totals
+        actual_product_total = sum(item.amount for item in invoice.invoice_items_table)
+        self.assertAlmostEqual(actual_product_total, expected_product_total, places=2,
+                              msg="Total product amount should match sum of item amounts")
+        
+        # Verify weights
+        self.assertEqual(float(invoice.product_gross_weight), expected_gross_weight)
+        self.assertEqual(float(invoice.product_net_weight), expected_net_weight)
+        
+        # Verify final total with discount applied
+        self.assertAlmostEqual(invoice.total, expected_total, places=2,
+                              msg="Invoice total should match expected calculation with discount")
+        
+        # Verify total quantity
+        total_qty = sum(item.quantity for item in invoice.invoice_items_table)
+        self.assertEqual(total_qty, 6, "Total quantity should be 6 units")
+        
+        # Display invoice details
+        tax_doc = frappe.get_doc("Tax", invoice.tax_template)
+        print("\n" + "="*80)
+        print("PROCESSING INVOICE TEST - 3 ITEMS (6 UNITS)".center(80))
+        print("="*80)
+        print_invoice_details(invoice, tax_doc, show_items=True)
+        print(f"\n✓ All calculations verified correctly!")
+        print(f"  - Product Total: R$ {actual_product_total:.2f} (Expected: R$ {expected_product_total:.2f})")
+        print(f"  - Invoice Total: R$ {invoice.total:.2f} (Expected: R$ {expected_total:.2f})")
+        print(f"  - Total Units: {total_qty} (6 units across 3 different items)")
+        print(f"  - Discount Applied: R$ {discount:.2f}")
+        print("="*80 + "\n")
 
 
 # =============================================================================
