@@ -10,6 +10,9 @@ import json
 class Invoices(Document):
 	def validate(self):
 		"""Ensure invoice has items and prevent status changes without items"""
+		# Lock invoice_items_table changes at Processing status and forward
+		self.validate_items_lock()
+		
 		# Must have at least one item row
 		if not self.invoice_items_table or len(self.invoice_items_table) == 0:
 			frappe.throw(_("Invoice must include at least one item (invoice_items_table)."))
@@ -20,6 +23,159 @@ class Invoices(Document):
 			# Redundant due to above, but explicit for clarity
 			if not self.invoice_items_table or len(self.invoice_items_table) == 0:
 				frappe.throw(_("Cannot set status to {0} without invoice items").format(self.invoice_status))
+		
+		# Calculate taxes automatically if in Draft or Created status
+		if self.invoice_status in [None, "Draft", "Created"]:
+			self.calculate_automatic_taxes()
+	
+	def validate_items_lock(self):
+		"""Prevent changes to invoice_items_table at Processing status and forward"""
+		if not self.is_new():
+			old_doc = self.get_doc_before_save()
+			if old_doc and old_doc.invoice_status in ["Processing", "Submitted", "Rejected", "Contingency", "Unused"]:
+				# Compare invoice items
+				old_items = {item.name: item for item in (old_doc.invoice_items_table or [])}
+				new_items = {item.name: item for item in (self.invoice_items_table or [])}
+				
+				# Check if items were added or removed
+				if set(old_items.keys()) != set(new_items.keys()):
+					frappe.throw(_("Cannot add or remove items when invoice status is {0}").format(old_doc.invoice_status))
+				
+				# Check if any item was modified
+				for item_name, old_item in old_items.items():
+					new_item = new_items.get(item_name)
+					if new_item:
+						# Check key fields for changes
+						fields_to_check = ['item_code', 'quantity', 'rate', 'amount', 'ncm', 'serial_no']
+						for field in fields_to_check:
+							if getattr(old_item, field, None) != getattr(new_item, field, None):
+								frappe.throw(_("Cannot modify invoice items when invoice status is {0}").format(old_doc.invoice_status))
+	
+	def calculate_automatic_taxes(self):
+		"""Calculate ICMS and IPI automatically based on tax template"""
+		if not self.tax_template:
+			return
+		
+		# Get the tax template document
+		try:
+			tax_template = frappe.get_doc("Tax", self.tax_template)
+		except Exception:
+			return
+		
+		# Calculate ICMS if automatic calculation is enabled
+		if tax_template.calculate_automatically_icms:
+			self.calculate_icms(tax_template)
+		
+		# Calculate IPI if automatic calculation is enabled
+		if tax_template.calculate_automatically_ipi:
+			self.calculate_ipi(tax_template)
+	
+	def calculate_icms(self, tax_template):
+		"""
+		Calculate ICMS based on operation type (interstate vs same state)
+		
+		ICMS Rates (can be updated to use external API):
+		- Interstate rates: 4%, 7%, or 12% depending on origin/destination
+		- Same state: varies by state (e.g., São Paulo = 18%)
+		
+		External API options:
+		- IBPT (Instituto Brasileiro de Planejamento e Tributação)
+		- PlugNotas API
+		- NFe.io API
+		- BrasilAPI
+		"""
+		if not self.invoice_items_table:
+			return
+		
+		# Determine if interstate operation
+		# For now, we'll use a simple check based on delivery_state
+		# TODO: Implement proper state comparison with company state
+		is_interstate = False  # Placeholder - needs proper state comparison
+		
+		# Get ICMS rate based on operation type
+		# Hardcoded rates for now - TODO: Integrate with external API
+		if is_interstate:
+			icms_rate = 12.0  # Standard interstate rate
+		else:
+			icms_rate = 18.0  # São Paulo standard rate
+		
+		# Calculate ICMS base and value
+		icms_base = 0.0
+		
+		for item in self.invoice_items_table:
+			item_value = float(item.amount or 0)
+			icms_base += item_value
+			
+			# Add additional values to base if configured in template
+			if tax_template.add_freight_icms and self.total_freight:
+				icms_base += float(self.total_freight or 0) / len(self.invoice_items_table)
+			if tax_template.add_insurance_icms and self.total_insurance:
+				icms_base += float(self.total_insurance or 0) / len(self.invoice_items_table)
+			if tax_template.add_other_expenses_icms and self.other_expenses:
+				icms_base += float(self.other_expenses or 0) / len(self.invoice_items_table)
+		
+		# Calculate ICMS value
+		icms_value = icms_base * (icms_rate / 100)
+		
+		# Update tax template fields (these would be in the Tax child table in real scenario)
+		# For now, storing in invoice-level fields if they exist
+		if hasattr(self, 'icms_base'):
+			self.icms_base = icms_base
+		if hasattr(self, 'icms_rate'):
+			self.icms_rate = icms_rate
+		if hasattr(self, 'icms_value'):
+			self.icms_value = icms_value
+	
+	def calculate_ipi(self, tax_template):
+		"""
+		Calculate IPI based on NCM codes
+		
+		IPI Rates by NCM:
+		- 85044090 (INVERSOR): 9.75%
+		- 85049090 (INSUMOS): 6.50%
+		- 85437099 (SMART ENERGY): 6.50%
+		"""
+		if not self.invoice_items_table:
+			return
+		
+		# IPI rate mapping by NCM
+		ipi_rates = {
+			"85044090": 9.75,
+			"8504.40.90": 9.75,  # Support both formats
+			"85049090": 6.50,
+			"8504.90.90": 6.50,
+			"85437099": 6.50,
+			"8543.70.99": 6.50
+		}
+		
+		ipi_base = 0.0
+		ipi_value = 0.0
+		
+		for item in self.invoice_items_table:
+			item_value = float(item.amount or 0)
+			
+			# Get NCM from item
+			ncm = (item.ncm or "").replace(".", "").replace("-", "").strip()
+			
+			# Get IPI rate for this NCM
+			ipi_rate = ipi_rates.get(ncm, 0.0)
+			
+			if ipi_rate > 0:
+				item_ipi_base = item_value
+				item_ipi_value = item_ipi_base * (ipi_rate / 100)
+				
+				ipi_base += item_ipi_base
+				ipi_value += item_ipi_value
+		
+		# Update tax template fields (these would be in the Tax child table in real scenario)
+		# For now, storing in invoice-level fields if they exist
+		if hasattr(self, 'ipi_base'):
+			self.ipi_base = ipi_base
+		if hasattr(self, 'ipi_rate'):
+			self.ipi_rate = ipi_value  # Store calculated value
+		if hasattr(self, 'ipi_value'):
+			self.ipi_value = ipi_value
+	
 	def on_update(self):
 		frappe.log_error(f"Invoice document updated: {self.name}")
 	
