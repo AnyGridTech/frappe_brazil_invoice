@@ -238,10 +238,10 @@ tax_array = [
         "template_name": "Remessa em Garantia",
         "is_template": 1,
         # ICMS - Fully taxed (warranty exchange must have ICMS highlighted)
-        # Same rate and base as original operation
+        # Same rate and base as original operation - will be calculated automatically
         "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8;",
         "cst_icms": "00 - Fully taxed",
-        "icms_rate": 18.00,  # São Paulo standard rate
+        "icms_rate": 0.00,  # Rate will be calculated automatically
         "fcp_rate": 0.00,
         "calculate_automatically_icms": 1,
         "add_other_expenses_icms": 1,
@@ -250,8 +250,9 @@ tax_array = [
         "add_insurance_icms": 1,
         "apply_auto_rate_icms": 0,
         # IPI - Exit taxed (warranty exchange must have IPI highlighted)
+        # Rate will be calculated automatically
         "cst_ipi": "50 - Exit taxed",
-        "ipi_rate": 10.00,  # Common rate for electronic equipment
+        "ipi_rate": 0.00,  # Rate will be calculated automatically
         "calculate_automatically_ipi": 1,
         # COFINS - Taxable operation with basic rate
         "cst_cofins": "01 - Taxable Operation with Basic Rate",
@@ -272,7 +273,7 @@ tax_array = [
         "base_calc_icms": 0.00,
         "icms_rate": 0.00,
         "fcp_rate": 0.00,
-        "calculate_automatically_icms": 1,
+        "calculate_automatically_icms": 0,  # No automatic calculation for non-taxed
         "add_other_expenses_icms": 0,
         "add_freight_icms": 0,
         "add_ipi_icms": 0,
@@ -283,19 +284,19 @@ tax_array = [
         "ipi_calculation_base": 0.00,
         "ipi_rate": 0.00,
         "ipi_value": 0.00,
-        "calculate_automatically_ipi": 1,
+        "calculate_automatically_ipi": 0,  # No automatic calculation for non-taxed
         # COFINS - Other exit operations
         "cst_cofins": "49 - Other Exit Operations",
         "cofins_calculation_base": 0.00,
         "cofins_rate": 0.00,
         "cofins_value": 0.00,
-        "calculate_automatically_cofins": 1,
+        "calculate_automatically_cofins": 0,  # No automatic calculation for non-taxed
         # PIS - Other exit operations
         "cst_pis": "49 - Other Exit Operations",
         "pis_calculation_base": 0.00,
         "pis_rate": 0.00,
         "pis_value": 0.00,
-        "calculate_automatically_pis": 1
+        "calculate_automatically_pis": 0  # No automatic calculation for non-taxed
     }
 ]
 
