@@ -176,7 +176,8 @@
   {
    "fieldname": "product_quantity",
    "fieldtype": "Data",
-   "label": "Quantity"
+   "label": "Quantity",
+   "read_only": 1
   },
   {
    "fieldname": "product_type",
@@ -196,12 +197,14 @@
   {
    "fieldname": "product_gross_weight",
    "fieldtype": "Data",
-   "label": "Gross Weight"
+   "label": "Gross Weight",
+   "read_only": 1
   },
   {
    "fieldname": "product_net_weight",
    "fieldtype": "Data",
-   "label": "Net Weight"
+   "label": "Net Weight",
+   "read_only": 1
   },
   {
    "fieldname": "additional_data_section",

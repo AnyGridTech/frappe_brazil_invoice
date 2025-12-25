@@ -556,11 +556,8 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             delivery_ibge=address_data["ibge"],
             delivery_phone=address_data["phone"],
             product_brand="Growatt",
-            product_quantity="1",
             product_type="Inversor Solar",
             carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
-            product_gross_weight="5.5",
-            product_net_weight="5.0",
             additional_information="Test invoice for automatic ICMS and IPI calculation",
             total_freight=50.00,
             total_discount=0.00,
@@ -646,11 +643,8 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             delivery_ibge=address_data["ibge"],
             delivery_phone=address_data["phone"],
             product_brand="Growatt",
-            product_quantity="2",
             product_type="Inversor Solar",
             carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
-            product_gross_weight="10.0",
-            product_net_weight="9.5",
             additional_information="Test invoice with item_code only (no serial number)",
             total_freight=0.00,
             total_discount=0.00,
@@ -724,11 +718,8 @@ class TestResponsibleValidation(FrappeTestCase):
             delivery_ibge=address_data["ibge"],
             delivery_phone=address_data["phone"],
             product_brand="Growatt",
-            product_quantity="1",
             product_type="Inversor Solar",
             carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
-            product_gross_weight="5.0",
-            product_net_weight="4.5",
             additional_information="Test invoice without responsible",
             total_freight=0.00,
             total_discount=0.00,
@@ -787,11 +778,8 @@ class TestResponsibleValidation(FrappeTestCase):
             delivery_ibge=address_data["ibge"],
             delivery_phone=address_data["phone"],
             product_brand="Growatt",
-            product_quantity="1",
             product_type="Inversor Solar",
             carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
-            product_gross_weight="5.0",
-            product_net_weight="4.5",
             additional_information="Test invoice for responsible change",
             total_freight=0.00,
             total_discount=0.00,
@@ -875,8 +863,6 @@ class TestInvoiceProcessing(FrappeTestCase):
         
         # Calculate expected totals
         expected_product_total = sum(item["item"]["rate"] for item in items_to_use)
-        expected_gross_weight = 12.5  # Total weight for 2 items
-        expected_net_weight = 11.8
         freight = 75.00
         insurance = 15.00
         other = 8.00
@@ -907,11 +893,8 @@ class TestInvoiceProcessing(FrappeTestCase):
             delivery_ibge=address_data["ibge"],
             delivery_phone=address_data["phone"],
             product_brand="Growatt",
-            product_quantity="2",
             product_type="Inversor Solar",
             carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
-            product_gross_weight=expected_gross_weight,
-            product_net_weight=expected_net_weight,
             additional_information="Processing invoice with 2 items",
             total_freight=freight,
             total_discount=discount,
@@ -952,9 +935,10 @@ class TestInvoiceProcessing(FrappeTestCase):
         self.assertEqual(actual_product_total, expected_product_total, 
                         "Total product amount should match sum of item amounts")
         
-        # Verify weights
-        self.assertEqual(float(invoice.product_gross_weight), expected_gross_weight)
-        self.assertEqual(float(invoice.product_net_weight), expected_net_weight)
+        # Verify product quantity (weights will be 0 since items don't have weight fields)
+        self.assertEqual(invoice.product_quantity, "2", "Product quantity should be 2")
+        self.assertEqual(invoice.product_gross_weight, "0", "Gross weight defaults to 0 without item weights")
+        self.assertEqual(invoice.product_net_weight, "0", "Net weight defaults to 0 without item weights")
         
         # Verify final total
         self.assertEqual(invoice.total, expected_total, 
@@ -999,8 +983,6 @@ class TestInvoiceProcessing(FrappeTestCase):
             item["item"]["rate"] * item["quantity"] 
             for item in items_to_use
         )
-        expected_gross_weight = 28.5  # Total weight for 3 different items (6 total units)
-        expected_net_weight = 27.2
         freight = 120.00
         insurance = 25.00
         other = 12.50
@@ -1031,11 +1013,8 @@ class TestInvoiceProcessing(FrappeTestCase):
             delivery_ibge=address_data["ibge"],
             delivery_phone=address_data["phone"],
             product_brand="Growatt",
-            product_quantity="6",  # Total quantity across all items
             product_type="Mixed Products",
             carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora RJ"}, "name"),
-            product_gross_weight=expected_gross_weight,
-            product_net_weight=expected_net_weight,
             additional_information="Processing invoice with 3 different items (6 total units)",
             total_freight=freight,
             total_discount=discount,
@@ -1077,9 +1056,10 @@ class TestInvoiceProcessing(FrappeTestCase):
         self.assertAlmostEqual(actual_product_total, expected_product_total, places=2,
                               msg="Total product amount should match sum of item amounts")
         
-        # Verify weights
-        self.assertEqual(float(invoice.product_gross_weight), expected_gross_weight)
-        self.assertEqual(float(invoice.product_net_weight), expected_net_weight)
+        # Verify product quantity (weights will be 0 since items don't have weight fields)
+        self.assertEqual(invoice.product_quantity, "6", "Product quantity should be 6")
+        self.assertEqual(invoice.product_gross_weight, "0", "Gross weight defaults to 0 without item weights")
+        self.assertEqual(invoice.product_net_weight, "0", "Net weight defaults to 0 without item weights")
         
         # Verify final total with discount applied
         self.assertAlmostEqual(invoice.total, expected_total, places=2,

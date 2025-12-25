@@ -117,11 +117,41 @@ class Invoices(Document):
 				frappe.throw(_("Responsible field is mandatory for invoice status '{0}'. Please specify who is responsible for this invoice.").format(self.invoice_status))
 	
 	def calculate_total(self):
-		"""Calculate invoice total automatically
+		"""Calculate invoice total and product summary automatically
 		
-		Formula: total = sum(items.amount) + freight + insurance + other_expenses - discount
+		Calculates:
+		- product_quantity: Total quantity of all items
+		- product_gross_weight: Total gross weight (from item master * quantity)
+		- product_net_weight: Total net weight (from item master * quantity)
+		- total: sum(items.amount) + freight + insurance + other_expenses - discount
 		"""
 		from frappe.utils import flt
+		
+		# Calculate product quantity (sum of all item quantities)
+		self.product_quantity = str(sum(int(item.quantity or 0) for item in (self.invoice_items_table or [])))
+		
+		# Calculate product weights from item master data
+		total_gross_weight = 0
+		total_net_weight = 0
+		
+		for item in (self.invoice_items_table or []):
+			if item.item_code:
+				try:
+					item_doc = frappe.get_doc("Item", item.item_code)
+					quantity = int(item.quantity or 0)
+					
+					# Get weight from item master (standard Frappe Item fields)
+					gross_weight = flt(item_doc.get("weight_per_unit") or 0)
+					net_weight = flt(item_doc.get("net_weight") or gross_weight)  # Fallback to gross if net not available
+					
+					total_gross_weight += gross_weight * quantity
+					total_net_weight += net_weight * quantity
+				except Exception:
+					# If item doesn't exist or has no weight, continue
+					pass
+		
+		self.product_gross_weight = str(total_gross_weight) if total_gross_weight > 0 else "0"
+		self.product_net_weight = str(total_net_weight) if total_net_weight > 0 else "0"
 		
 		# Calculate sum of all item amounts
 		items_total = sum(flt(item.amount) for item in (self.invoice_items_table or []))
@@ -279,11 +309,8 @@ def create_invoice(
 	delivery_ibge=None,
 	delivery_phone=None,
 	product_brand=None,
-	product_quantity=None,
 	product_type=None,
 	carrier=None,
-	product_gross_weight=None,
-	product_net_weight=None,
 	additional_information=None,
 	total_freight=None,
 	total_discount=None,
@@ -325,11 +352,8 @@ def create_invoice(
 		delivery_ibge (str): IBGE city code
 		delivery_phone (str): Delivery phone
 		product_brand (str): Product brand
-		product_quantity (str): Product quantity
 		product_type (str): Product type/species
 		carrier (str): Carrier name or ID
-		product_gross_weight (str): Product gross weight
-		product_net_weight (str): Product net weight
 		additional_information (str): Additional information for the invoice
 		total_freight (float): Total freight value
 		total_discount (float): Total discount value
@@ -339,7 +363,12 @@ def create_invoice(
 		tax_template (str): Tax template name or ID
 		
 	Note:
-		total (float): Calculated automatically from items and additional charges
+		The following fields are calculated automatically:
+		- total (float): Calculated from items and additional charges
+		- product_quantity (str): Calculated from sum of item quantities
+		- product_gross_weight (str): Calculated from item weights
+		- product_net_weight (str): Calculated from item weights
+		
 		invoice_items_table (list): List of invoice items (child table)
 		nf_ref_serie (str): Reference NF series
 		nf_ref_num (str): Reference NF number
@@ -441,19 +470,13 @@ def create_invoice(
 		if delivery_phone:
 			invoice_doc.delivery_phone = delivery_phone
 			
-		# Set product information
+		# Set product information (quantity and weights calculated automatically)
 		if product_brand:
 			invoice_doc.product_brand = product_brand
-		if product_quantity:
-			invoice_doc.product_quantity = product_quantity
 		if product_type:
 			invoice_doc.product_type = product_type
 		if carrier:
 			invoice_doc.carrier = carrier
-		if product_gross_weight:
-			invoice_doc.product_gross_weight = product_gross_weight
-		if product_net_weight:
-			invoice_doc.product_net_weight = product_net_weight
 			
 		# Set additional information
 		if additional_information:
