@@ -33,34 +33,46 @@ class Invoices(Document):
 			self.calculate_automatic_taxes()
 	
 	def process_invoice_items(self):
-		"""Process invoice items to auto-fill fields from serial numbers"""
+		"""Process invoice items to auto-fill fields
+		
+		Two-stage auto-fill strategy:
+		1. If serial_number is provided → auto-fill item_code
+		2. If item_code is provided → auto-fill all other fields
+		
+		This allows both use cases:
+		- Serial number provided: serial_number → item_code → other fields
+		- Item code provided directly: item_code → other fields
+		"""
 		for item in self.invoice_items_table:
+			# Stage 1: Auto-fill item_code from serial_number
 			if hasattr(item, 'serial_number') and item.serial_number:
 				# Enforce quantity = 1 for serial numbers
 				if item.quantity and item.quantity != 1:
 					frappe.throw(_("Quantity must be 1 when Serial Number is provided. Serial numbers are unique and cannot have multiple quantities."))
 				item.quantity = 1
 				
-				# Auto-fill item_code from serial number
+				# Auto-fill item_code from serial number if not already set
 				if not item.item_code:
 					serial_doc = frappe.get_doc("Serial No", item.serial_number)
 					item.item_code = serial_doc.item_code
+			
+			# Stage 2: Auto-fill other fields from item_code (works for both cases)
+			if item.item_code:
+				item_doc = frappe.get_doc("Item", item.item_code)
 				
-				# Auto-fill fields from item
-				if item.item_code:
-					item_doc = frappe.get_doc("Item", item.item_code)
-					if not item.item_name:
-						item.item_name = item_doc.item_name
-					if not item.rate:
-						item.rate = item_doc.valuation_rate or item_doc.standard_rate
-					if not item.ncm:
-						item.ncm = item_doc.get("ncm")
-					if not item.description:
-						item.description = item_doc.description or item_doc.item_name
-				
-				# Calculate amount
-				if item.rate and item.quantity:
-					item.amount = item.rate * item.quantity
+				# Auto-fill item details
+				if not item.item_name:
+					item.item_name = item_doc.item_name
+				if not item.rate:
+					item.rate = item_doc.valuation_rate or item_doc.standard_rate
+				if not item.ncm:
+					item.ncm = item_doc.get("ncm")
+				if not item.description:
+					item.description = item_doc.description or item_doc.item_name
+			
+			# Calculate amount if rate and quantity are available
+			if item.rate and item.quantity:
+				item.amount = item.rate * item.quantity
 	
 	def validate_items_lock(self):
 		"""Prevent changes to invoice_items_table at Processing status and forward"""

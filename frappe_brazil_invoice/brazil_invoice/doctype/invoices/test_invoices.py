@@ -490,6 +490,95 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         print(f"  - IPI Base: {tax_doc.ipi_calculation_base if tax_doc.ipi_calculation_base else 0}")
         print(f"  - IPI Rate: {tax_doc.ipi_rate if tax_doc.ipi_rate else 0}%")
         print(f"⚠ Note: Tax values calculated automatically when NFe.io API is configured")
+    
+    def test_create_invoice_with_item_code_only(self):
+        """Test creating an invoice with only item_code (no serial number)
+        
+        This tests the auto-fill functionality when item_code is provided directly
+        without a serial number. System should auto-fill item_name, rate, ncm, 
+        description, and amount.
+        """
+        frappe.set_user("Administrator")
+        
+        # Get test item
+        item = items_array[1]
+        
+        # Prepare invoice items - only item_code and quantity required
+        invoice_items = [
+            {
+                "item_code": item["item_code"],
+                "quantity": 2  # Can be any quantity when no serial number
+            }
+        ]
+        
+        # Create invoice
+        result = create_test_invoice_with_token(
+            operation_type="Bonus",
+            client_type="Company",
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name="Direct Item Test Company",
+            client_email="itemtest@test.com",
+            client_phone="+5511999888777",
+            client_id_number="11.222.333/0001-44",
+            contribuinte_icms="Taxpayer",
+            inscricao_estadual="999888777",
+            delivery_cep="01310-100",
+            delivery_address="Rua Teste",
+            delivery_neighborhood="Centro",
+            delivery_state="SP",
+            city="São Paulo",
+            delivery_number_address="100",
+            delivery_ibge="3550308",
+            delivery_phone="+5511912345678",
+            product_brand="Growatt",
+            product_quantity="2",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
+            product_gross_weight="10.0",
+            product_net_weight="9.5",
+            additional_information="Test invoice with item_code only (no serial number)",
+            total_freight=0.00,
+            total_discount=0.00,
+            total_insurance=0.00,
+            other_expenses=0.00,
+            total=item["rate"] * 2,  # 2 items
+            tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
+            invoice_items_table=invoice_items
+        )
+        
+        # Verify invoice was created successfully
+        self.assertTrue(result.get("success"), f"Invoice creation failed: {result.get('message')}")
+        invoice_name = result.get("docname")
+        self.assertIsNotNone(invoice_name, "Invoice name should not be None")
+        
+        # Fetch the created invoice
+        invoice = frappe.get_doc("Invoices", invoice_name)
+        
+        # Verify invoice items were auto-filled
+        self.assertEqual(len(invoice.invoice_items_table), 1)
+        invoice_item = invoice.invoice_items_table[0]
+        
+        # Verify all fields were auto-filled from item_code
+        self.assertEqual(invoice_item.item_code, item["item_code"])
+        self.assertEqual(invoice_item.item_name, item["item_name"])
+        self.assertEqual(invoice_item.quantity, 2)
+        self.assertEqual(invoice_item.rate, item["rate"])
+        self.assertEqual(invoice_item.ncm, item["ncm_code"])
+        self.assertIsNotNone(invoice_item.description)
+        self.assertEqual(invoice_item.amount, item["rate"] * 2)
+        
+        # Verify no serial number is set
+        self.assertIsNone(invoice_item.serial_number)
+        
+        print(f"✓ Invoice created successfully with item_code only: {invoice_name}")
+        print(f"  - Item Code: {invoice_item.item_code}")
+        print(f"  - Item Name: {invoice_item.item_name} (auto-filled)")
+        print(f"  - Quantity: {invoice_item.quantity}")
+        print(f"  - Rate: {invoice_item.rate} (auto-filled)")
+        print(f"  - NCM: {invoice_item.ncm} (auto-filled)")
+        print(f"  - Amount: {invoice_item.amount} (auto-calculated)")
+        print(f"  - Serial Number: None (not required)")
+        print(f"✓ Auto-fill from item_code works correctly!")
 
 
 # =============================================================================
