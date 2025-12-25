@@ -256,12 +256,12 @@ tax_array = [
         "calculate_automatically_ipi": 1,
         # COFINS - Taxable operation with basic rate
         "cst_cofins": "01 - Taxable Operation with Basic Rate",
-        "cofins_rate": 0.00,  # Rate will be calculated automatically
-        "calculate_automatically_cofins": 0,  # No automatic calculation for COFINS yet
+        "cofins_rate": 7.6,  # Non-cumulative regime rate
+        "calculate_automatically_cofins": 0,  # Manual rate configuration
         # PIS - Taxable operation with basic rate
         "cst_pis": "01 - Taxable Operation with Basic Rate",
-        "pis_rate": 0.00,  # Rate will be calculated automatically
-        "calculate_automatically_pis": 0  # No automatic calculation for PIS yet
+        "pis_rate": 1.65,  # Non-cumulative regime rate
+        "calculate_automatically_pis": 0  # Manual rate configuration
     },
     {
         "template_name": "Remessa para Conserto",
