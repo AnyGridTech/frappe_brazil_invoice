@@ -408,10 +408,18 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         item = items_array[0]
         serial = serial_no_array[0]
         
-        # Prepare invoice items - only serial_no needed, rest auto-filled
+        # Prepare invoice items - fetch item details from serial number
+        quantity = 1
         invoice_items = [
             {
-                "serial_no": serial["serial_no"]
+                "serial_no": serial["serial_no"],
+                "item_code": item["item_code"],
+                "item_name": item["item_name"],
+                "ncm": item["ncm_code"],
+                "description": item["item_name"],
+                "quantity": quantity,
+                "rate": item["rate"],
+                "amount": item["rate"] * quantity
             }
         ]
         
@@ -496,10 +504,18 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         item = items_array[1]
         serial = serial_no_array[1]
         
-        # Prepare invoice items - only serial_no needed, rest auto-filled
+        # Prepare invoice items - fetch item details from serial number
+        quantity = 2
         invoice_items = [
             {
-                "serial_no": serial["serial_no"]
+                "serial_no": serial["serial_no"],
+                "item_code": item["item_code"],
+                "item_name": item["item_name"],
+                "ncm": item["ncm_code"],
+                "description": item["item_name"],
+                "quantity": quantity,
+                "rate": item["rate"],
+                "amount": item["rate"] * quantity
             }
         ]
         
