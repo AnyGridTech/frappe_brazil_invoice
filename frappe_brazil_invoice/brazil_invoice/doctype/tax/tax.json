@@ -74,7 +74,7 @@
   {
    "fieldname": "section_break_aprs",
    "fieldtype": "Section Break",
-   "label": " ICMS Pr\u00f3prio"
+   "label": " Own ICMS"
   },
   {
    "fieldname": "amended_from",
@@ -89,25 +89,25 @@
   {
    "fieldname": "origin_icms",
    "fieldtype": "Select",
-   "label": "Origem",
-   "options": "0 - Nacional, exceto as indicadas nos c\u00f3digos 3, 4, 5 e 8;\n1 - Estrangeira - Importa\u00e7\u00e3o direta, exceto a indicada no c\u00f3digo 6;\n2 - Estrangeira - Adquirida no mercado interno, exceto a indicada no c\u00f3digo 7;\n3 - Nacional, mercadoria ou bem com Conte\u00fado de Importa\u00e7\u00e3o superior a 40% e inferior ou igual a 70%;\n4 - Nacional, cuja produ\u00e7\u00e3o tenha sido feita em conformidade com os processos produtivos b\u00e1sicos de que tratam as legisla\u00e7\u00f5es citadas nos Ajustes;\n5 - Nacional, mercadoria ou bem com Conte\u00fado de Importa\u00e7\u00e3o inferior ou igual a 40%;\n6 - Estrangeira - Importa\u00e7\u00e3o direta, sem similar nacional, constante em lista da CAMEX e g\u00e1s natural;\n7 - Estrangeira - Adquirida no mercado interno, sem similar nacional, constante em lista da CAMEX e g\u00e1s natural;\n8 - Nacional, mercadoria ou bem com Conte\u00fado de Importa\u00e7\u00e3o superior a 70%."
+   "label": "Origin",
+   "options": "0 - National, except those indicated in codes 3, 4, 5 and 8;\n1 - Foreign - Direct import, except the one indicated in code 6;\n2 - Foreign - Acquired in the domestic market, except the one indicated in code 7;\n3 - National, merchandise or goods with Import Content greater than 40% and less than or equal to 70%;\n4 - National, whose production was made in accordance with the basic productive processes dealt with in the legislation cited in the Adjustments;\n5 - National, merchandise or goods with Import Content less than or equal to 40%;\n6 - Foreign - Direct import, without national equivalent, listed in CAMEX and natural gas;\n7 - Foreign - Acquired in the domestic market, without national equivalent, listed in CAMEX and natural gas;\n8 - National, merchandise or goods with Import Content greater than 70%."
   },
   {
    "fieldname": "mod_determ_bc",
    "fieldtype": "Select",
-   "label": "Modalidade de determina\u00e7\u00e3o da B.C",
-   "options": "0 - Margem Valor Agregado (%)\n1 - Pauta (valor)\n2 - Pre\u00e7o Tabelado M\u00e1ximo (valor)\n3 - Valor da Opera\u00e7\u00e3o"
+   "label": "Calculation Base Determination Mode",
+   "options": "0 - Added Value Margin (%)\n1 - Guideline (value)\n2 - Maximum List Price (value)\n3 - Operation Value"
   },
   {
    "fieldname": "base_calc_icms_fcp",
    "fieldtype": "Currency",
-   "label": "Base de C\u00e1lculo ICMS (FCP)",
+   "label": "ICMS Calculation Base (FCP)",
    "precision": "2"
   },
   {
    "fieldname": "icms_value_fcp",
    "fieldtype": "Currency",
-   "label": "Valor ICMS (FCP)",
+   "label": "ICMS Value (FCP)",
    "precision": "2"
   },
   {
@@ -123,19 +123,19 @@
   {
    "fieldname": "base_calc_icms",
    "fieldtype": "Currency",
-   "label": "Base de C\u00e1lculo",
+   "label": "Calculation Base",
    "precision": "2"
   },
   {
    "fieldname": "aliq_icms",
    "fieldtype": "Float",
-   "label": "Al\u00edquota Interna %",
+   "label": "Internal Rate %",
    "precision": "2"
   },
   {
    "fieldname": "aliq_fcp",
    "fieldtype": "Float",
-   "label": "% aliq. (FCP)",
+   "label": "% Rate (FCP)",
    "precision": "2"
   },
   {
@@ -156,48 +156,48 @@
    "default": "1",
    "fieldname": "calcular_automaticamente_icms",
    "fieldtype": "Check",
-   "label": "Calcular automaticamente"
+   "label": "Calculate Automatically"
   },
   {
    "default": "0",
    "fieldname": "adiciona_outras_despesas_icms",
    "fieldtype": "Check",
-   "label": " Adiciona Outras Despesas"
+   "label": " Add Other Expenses"
   },
   {
    "default": "0",
    "fieldname": "adiciona_frete_icms",
    "fieldtype": "Check",
-   "label": "Adiciona Frete"
+   "label": "Add Freight"
   },
   {
    "default": "0",
    "fieldname": "adiciona_ipi_icms",
    "fieldtype": "Check",
-   "label": " Adiciona IPI"
+   "label": " Add IPI"
   },
   {
    "default": "0",
    "fieldname": "adiciona_seguro_icms",
    "fieldtype": "Check",
-   "label": "Adiciona Seguro"
+   "label": "Add Insurance"
   },
   {
    "default": "0",
    "fieldname": "aplicar_aliq_auto_icms",
    "fieldtype": "Check",
-   "label": "Aplicar Aliq. Autom\u00e1tico"
+   "label": "Apply Automatic Rate"
   },
   {
    "fieldname": "substitui\u00e7\u00e3o_tribut\u00e1ria_section",
    "fieldtype": "Section Break",
-   "label": "Substitui\u00e7\u00e3o Tribut\u00e1ria"
+   "label": "Tax Substitution"
   },
   {
    "fieldname": "mod_base_calc_icms_trib",
    "fieldtype": "Select",
-   "label": " Modalidade de determina\u00e7\u00e3o da Base de C\u00e1lculo ",
-   "options": "0 - Pre\u00e7o tabelado ou m\u00e1ximo suger\u00eddo\n1 - Lista Negativa (valor)\n2 - Lista Positiva (valor)\n3 - Lista Neutra (valor)\n4 - Margem Valor Agregado (%)\n5 - Pauta (valor)\n6 - Valor de Opera\u00e7\u00e3o"
+   "label": " Calculation Base Determination Mode ",
+   "options": "0 - Listed or suggested maximum price\n1 - Negative List (value)\n2 - Positive List (value)\n3 - Neutral List (value)\n4 - Added Value Margin (%)\n5 - Guideline (value)\n6 - Operation Value"
   },
   {
    "fieldname": "cest_icms_trib",
@@ -207,7 +207,7 @@
   {
    "fieldname": "base_icms_trib",
    "fieldtype": "Currency",
-   "label": "Base de C\u00e1lculo"
+   "label": "Calculation Base"
   },
   {
    "fieldname": "column_break_igtf",
@@ -222,13 +222,13 @@
   {
    "fieldname": "credito_trib",
    "fieldtype": "Float",
-   "label": " Cr\u00e9dito %",
+   "label": " Credit %",
    "precision": "2"
   },
   {
    "fieldname": "reducao_trib",
    "fieldtype": "Float",
-   "label": " Redu\u00e7\u00e3o %",
+   "label": " Reduction %",
    "precision": "2"
   },
   {
@@ -239,47 +239,47 @@
    "default": "0",
    "fieldname": "adiciona_outras_despesas_trib",
    "fieldtype": "Check",
-   "label": " Adiciona Outras Despesas"
+   "label": " Add Other Expenses"
   },
   {
    "default": "0",
    "fieldname": "adiciona_frete_trib",
    "fieldtype": "Check",
-   "label": "Adiciona Frete"
+   "label": "Add Freight"
   },
   {
    "default": "0",
    "fieldname": "adiciona_ipi_trib",
    "fieldtype": "Check",
-   "label": " Adiciona IPI"
+   "label": " Add IPI"
   },
   {
    "default": "0",
    "fieldname": "adiciona_seguro_trib",
    "fieldtype": "Check",
-   "label": "Adiciona Seguro"
+   "label": "Add Insurance"
   },
   {
    "fieldname": "partilha_icms",
    "fieldtype": "Section Break",
-   "label": " Partilha do ICMS nas vendas interestaduais para n\u00e3o contribuintes"
+   "label": " ICMS Sharing for Interstate Sales to Non-Taxpayers"
   },
   {
    "fieldname": "valor_da_base_de_calculo_icms_no_destino",
    "fieldtype": "Currency",
-   "label": " Valor da base de c\u00e1lculo ICMS no destino",
+   "label": " ICMS Calculation Base Value at Destination",
    "precision": "2"
   },
   {
    "fieldname": "aliq_do_icms_do_estado_de_destino",
    "fieldtype": "Currency",
-   "label": " Al\u00edq. do ICMS do Estado de Destino % ",
+   "label": " ICMS Rate of Destination State % ",
    "precision": "2"
   },
   {
    "fieldname": "aliq_do_icms_interestadual",
    "fieldtype": "Currency",
-   "label": " Al\u00edq. do ICMS Interestadual %",
+   "label": " Interstate ICMS Rate %",
    "precision": "2"
   },
   {
@@ -289,19 +289,19 @@
   {
    "fieldname": "valor_da_base_de_calculo_fcp_na_uf_destino",
    "fieldtype": "Currency",
-   "label": " Valor da base de c\u00e1lculo FCP na UF destino",
+   "label": " FCP Calculation Base Value at Destination State",
    "precision": "2"
   },
   {
    "fieldname": "valor_icms_inter_puf_de_destino_difal",
    "fieldtype": "Float",
-   "label": " Valor ICMS Inter. p/UF de destino (DIFAL)",
+   "label": " Interstate ICMS Value to Destination State (DIFAL)",
    "precision": "2"
   },
   {
    "fieldname": "aliq_fundo_pobre",
    "fieldtype": "Float",
-   "label": " Al\u00edq. Fundo de Combate \u00e0 Pobreza - FCP %",
+   "label": " Poverty Combat Fund Rate - FCP %",
    "precision": "2"
   },
   {
@@ -323,12 +323,12 @@
   {
    "fieldname": "base_de_calculo_ipi",
    "fieldtype": "Currency",
-   "label": "Base de C\u00e1lculo"
+   "label": "Calculation Base"
   },
   {
    "fieldname": "valor_do_ipi",
    "fieldtype": "Currency",
-   "label": "Valor do IPI"
+   "label": "IPI Value"
   },
   {
    "fieldname": "column_break_kfaj",
@@ -337,19 +337,19 @@
   {
    "fieldname": "cod_enquadramento",
    "fieldtype": "Float",
-   "label": "C\u00f3digo de Enquadramento",
+   "label": "Framework Code",
    "precision": "0"
   },
   {
    "fieldname": "aliquota_ipi",
    "fieldtype": "Float",
-   "label": "Al\u00edquota %"
+   "label": "Rate %"
   },
   {
    "default": "1",
    "fieldname": "calcular_automaticamente_ipi",
    "fieldtype": "Check",
-   "label": "Calcular Automaticamente"
+   "label": "Calculate Automatically"
   },
   {
    "fieldname": "cst_cofins",
@@ -360,13 +360,13 @@
   {
    "fieldname": "base_de_calculo_cofins",
    "fieldtype": "Currency",
-   "label": "Base de C\u00e1lculo",
+   "label": "Calculation Base",
    "precision": "2"
   },
   {
    "fieldname": "valor_cofins",
    "fieldtype": "Currency",
-   "label": "Valor COFINS",
+   "label": "COFINS Value",
    "precision": "2"
   },
   {
@@ -376,14 +376,14 @@
   {
    "fieldname": "aliquota_cofins",
    "fieldtype": "Float",
-   "label": "Al\u00edquota %",
+   "label": "Rate %",
    "precision": "2"
   },
   {
    "default": "1",
    "fieldname": "calcular_automaticamente_cofins",
    "fieldtype": "Check",
-   "label": "Calcular Automaticamente"
+   "label": "Calculate Automatically"
   },
   {
    "fieldname": "pis_tab",
@@ -399,13 +399,13 @@
   {
    "fieldname": "base_de_calculo_pis",
    "fieldtype": "Currency",
-   "label": "Base de C\u00e1lculo",
+   "label": "Calculation Base",
    "precision": "2"
   },
   {
    "fieldname": "valor_pis",
    "fieldtype": "Currency",
-   "label": "Valor COFINS",
+   "label": "PIS Value",
    "precision": "2"
   },
   {
@@ -415,14 +415,14 @@
   {
    "fieldname": "aliquota_pis",
    "fieldtype": "Float",
-   "label": "Al\u00edquota %",
+   "label": "Rate %",
    "precision": "2"
   },
   {
    "default": "1",
    "fieldname": "calcular_automaticamente_pis",
    "fieldtype": "Check",
-   "label": "Calcular Automaticamente"
+   "label": "Calculate Automatically"
   }
  ],
  "grid_page_length": 50,
