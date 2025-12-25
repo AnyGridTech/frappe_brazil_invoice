@@ -532,6 +532,9 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             }
         ]
         
+        # Generate random address data
+        address_data = generate_random_address()
+        
         # Create invoice with tax template that has automatic ICMS and IPI calculation
         result = create_test_invoice_with_token(
             operation_type="Warranty Exchange",
@@ -539,19 +542,19 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Test Customer Ltda",
             client_email="customer@test.com",
-            client_phone="+55-11987654321",
+            client_phone=address_data["phone"],
             client_id_number="12.345.678/0001-90",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="123456789",
             delivery_supervisor="John Silva",
-            delivery_cep="01310-100",
-            delivery_address="Avenida Paulista",
-            delivery_neighborhood="Bela Vista",
-            delivery_state="SP",
-            city="São Paulo",
-            delivery_number_address="1000",
-            delivery_ibge="3550308",
-            delivery_phone="+55-11912345678",
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
             product_brand="Growatt",
             product_quantity="1",
             product_type="Inversor Solar",
@@ -620,6 +623,9 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             }
         ]
         
+        # Generate random address data
+        address_data = generate_random_address()
+        
         # Create invoice
         result = create_test_invoice_with_token(
             operation_type="Bonus",
@@ -627,19 +633,19 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Direct Item Test Company",
             client_email="itemtest@test.com",
-            client_phone="+55-11999888777",
+            client_phone=address_data["phone"],
             client_id_number="11.222.333/0001-44",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="999888777",
             delivery_supervisor="Maria Santos",
-            delivery_cep="01310-100",
-            delivery_address="Rua Teste",
-            delivery_neighborhood="Centro",
-            delivery_state="SP",
-            city="São Paulo",
-            delivery_number_address="100",
-            delivery_ibge="3550308",
-            delivery_phone="+55-11912345678",
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
             product_brand="Growatt",
             product_quantity="2",
             product_type="Inversor Solar",
@@ -696,6 +702,9 @@ class TestResponsibleValidation(FrappeTestCase):
         """Test that invoices cannot reach Created status without responsible field"""
         frappe.set_user("Administrator")
         
+        # Generate random address data
+        address_data = generate_random_address()
+        
         # Create an invoice without delivery_supervisor (will be in Draft status)
         result = create_test_invoice_with_token(
             operation_type="Bonus",
@@ -703,19 +712,19 @@ class TestResponsibleValidation(FrappeTestCase):
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Test No Responsible Company",
             client_email="noresponsible@test.com",
-            client_phone="+55-11988877666",
+            client_phone=address_data["phone"],
             client_id_number="99.888.777/0001-11",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="999888777",
             delivery_supervisor=None,  # Explicitly set to None
-            delivery_cep="01310-100",
-            delivery_address="Rua Teste",
-            delivery_neighborhood="Centro",
-            delivery_state="SP",
-            city="São Paulo",
-            delivery_number_address="100",
-            delivery_ibge="3550308",
-            delivery_phone="+55-11912345678",
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
             product_brand="Growatt",
             product_quantity="1",
             product_type="Inversor Solar",
@@ -757,6 +766,9 @@ class TestResponsibleValidation(FrappeTestCase):
         """Test that responsible field cannot be cleared once invoice is in Created status"""
         frappe.set_user("Administrator")
         
+        # Generate random address data
+        address_data = generate_random_address()
+        
         # Create invoice with responsible field
         result = create_test_invoice_with_token(
             operation_type="Bonus",
@@ -764,19 +776,19 @@ class TestResponsibleValidation(FrappeTestCase):
             freight_modality="0 - Freight Contracted by Sender (CIF)",
             client_name="Test Responsible Change Company",
             client_email="respchange@test.com",
-            client_phone="+55-11977777666",
+            client_phone=address_data["phone"],
             client_id_number="88.777.666/0001-22",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="888777666",
             delivery_supervisor="Initial Responsible",
-            delivery_cep="01310-100",
-            delivery_address="Rua Teste",
-            delivery_neighborhood="Centro",
-            delivery_state="SP",
-            city="São Paulo",
-            delivery_number_address="100",
-            delivery_ibge="3550308",
-            delivery_phone="+55-11912345678",
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
             product_brand="Growatt",
             product_quantity="1",
             product_type="Inversor Solar",
