@@ -235,9 +235,38 @@ serial_no_array = [
 
 tax_array = [
     {
-        "template_name": "Troca em Garantia",
+        "template_name": "Remessa em Garantia",
         "is_template": 1,
-        # ICMS - Non-taxed (warranty exchange)
+        # ICMS - Fully taxed (warranty exchange must have ICMS highlighted)
+        # Same rate and base as original operation
+        "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8;",
+        "cst_icms": "00 - Fully taxed",
+        "icms_rate": 18.00,  # São Paulo standard rate
+        "fcp_rate": 0.00,
+        "calculate_automatically_icms": 1,
+        "add_other_expenses_icms": 1,
+        "add_freight_icms": 1,
+        "add_ipi_icms": 1,
+        "add_insurance_icms": 1,
+        "apply_auto_rate_icms": 0,
+        # IPI - Exit taxed (warranty exchange must have IPI highlighted)
+        "cst_ipi": "50 - Exit taxed",
+        "ipi_rate": 10.00,  # Common rate for electronic equipment
+        "calculate_automatically_ipi": 1,
+        # COFINS - Taxable operation with basic rate
+        "cst_cofins": "01 - Taxable Operation with Basic Rate",
+        "cofins_rate": 7.6,  # Non-cumulative regime
+        "calculate_automatically_cofins": 1,
+        # PIS - Taxable operation with basic rate
+        "cst_pis": "01 - Taxable Operation with Basic Rate",
+        "pis_rate": 1.65,  # Non-cumulative regime
+        "calculate_automatically_pis": 1
+    },
+    {
+        "template_name": "Remessa para Conserto",
+        "is_template": 1,
+        # ICMS - Not taxed (repair shipment without tax highlight)
+        # CFOP 5.915 - Remessa de mercadoria para conserto
         "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8;",
         "cst_icms": "41 - Not taxed",
         "base_calc_icms": 0.00,
@@ -249,54 +278,20 @@ tax_array = [
         "add_ipi_icms": 0,
         "add_insurance_icms": 0,
         "apply_auto_rate_icms": 0,
-        # IPI - Exit non-taxed
+        # IPI - Exit non-taxed (repair shipment without IPI)
         "cst_ipi": "53 - Exit non-taxed",
         "ipi_calculation_base": 0.00,
         "ipi_rate": 0.00,
         "ipi_value": 0.00,
         "calculate_automatically_ipi": 1,
-        # COFINS - Operation without incidence
-        "cst_cofins": "08 - Operation without Incidence of Contribution",
+        # COFINS - Other exit operations
+        "cst_cofins": "49 - Other Exit Operations",
         "cofins_calculation_base": 0.00,
         "cofins_rate": 0.00,
         "cofins_value": 0.00,
         "calculate_automatically_cofins": 1,
-        # PIS - Operation without incidence
-        "cst_pis": "08 - Operation without Incidence of Contribution",
-        "pis_calculation_base": 0.00,
-        "pis_rate": 0.00,
-        "pis_value": 0.00,
-        "calculate_automatically_pis": 1
-    },
-    {
-        "template_name": "Reparo em Garantia",
-        "is_template": 1,
-        # ICMS - Suspension (warranty repair)
-        "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8;",
-        "cst_icms": "50 - Suspension",
-        "base_calc_icms": 0.00,
-        "icms_rate": 0.00,
-        "fcp_rate": 0.00,
-        "calculate_automatically_icms": 1,
-        "add_other_expenses_icms": 0,
-        "add_freight_icms": 0,
-        "add_ipi_icms": 0,
-        "add_insurance_icms": 0,
-        "apply_auto_rate_icms": 0,
-        # IPI - Exit with suspension
-        "cst_ipi": "55 - Exit with suspension",
-        "ipi_calculation_base": 0.00,
-        "ipi_rate": 0.00,
-        "ipi_value": 0.00,
-        "calculate_automatically_ipi": 1,
-        # COFINS - Operation with suspension
-        "cst_cofins": "09 - Operation with Contribution Suspension",
-        "cofins_calculation_base": 0.00,
-        "cofins_rate": 0.00,
-        "cofins_value": 0.00,
-        "calculate_automatically_cofins": 1,
-        # PIS - Operation with suspension
-        "cst_pis": "09 - Operation with Contribution Suspension",
+        # PIS - Other exit operations
+        "cst_pis": "49 - Other Exit Operations",
         "pis_calculation_base": 0.00,
         "pis_rate": 0.00,
         "pis_value": 0.00,
