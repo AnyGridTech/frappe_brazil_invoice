@@ -11,6 +11,9 @@ from . import nfeio
 class Invoices(Document):
 	def validate(self):
 		"""Ensure invoice has items and prevent status changes without items"""
+		# Process invoice items to auto-fill from serial numbers
+		self.process_invoice_items()
+		
 		# Lock invoice_items_table changes at Processing status and forward
 		self.validate_items_lock()
 		
@@ -28,6 +31,36 @@ class Invoices(Document):
 		# Calculate taxes automatically if in Draft or Created status
 		if self.invoice_status in [None, "Draft", "Created"]:
 			self.calculate_automatic_taxes()
+	
+	def process_invoice_items(self):
+		"""Process invoice items to auto-fill fields from serial numbers"""
+		for item in self.invoice_items_table:
+			if hasattr(item, 'serial_number') and item.serial_number:
+				# Enforce quantity = 1 for serial numbers
+				if item.quantity and item.quantity != 1:
+					frappe.throw(_("Quantity must be 1 when Serial Number is provided. Serial numbers are unique and cannot have multiple quantities."))
+				item.quantity = 1
+				
+				# Auto-fill item_code from serial number
+				if not item.item_code:
+					serial_doc = frappe.get_doc("Serial No", item.serial_number)
+					item.item_code = serial_doc.item_code
+				
+				# Auto-fill fields from item
+				if item.item_code:
+					item_doc = frappe.get_doc("Item", item.item_code)
+					if not item.item_name:
+						item.item_name = item_doc.item_name
+					if not item.rate:
+						item.rate = item_doc.valuation_rate or item_doc.standard_rate
+					if not item.ncm:
+						item.ncm = item_doc.get("ncm")
+					if not item.description:
+						item.description = item_doc.description or item_doc.item_name
+				
+				# Calculate amount
+				if item.rate and item.quantity:
+					item.amount = item.rate * item.quantity
 	
 	def validate_items_lock(self):
 		"""Prevent changes to invoice_items_table at Processing status and forward"""

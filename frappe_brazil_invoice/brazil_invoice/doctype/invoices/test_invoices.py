@@ -80,7 +80,7 @@ def create_test_item(item_code, item_name, rate, ncm_code, description=None, ite
         "standard_rate": rate,
         "description": description or item_name,
         "has_serial_no": 1,  # Enable serial numbers for tracking
-        "ncm_code": ncm_code
+        "ncm": ncm_code
     })
     item.insert(ignore_permissions=True)
     frappe.db.commit()
@@ -408,18 +408,10 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         item = items_array[0]
         serial = serial_no_array[0]
         
-        # Prepare invoice items - fetch item details from serial number
-        quantity = 1
+        # Prepare invoice items - only serial_number required, system auto-fills the rest
         invoice_items = [
             {
-                "serial_no": serial["serial_no"],
-                "item_code": item["item_code"],
-                "item_name": item["item_name"],
-                "ncm": item["ncm_code"],
-                "description": item["item_name"],
-                "quantity": quantity,
-                "rate": item["rate"],
-                "amount": item["rate"] * quantity
+                "serial_number": serial["serial_no"]
             }
         ]
         
@@ -504,18 +496,10 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         item = items_array[1]
         serial = serial_no_array[1]
         
-        # Prepare invoice items - fetch item details from serial number
-        quantity = 2
+        # Prepare invoice items - only serial_number required, system auto-fills the rest
         invoice_items = [
             {
-                "serial_no": serial["serial_no"],
-                "item_code": item["item_code"],
-                "item_name": item["item_name"],
-                "ncm": item["ncm_code"],
-                "description": item["item_name"],
-                "quantity": quantity,
-                "rate": item["rate"],
-                "amount": item["rate"] * quantity
+                "serial_number": serial["serial_no"]
             }
         ]
         
@@ -539,17 +523,17 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             delivery_ibge="3304557",
             delivery_phone="+5521912345678",
             product_brand="Growatt",
-            product_quantity="2",
+            product_quantity="1",  # Always 1 when serial_no is provided
             product_type="Inversor Solar",
             carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora RJ"}, "name"),
-            product_gross_weight="11.0",
-            product_net_weight="10.0",
+            product_gross_weight="5.5",
+            product_net_weight="5.0",
             additional_information="Test invoice for automatic IPI calculation",
             total_freight=0.00,  # Por conta do destinatário
             total_discount=10.00,
             total_insurance=0.00,
             other_expenses=0.00,
-            total=(item["rate"] * 2) - 10.00,  # item value * qty - discount
+            total=item["rate"] - 10.00,  # item value (qty=1) - discount
             tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
             invoice_items_table=invoice_items
         )
@@ -569,7 +553,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         
         # Verify invoice items
         self.assertEqual(len(invoice.invoice_items_table), 1)
-        self.assertEqual(invoice.invoice_items_table[0].quantity, 2)
+        self.assertEqual(invoice.invoice_items_table[0].quantity, 1)  # Always 1 when serial_no is provided
         
         # Verify IPI was calculated (should not be 0 if auto-calc worked)
         tax_doc = frappe.get_doc("Tax", invoice.tax_template)

@@ -13,7 +13,9 @@
   "column_break_fatv",
   "rate",
   "quantity",
+  "amount",
   "ncm",
+  "description",
   "tax_section",
   "invoice_taxes",
   "icms_rate",
@@ -75,6 +77,29 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Quantity"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "item_code.ncm",
+   "fetch_if_empty": 1,
+   "fieldname": "ncm",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "NCM"
+  },
+  {
+   "fetch_from": "item_code.description",
+   "fetch_if_empty": 1,
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Description"
   },
   {
    "fieldname": "tax_section",
