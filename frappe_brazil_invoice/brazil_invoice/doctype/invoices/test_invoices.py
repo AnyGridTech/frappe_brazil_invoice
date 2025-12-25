@@ -543,6 +543,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             client_id_number="12.345.678/0001-90",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="123456789",
+            delivery_supervisor="John Silva",
             delivery_cep="01310-100",
             delivery_address="Avenida Paulista",
             delivery_neighborhood="Bela Vista",
@@ -630,6 +631,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             client_id_number="11.222.333/0001-44",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="999888777",
+            delivery_supervisor="Maria Santos",
             delivery_cep="01310-100",
             delivery_address="Rua Teste",
             delivery_neighborhood="Centro",
@@ -684,8 +686,133 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
 
 
 # =============================================================================
-# Final Summary Test - Overall Invoice Statistics
-        print("="*80 + "\n")
+# Responsible Field Validation Tests
+# =============================================================================
+
+class TestResponsibleValidation(FrappeTestCase):
+    """Test that Responsible field is mandatory for Created status and beyond"""
+    
+    def test_invoice_requires_responsible_for_created_status(self):
+        """Test that invoices cannot reach Created status without responsible field"""
+        frappe.set_user("Administrator")
+        
+        # Create an invoice without delivery_supervisor (will be in Draft status)
+        result = create_test_invoice_with_token(
+            operation_type="Bonus",
+            client_type="Company",
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name="Test No Responsible Company",
+            client_email="noresponsible@test.com",
+            client_phone="+55-11988877666",
+            client_id_number="99.888.777/0001-11",
+            contribuinte_icms="Taxpayer",
+            inscricao_estadual="999888777",
+            delivery_supervisor=None,  # Explicitly set to None
+            delivery_cep="01310-100",
+            delivery_address="Rua Teste",
+            delivery_neighborhood="Centro",
+            delivery_state="SP",
+            city="São Paulo",
+            delivery_number_address="100",
+            delivery_ibge="3550308",
+            delivery_phone="+55-11912345678",
+            product_brand="Growatt",
+            product_quantity="1",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
+            product_gross_weight="5.0",
+            product_net_weight="4.5",
+            additional_information="Test invoice without responsible",
+            total_freight=0.00,
+            total_discount=0.00,
+            total_insurance=0.00,
+            other_expenses=0.00,
+            total=100.00,
+            tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
+            invoice_items_table=[{"item_code": "TEST_INVERTER_001", "quantity": 1}]
+        )
+        
+        # Invoice should be created successfully in Draft status
+        self.assertTrue(result.get("success"), f"Invoice creation should succeed in Draft status: {result.get('message')}")
+        invoice_name = result.get("docname")
+        
+        # Now try to change status to Created without responsible field
+        invoice = frappe.get_doc("Invoices", invoice_name)
+        self.assertIsNone(invoice.delivery_supervisor or None, "Responsible should be None")
+        
+        # Try to set status to Created
+        invoice.invoice_status = "Created"
+        
+        with self.assertRaises(frappe.ValidationError) as context:
+            invoice.save()
+        
+        # Verify the error message mentions responsible field
+        error_message = str(context.exception)
+        self.assertIn("Responsible", error_message, f"Error message should mention Responsible field. Got: {error_message}")
+        
+        print(f"✓ Validation correctly prevents moving to Created status without Responsible field")
+        print(f"  Error: {error_message}")
+    
+    def test_invoice_cannot_clear_responsible_after_created(self):
+        """Test that responsible field cannot be cleared once invoice is in Created status"""
+        frappe.set_user("Administrator")
+        
+        # Create invoice with responsible field
+        result = create_test_invoice_with_token(
+            operation_type="Bonus",
+            client_type="Company",
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name="Test Responsible Change Company",
+            client_email="respchange@test.com",
+            client_phone="+55-11977777666",
+            client_id_number="88.777.666/0001-22",
+            contribuinte_icms="Taxpayer",
+            inscricao_estadual="888777666",
+            delivery_supervisor="Initial Responsible",
+            delivery_cep="01310-100",
+            delivery_address="Rua Teste",
+            delivery_neighborhood="Centro",
+            delivery_state="SP",
+            city="São Paulo",
+            delivery_number_address="100",
+            delivery_ibge="3550308",
+            delivery_phone="+55-11912345678",
+            product_brand="Growatt",
+            product_quantity="1",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
+            product_gross_weight="5.0",
+            product_net_weight="4.5",
+            additional_information="Test invoice for responsible change",
+            total_freight=0.00,
+            total_discount=0.00,
+            total_insurance=0.00,
+            other_expenses=0.00,
+            total=100.00,
+            tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
+            invoice_items_table=[{"item_code": "TEST_INVERTER_001", "quantity": 1}]
+        )
+        
+        self.assertTrue(result.get("success"), f"Invoice creation should succeed: {result.get('message')}")
+        invoice_name = result.get("docname")
+        
+        # Fetch the invoice and verify responsible field is set
+        invoice = frappe.get_doc("Invoices", invoice_name)
+        self.assertEqual(invoice.delivery_supervisor, "Initial Responsible")
+        initial_status = invoice.invoice_status
+        
+        # Try to clear the responsible field
+        invoice.delivery_supervisor = None
+        
+        with self.assertRaises(frappe.ValidationError) as context:
+            invoice.save()
+        
+        # Verify the error message mentions responsible field
+        error_message = str(context.exception)
+        self.assertIn("Responsible", error_message, f"Error message should mention Responsible field. Got: {error_message}")
+        
+        print(f"✓ Validation correctly prevents clearing Responsible field for invoice in {initial_status} status")
+        print(f"  Error: {error_message}")
 
 
 # =============================================================================
@@ -762,6 +889,7 @@ class TestInvoiceProcessing(FrappeTestCase):
             client_id_number="22.333.444/0001-55",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="111222333",
+            delivery_supervisor="Carlos Oliveira",
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
             delivery_neighborhood=address_data["neighborhood"],
@@ -886,6 +1014,7 @@ class TestInvoiceProcessing(FrappeTestCase):
             client_id_number="33.444.555/0001-66",
             contribuinte_icms="Taxpayer",
             inscricao_estadual="444555666",
+            delivery_supervisor="Ana Rodrigues",
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
             delivery_neighborhood=address_data["neighborhood"],

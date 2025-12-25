@@ -17,6 +17,9 @@ class Invoices(Document):
 		# Lock invoice_items_table changes at Processing status and forward
 		self.validate_items_lock()
 		
+		# Validate responsible field is mandatory for Created status and beyond
+		self.validate_responsible()
+		
 		# Must have at least one item row
 		if not self.invoice_items_table or len(self.invoice_items_table) == 0:
 			frappe.throw(_("Invoice must include at least one item (invoice_items_table)."))
@@ -96,6 +99,18 @@ class Invoices(Document):
 						for field in fields_to_check:
 							if getattr(old_item, field, None) != getattr(new_item, field, None):
 								frappe.throw(_("Cannot modify invoice items when invoice status is {0}").format(old_doc.invoice_status))
+	
+	def validate_responsible(self):
+		"""Validate that Responsible field is mandatory for Created status and beyond
+		
+		The Responsible field (delivery_supervisor) must be filled when invoice 
+		reaches Created status and must never be empty afterwards.
+		"""
+		statuses_requiring_responsible = ["Created", "Processing", "Submitted", "Rejected", "Contingency", "Unused"]
+		
+		if self.invoice_status in statuses_requiring_responsible:
+			if not self.delivery_supervisor or not self.delivery_supervisor.strip():
+				frappe.throw(_("Responsible field is mandatory for invoice status '{0}'. Please specify who is responsible for this invoice.").format(self.invoice_status))
 	
 	def calculate_automatic_taxes(self):
 		"""Calculate ICMS and IPI automatically based on tax template using NFe.io API"""
