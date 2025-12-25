@@ -400,8 +400,8 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         
         frappe.db.commit()
     
-    def test_create_invoice_with_automatic_icms_calculation(self):
-        """Test creating an invoice with automatic ICMS calculation"""
+    def test_create_invoice_with_automatic_tax_calculation(self):
+        """Test creating an invoice with automatic ICMS and IPI calculation"""
         frappe.set_user("Administrator")
         
         # Get test item and serial number
@@ -415,7 +415,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             }
         ]
         
-        # Create invoice with tax template that has automatic ICMS calculation
+        # Create invoice with tax template that has automatic ICMS and IPI calculation
         result = create_test_invoice_with_token(
             operation_type="Warranty Exchange",
             client_type="Company",
@@ -440,7 +440,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora Teste"}, "name"),
             product_gross_weight="5.5",
             product_net_weight="5.0",
-            additional_information="Test invoice for automatic ICMS calculation",
+            additional_information="Test invoice for automatic ICMS and IPI calculation",
             total_freight=50.00,
             total_discount=0.00,
             total_insurance=10.00,
@@ -470,14 +470,15 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         self.assertEqual(invoice.invoice_items_table[0].quantity, 1)
         self.assertEqual(invoice.invoice_items_table[0].rate, item["rate"])
         
-        # Verify ICMS was calculated (should not be 0 if auto-calc worked)
+        # Verify ICMS and IPI were calculated (should not be 0 if auto-calc worked)
         # Note: This will only work if NFe.io API is configured or fallback calculation runs
         tax_doc = frappe.get_doc("Tax", invoice.tax_template)
         self.assertIsNotNone(tax_doc.base_calc_icms, "ICMS calculation base should be set")
         self.assertIsNotNone(tax_doc.icms_rate, "ICMS rate should be set")
+        self.assertIsNotNone(tax_doc.ipi_calculation_base, "IPI calculation base should be set")
+        self.assertIsNotNone(tax_doc.ipi_rate, "IPI rate should be set")
         
-        # Check if ICMS was calculated (requires NFe.io API or fallback)
-        # The tax template might not have icms_value field populated yet if API is not configured
+        # Display invoice details
         print(f"✓ Invoice created successfully: {invoice_name}")
         print(f"  - Client: {invoice.client_name}")
         print(f"  - Brand: {invoice.product_brand}")
@@ -486,86 +487,6 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         print(f"  - Total: {invoice.total}")
         print(f"  - ICMS Base: {tax_doc.base_calc_icms if tax_doc.base_calc_icms else 0}")
         print(f"  - ICMS Rate: {tax_doc.icms_rate if tax_doc.icms_rate else 0}%")
-        print(f"⚠ Note: Tax values calculated automatically when NFe.io API is configured")
-    
-    def test_create_invoice_with_automatic_ipi_calculation(self):
-        """Test creating an invoice with automatic IPI calculation"""
-        frappe.set_user("Administrator")
-        
-        # Get test item and serial number
-        item = items_array[1]
-        serial = serial_no_array[1]
-        
-        # Prepare invoice items - only serial_number required, system auto-fills the rest
-        invoice_items = [
-            {
-                "serial_number": serial["serial_no"]
-            }
-        ]
-        
-        # Create invoice with tax template that has automatic IPI calculation
-        result = create_test_invoice_with_token(
-            operation_type="Warranty Exchange",
-            client_type="Company",
-            freight_modality="1 - Freight Contracted by Recipient (FOB)",
-            client_name="Another Test Company SA",
-            client_email="another@test.com",
-            client_phone="+5521987654321",
-            client_id_number="98.765.432/0001-10",
-            contribuinte_icms="Taxpayer",
-            inscricao_estadual="987654321",
-            delivery_cep="20040-020",
-            delivery_address="Avenida Rio Branco",
-            delivery_neighborhood="Centro",
-            delivery_state="RJ",
-            city="Rio de Janeiro",
-            delivery_number_address="156",
-            delivery_ibge="3304557",
-            delivery_phone="+5521912345678",
-            product_brand="Growatt",
-            product_quantity="1",  # Always 1 when serial_no is provided
-            product_type="Inversor Solar",
-            carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora RJ"}, "name"),
-            product_gross_weight="5.5",
-            product_net_weight="5.0",
-            additional_information="Test invoice for automatic IPI calculation",
-            total_freight=0.00,  # Por conta do destinatário
-            total_discount=10.00,
-            total_insurance=0.00,
-            other_expenses=0.00,
-            total=item["rate"] - 10.00,  # item value (qty=1) - discount
-            tax_template=frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name"),
-            invoice_items_table=invoice_items
-        )
-        
-        # Verify invoice was created successfully
-        self.assertTrue(result.get("success"), f"Invoice creation failed: {result.get('message')}")
-        invoice_name = result.get("docname")
-        self.assertIsNotNone(invoice_name, "Invoice name should not be None")
-        
-        # Fetch the created invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
-        
-        # Verify basic fields
-        self.assertEqual(invoice.client_name, "Another Test Company SA")
-        self.assertEqual(invoice.product_brand, "Growatt")
-        self.assertEqual(invoice.delivery_state, "RJ")
-        
-        # Verify invoice items
-        self.assertEqual(len(invoice.invoice_items_table), 1)
-        self.assertEqual(invoice.invoice_items_table[0].quantity, 1)  # Always 1 when serial_no is provided
-        
-        # Verify IPI was calculated (should not be 0 if auto-calc worked)
-        tax_doc = frappe.get_doc("Tax", invoice.tax_template)
-        self.assertIsNotNone(tax_doc.ipi_calculation_base, "IPI calculation base should be set")
-        self.assertIsNotNone(tax_doc.ipi_rate, "IPI rate should be set")
-        
-        # Check if IPI was calculated (requires NFe.io API or fallback)
-        print(f"✓ Invoice created successfully: {invoice_name}")
-        print(f"  - Client: {invoice.client_name}")
-        print(f"  - State: {invoice.delivery_state}")
-        print(f"  - Items: {len(invoice.invoice_items_table)} (Qty: {invoice.invoice_items_table[0].quantity})")
-        print(f"  - Total: {invoice.total}")
         print(f"  - IPI Base: {tax_doc.ipi_calculation_base if tax_doc.ipi_calculation_base else 0}")
         print(f"  - IPI Rate: {tax_doc.ipi_rate if tax_doc.ipi_rate else 0}%")
         print(f"⚠ Note: Tax values calculated automatically when NFe.io API is configured")
