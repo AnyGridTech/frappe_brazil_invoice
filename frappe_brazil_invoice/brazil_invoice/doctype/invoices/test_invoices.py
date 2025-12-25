@@ -15,17 +15,11 @@ To run a specific test method:
 """
 
 import frappe
-import unittest
-import json
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import now_datetime
 import uuid
 from frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices import (
     create_invoice,
-    get_invoice_details,
-    update_invoice_status,
-    bulk_create_invoices,
-    bulk_process_invoices,
 )
 
 
@@ -323,7 +317,7 @@ def print_invoice_details(invoice, tax_doc=None, show_items=True):
     print(f"  - Net Weight: {float(invoice.product_net_weight or 0)} kg")
 
     if tax_doc:
-        print(f"  - Tax Details:")
+        print("  - Tax Details:")
         print(
             f"    - ICMS Base: R$ {tax_doc.base_calc_icms if tax_doc.base_calc_icms else 0:.2f}"
         )
@@ -692,7 +686,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         # Display invoice details using helper function
         print_invoice_details(invoice, tax_doc, show_items=False)
         print(
-            f"⚠ Note: Tax values calculated automatically when NFe.io API is configured"
+            "⚠ Note: Tax values calculated automatically when NFe.io API is configured"
         )
 
     def test_create_invoice_with_item_code_only(self):
@@ -781,7 +775,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
 
         # Display invoice details using helper function
         print_invoice_details(invoice, show_items=True)
-        print(f"✓ Auto-fill from item_code works correctly!")
+        print("✓ Auto-fill from item_code works correctly!")
 
 
 # =============================================================================
@@ -862,7 +856,7 @@ class TestResponsibleValidation(FrappeTestCase):
         )
 
         print(
-            f"✓ Validation correctly prevents moving to Created status without Responsible field"
+            "✓ Validation correctly prevents moving to Created status without Responsible field"
         )
         print(f"  Error: {error_message}")
 
@@ -1100,7 +1094,7 @@ class TestInvoiceProcessing(FrappeTestCase):
         print("PROCESSING INVOICE TEST - 2 ITEMS".center(80))
         print("=" * 80)
         print_invoice_details(invoice, tax_doc, show_items=True)
-        print(f"\n✓ All calculations verified correctly!")
+        print("\n✓ All calculations verified correctly!")
         print(
             f"  - Product Total: R$ {actual_product_total:.2f} (Expected: R$ {expected_product_total:.2f})"
         )
@@ -1251,7 +1245,7 @@ class TestInvoiceProcessing(FrappeTestCase):
         print("PROCESSING INVOICE TEST - 3 ITEMS (6 UNITS)".center(80))
         print("=" * 80)
         print_invoice_details(invoice, tax_doc, show_items=True)
-        print(f"\n✓ All calculations verified correctly!")
+        print("\n✓ All calculations verified correctly!")
         print(
             f"  - Product Total: R$ {actual_product_total:.2f} (Expected: R$ {expected_product_total:.2f})"
         )
@@ -1438,7 +1432,7 @@ class TestInvoicesSummary(FrappeTestCase):
         print("=" * 80)
 
         # PDF Validation Check
-        print(f"\n✅ PDF VALIDATION CHECK:")
+        print("\n✅ PDF VALIDATION CHECK:")
         if submitted_without_pdf:
             print(
                 f"   ❌ FAILED: {len(submitted_without_pdf)} Submitted invoice(s) missing PDF!"
@@ -1455,7 +1449,7 @@ class TestInvoicesSummary(FrappeTestCase):
             )
 
         # Workflow Distribution Validation
-        print(f"\n📋 WORKFLOW DISTRIBUTION:")
+        print("\n📋 WORKFLOW DISTRIBUTION:")
         print(
             "   Requirement: EXACTLY 2 for Created/Processing/Rejected/Contingency/Unused."
         )
@@ -1489,14 +1483,14 @@ class TestInvoicesSummary(FrappeTestCase):
 
         if distribution_valid:
             print(
-                f"\n✅ Workflow distribution is correct! All required statuses have at least 2 invoices."
+                "\n✅ Workflow distribution is correct! All required statuses have at least 2 invoices."
             )
         else:
-            print(f"\n⚠️  Workflow distribution does not match requirements")
+            print("\n⚠️  Workflow distribution does not match requirements")
 
         print("\n" + "=" * 80 + "\n")
 
         # Final assertion: All submitted invoices must have PDFs
         self.assertEqual(
-            len(submitted_without_pdf), 0, f"All submitted invoices must have PDF URLs"
+            len(submitted_without_pdf), 0, "All submitted invoices must have PDF URLs"
         )
