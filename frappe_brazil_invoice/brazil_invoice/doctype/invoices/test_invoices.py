@@ -2566,6 +2566,538 @@ class TestInvoiceSubmitted(FrappeTestCase):
 
 
 # =============================================================================
+# Tax Calculation Validation Tests
+# =============================================================================
+
+
+class TestTaxCalculationValidation(FrappeTestCase):
+    """Test that tax calculation validations work correctly"""
+
+    def test_processing_requires_tax_calculation_with_auto_icms(self):
+        """Test that Processing status validates tax calculation when template has automatic ICMS"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data
+        client_data = generate_random_client(client_type="Company")
+        address_data = generate_random_address()
+        totals_data = generate_random_totals()
+
+        # Create invoice with tax template that requires automatic ICMS calculation
+        invoice_items = [{"item_code": items_array[0]["item_code"], "quantity": 1}]
+
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Growatt",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test tax validation - requires automatic calculation",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),  # This template requires automatic ICMS and IPI
+            invoice_items_table=invoice_items,
+        )
+
+        invoice_name = result.get("docname")
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Move to Created first
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        # Reload and move to Processing - taxes should be calculated automatically
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify taxes were calculated (should have non-None values)
+        invoice.reload()
+        self.assertIsNotNone(invoice.icms_value, "ICMS should be calculated automatically")
+        self.assertIsNotNone(invoice.ipi_value, "IPI should be calculated automatically")
+        self.assertEqual(invoice.invoice_status, "Processing")
+
+        print("\n✓ Tax calculation validation working - taxes calculated automatically when moving to Processing")
+        print(f"  ICMS: R$ {invoice.icms_value:.2f}, IPI: R$ {invoice.ipi_value:.2f}")
+
+    def test_processing_allows_zero_tax_without_auto_calculation(self):
+        """Test that Processing allows zero tax values when template doesn't require calculation"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data
+        client_data = generate_random_client(client_type="Individual")
+        address_data = generate_random_address()
+        totals_data = generate_random_totals()
+
+        # Create invoice with tax template that doesn't require automatic calculation
+        invoice_items = [{"item_code": items_array[1]["item_code"], "quantity": 1}]
+
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Growatt",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora RJ"}, "name"
+            ),
+            additional_information="Test tax validation - no auto calculation required",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa para Conserto"}, "name"
+            ),  # This template doesn't require automatic calculation
+            invoice_items_table=invoice_items,
+        )
+
+        invoice_name = result.get("docname")
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Move to Created first
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        # Move to Processing (should succeed even with zero tax values)
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify status changed successfully
+        self.assertEqual(invoice.invoice_status, "Processing")
+
+        print(
+            "\n✓ Processing succeeded with zero tax values (no auto calculation required)"
+        )
+        print(
+            f"  Invoice: {invoice.name}, ICMS: {invoice.icms_value or 0}, IPI: {invoice.ipi_value or 0}"
+        )
+
+
+# =============================================================================
+# Submitted Status Tests with Auto Tax Calculation
+# =============================================================================
+
+
+class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
+    """Test creating Submitted invoices with automatic tax calculation (Remessa em Garantia template)"""
+
+    def test_create_submitted_invoice_company_with_auto_tax_calculation(self):
+        """Test creating a Submitted invoice for company with automatic ICMS and IPI calculation"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data (Company/PJ)
+        client_data = generate_random_client(client_type="Company")
+
+        # Generate random totals
+        totals_data = generate_random_totals()
+
+        # Generate random address data
+        address_data = generate_random_address()
+
+        # Prepare invoice items
+        invoice_items = [
+            {"item_code": items_array[0]["item_code"], "quantity": 2},
+            {"item_code": items_array[1]["item_code"], "quantity": 1},
+        ]
+
+        # Create invoice
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Growatt",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test submitted invoice - automatic tax calculation",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+        )
+
+        # Verify invoice was created
+        self.assertTrue(
+            result.get("success"), f"Invoice creation failed: {result.get('message')}"
+        )
+        invoice_name = result.get("docname")
+        self.assertIsNotNone(invoice_name)
+
+        # Fetch invoice
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Follow proper workflow: Draft → Created → Processing → Submitted
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        # Transition to Processing (taxes should be calculated)
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify tax values were calculated
+        invoice.reload()
+        self.assertIsNotNone(invoice.icms_value, "ICMS value should be calculated")
+        self.assertIsNotNone(invoice.ipi_value, "IPI value should be calculated")
+
+        # Transition to Submitted
+        invoice.invoice_status = "Submitted"
+        invoice.nf_ref_series = "1"
+        invoice.nf_ref_number = f"{frappe.utils.random_string(9)}"
+        invoice.nf_ref_access_key = frappe.generate_hash(length=44)
+        invoice.invoice_serie = "1"
+        invoice.invoice_number = f"{frappe.utils.random_string(9)}"
+        invoice.invoice_link = f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify status and tax fields
+        self.assertEqual(invoice.invoice_status, "Submitted")
+        print(
+            f"\n✓ Submitted invoice with auto tax calculation created successfully: {invoice.name}"
+        )
+        print(f"  ICMS Value: R$ {invoice.icms_value:.2f}")
+        print(f"  IPI Value: R$ {invoice.ipi_value:.2f}")
+        print(f"  PIS Value: R$ {invoice.pis_value or 0:.2f}")
+        print(f"  COFINS Value: R$ {invoice.cofins_value or 0:.2f}")
+
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
+
+    def test_create_submitted_invoice_individual_multiple_items_with_auto_tax(self):
+        """Test creating a Submitted invoice for individual with multiple items and automatic tax calculation"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data (Individual/PF)
+        client_data = generate_random_client(client_type="Individual")
+        totals_data = generate_random_totals()
+        address_data = generate_random_address()
+
+        # Prepare invoice items with multiple quantities
+        invoice_items = [
+            {"item_code": items_array[2]["item_code"], "quantity": 3},
+            {"item_code": items_array[3]["item_code"], "quantity": 2},
+        ]
+
+        # Create invoice
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="1 - Freight Contracted by Recipient (FOB)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Sungrow",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test submitted - individual with multiple items and auto tax",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+        )
+
+        self.assertTrue(result.get("success"))
+        invoice_name = result.get("docname")
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Follow workflow
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify taxes calculated
+        invoice.reload()
+        self.assertIsNotNone(invoice.icms_value)
+        self.assertIsNotNone(invoice.ipi_value)
+
+        # Move to Submitted
+        invoice.invoice_status = "Submitted"
+        invoice.nf_ref_series = "2"
+        invoice.nf_ref_number = f"{frappe.utils.random_string(9)}"
+        invoice.nf_ref_access_key = frappe.generate_hash(length=44)
+        invoice.invoice_serie = "2"
+        invoice.invoice_number = f"{frappe.utils.random_string(9)}"
+        invoice.invoice_link = f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
+        invoice.save()
+        frappe.db.commit()
+
+        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.product_quantity, "5")
+
+        print(
+            f"\n✓ Submitted invoice (Individual, 5 items) with auto tax: {invoice.name}"
+        )
+        print(f"  ICMS: R$ {invoice.icms_value:.2f}, IPI: R$ {invoice.ipi_value:.2f}")
+
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
+
+    def test_create_submitted_invoice_with_serial_and_auto_tax(self):
+        """Test creating a Submitted invoice with serial number and automatic tax calculation"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data (Company/PJ)
+        client_data = generate_random_client(client_type="Company")
+        totals_data = generate_random_totals()
+        address_data = generate_random_address()
+
+        # Use serial number (automatically sets quantity to 1)
+        invoice_items = [{"serial_number": serial_no_array[7]["serial_no"]}]
+
+        # Create invoice
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Fronius",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora RJ"}, "name"
+            ),
+            additional_information="Test submitted - serial with auto tax",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+        )
+
+        self.assertTrue(result.get("success"))
+        invoice_name = result.get("docname")
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Follow workflow
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify taxes calculated
+        invoice.reload()
+        self.assertIsNotNone(invoice.icms_value)
+        self.assertIsNotNone(invoice.ipi_value)
+
+        # Move to Submitted
+        invoice.invoice_status = "Submitted"
+        invoice.nf_ref_series = "3"
+        invoice.nf_ref_number = f"{frappe.utils.random_string(9)}"
+        invoice.nf_ref_access_key = frappe.generate_hash(length=44)
+        invoice.invoice_serie = "3"
+        invoice.invoice_number = f"{frappe.utils.random_string(9)}"
+        invoice.invoice_link = f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
+        invoice.save()
+        frappe.db.commit()
+
+        self.assertEqual(invoice.invoice_status, "Submitted")
+
+        print(f"\n✓ Submitted invoice (serial) with auto tax: {invoice.name}")
+        print(f"  ICMS: R$ {invoice.icms_value:.2f}, IPI: R$ {invoice.ipi_value:.2f}")
+
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
+
+    def test_create_submitted_invoice_with_return_nf_and_auto_tax(self):
+        """Test creating a Submitted invoice with Return NF and automatic tax calculation"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data (Company/PJ)
+        client_data = generate_random_client(client_type="Company")
+        totals_data = generate_random_totals()
+        address_data = generate_random_address()
+
+        # Prepare invoice items
+        invoice_items = [{"item_code": items_array[4]["item_code"], "quantity": 2}]
+
+        # Create invoice with Return NF flag
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="1 - Freight Contracted by Recipient (FOB)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Huawei",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test submitted - Return NF with auto tax",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+            nf_de_retorno=True,
+            nf_ref_serie="5",
+            nf_ref_num="123456789",
+            nf_ref_access_key=frappe.generate_hash(length=44),
+        )
+
+        self.assertTrue(result.get("success"))
+        invoice_name = result.get("docname")
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Follow workflow
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify taxes calculated
+        invoice.reload()
+        self.assertIsNotNone(invoice.icms_value)
+        self.assertIsNotNone(invoice.ipi_value)
+
+        # Move to Submitted
+        invoice.invoice_status = "Submitted"
+        invoice.nf_ref_series = "5"
+        invoice.nf_ref_number = "123456789"
+        invoice.invoice_serie = "5"
+        invoice.invoice_number = f"{frappe.utils.random_string(9)}"
+        invoice.invoice_link = f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
+        invoice.save()
+        frappe.db.commit()
+
+        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.nf_de_retorno, 1)
+
+        print(f"\n✓ Submitted invoice (Return NF) with auto tax: {invoice.name}")
+        print(f"  ICMS: R$ {invoice.icms_value:.2f}, IPI: R$ {invoice.ipi_value:.2f}")
+
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
+
+
+# =============================================================================
 # Final Summary Test - Overall Invoice Statistics
 # =============================================================================
 

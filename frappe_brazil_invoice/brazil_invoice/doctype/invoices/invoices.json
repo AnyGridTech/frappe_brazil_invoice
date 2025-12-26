@@ -49,6 +49,13 @@
   "total",
   "column_break_bjbb",
   "total_tax",
+  "taxes_section",
+  "icms_value",
+  "ipi_value",
+  "column_break_taxes",
+  "pis_value",
+  "cofins_value",
+  "difal_value",
   "address_section",
   "delivery_supervisor",
   "delivery_cep",
@@ -407,6 +414,45 @@
    "label": "Tax Template",
    "options": "Tax",
    "get_query": "frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.get_tax_template_query"
+  },
+  {
+   "fieldname": "taxes_section",
+   "fieldtype": "Section Break",
+   "label": "Individual Taxes"
+  },
+  {
+   "fieldname": "icms_value",
+   "fieldtype": "Currency",
+   "label": "ICMS Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ipi_value",
+   "fieldtype": "Currency",
+   "label": "IPI Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_taxes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pis_value",
+   "fieldtype": "Currency",
+   "label": "PIS Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cofins_value",
+   "fieldtype": "Currency",
+   "label": "COFINS Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "difal_value",
+   "fieldtype": "Currency",
+   "label": "DIFAL Value",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

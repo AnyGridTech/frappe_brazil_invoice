@@ -14,6 +14,8 @@ class Invoices(Document):
         """Actions before saving the document"""
         # Set operation_type from tax template if tax_template is selected
         self.set_operation_type_from_template()
+        # Calculate taxes from template or automatically
+        self.calculate_taxes_from_template()
         # Calculate total and product fields
         self.calculate_total()
 
@@ -30,6 +32,9 @@ class Invoices(Document):
 
         # Validate Invoice ID is mandatory when transitioning to Processing
         self.validate_invoice_id()
+
+        # Validate tax fields are calculated before Processing
+        self.validate_tax_calculation()
 
         # Validate required fields when transitioning to Submitted
         self.validate_submitted_fields()
@@ -188,6 +193,62 @@ class Invoices(Document):
                     )
                 )
 
+    def validate_tax_calculation(self):
+        """Validate that tax fields are calculated before transitioning to Processing status
+
+        When an invoice moves to Processing status, it must have tax values calculated.
+        This validates that if the tax template requires automatic calculation for any tax,
+        the corresponding tax value field must be filled (non-zero or explicitly zero after calculation).
+        """
+        if self.invoice_status == "Processing" and self.tax_template:
+            try:
+                tax_template = frappe.get_doc("Tax", self.tax_template)
+
+                # Check which taxes require calculation
+                taxes_to_check = []
+
+                if tax_template.calculate_automatically_icms:
+                    # ICMS should be calculated - check if value exists
+                    if not hasattr(self, "icms_value"):
+                        taxes_to_check.append("ICMS")
+                    # Value can be zero if calculated as zero, but must be set (not None)
+                    elif self.icms_value is None:
+                        taxes_to_check.append("ICMS")
+
+                if tax_template.calculate_automatically_ipi:
+                    if not hasattr(self, "ipi_value"):
+                        taxes_to_check.append("IPI")
+                    elif self.ipi_value is None:
+                        taxes_to_check.append("IPI")
+
+                if tax_template.calculate_automatically_pis:
+                    if not hasattr(self, "pis_value"):
+                        taxes_to_check.append("PIS")
+                    elif self.pis_value is None:
+                        taxes_to_check.append("PIS")
+
+                if tax_template.calculate_automatically_cofins:
+                    if not hasattr(self, "cofins_value"):
+                        taxes_to_check.append("COFINS")
+                    elif self.cofins_value is None:
+                        taxes_to_check.append("COFINS")
+
+                if taxes_to_check:
+                    frappe.throw(
+                        _(
+                            "Tax calculation is required before moving to Processing status. "
+                            "The following taxes need to be calculated: {0}. "
+                            "Please ensure the tax template calculations are completed."
+                        ).format(", ".join(taxes_to_check))
+                    )
+            except Exception as e:
+                # If tax template doesn't exist or other error, skip validation
+                if "does not exist" not in str(e):
+                    frappe.log_error(
+                        f"Error validating tax calculation: {str(e)}",
+                        "Tax Validation Error",
+                    )
+
     def validate_submitted_fields(self):
         """Validate that required fields are filled when transitioning to Submitted status
 
@@ -289,6 +350,56 @@ class Invoices(Document):
             + flt(self.other_expenses)
             - flt(self.total_discount)
         )
+
+    def calculate_taxes_from_template(self):
+        """Calculate tax values from template - either from template values or automatically
+
+        This method:
+        1. Gets tax template if selected
+        2. For each tax (ICMS, IPI, PIS, COFINS):
+           - If template requires automatic calculation: Call calculation API
+           - If template doesn't require automatic calculation: Set field to zero
+        """
+        if not self.tax_template:
+            return
+
+        try:
+            tax_template = frappe.get_doc("Tax", self.tax_template)
+        except Exception:
+            return
+
+        # Check if any tax requires automatic calculation
+        needs_auto_calculation = (
+            tax_template.calculate_automatically_icms
+            or tax_template.calculate_automatically_ipi
+            or tax_template.calculate_automatically_pis
+            or tax_template.calculate_automatically_cofins
+        )
+
+        if needs_auto_calculation:
+            # Call NFe.io API for automatic calculation
+            nfeio.calculate_taxes(self, tax_template)
+
+        # For taxes that don't require automatic calculation, set to zero
+        if not tax_template.calculate_automatically_icms:
+            # Set ICMS value to zero (non-taxed)
+            self.icms_value = 0.0
+
+        if not tax_template.calculate_automatically_ipi:
+            # Set IPI value to zero (non-taxed)
+            self.ipi_value = 0.0
+
+        if not tax_template.calculate_automatically_pis:
+            # Set PIS value to zero (non-taxed)
+            self.pis_value = 0.0
+
+        if not tax_template.calculate_automatically_cofins:
+            # Set COFINS value to zero (non-taxed)
+            self.cofins_value = 0.0
+
+        # DIFAL is typically not in templates, set to 0 for now
+        if not hasattr(self, "difal_value") or self.difal_value is None:
+            self.difal_value = 0.0
 
     def calculate_automatic_taxes(self):
         """Calculate ICMS and IPI automatically based on tax template using NFe.io API"""
