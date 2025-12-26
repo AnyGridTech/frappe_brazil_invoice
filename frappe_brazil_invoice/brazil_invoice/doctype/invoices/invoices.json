@@ -14,10 +14,10 @@
   "client_type",
   "freight_modality",
   "column_break_tutt",
-  "nf_ref_serie",
-  "nf_ref_num",
-  "nf_ref_access_key",
-  "nf_de_retorno",
+  "invoice_ref_series",
+  "invoice_ref_number",
+  "invoice_ref_access_key",
+  "is_return_invoice",
   "section_break_goab",
   "client_name",
   "client_email",
@@ -39,6 +39,13 @@
   "product_net_weight",
   "additional_data_section",
   "additional_information",
+  "taxes_section",
+  "icms_value",
+  "ipi_value",
+  "column_break_taxes",
+  "pis_value",
+  "cofins_value",
+  "difal_value",
   "totals_section",
   "total_freight",
   "total_discount",
@@ -48,14 +55,8 @@
   "section_break_ycvd",
   "total",
   "column_break_bjbb",
-  "total_tax",
-  "taxes_section",
-  "icms_value",
-  "ipi_value",
-  "column_break_taxes",
-  "pis_value",
-  "cofins_value",
-  "difal_value",
+  "total_of_taxes",
+  "total_with_taxes",
   "address_section",
   "delivery_supervisor",
   "delivery_cep",
@@ -71,6 +72,7 @@
   "sefaz_events_section",
   "invoice_id",
   "invoice_serie",
+  "invoice_access_key",
   "column_break_pbac",
   "invoice_link",
   "invoice_number",
@@ -130,19 +132,25 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "nf_ref_serie",
+   "fieldname": "invoice_ref_series",
    "fieldtype": "Data",
-   "label": "NF Ref. Series"
+   "label": "Invoice Ref. Series"
   },
   {
-   "fieldname": "nf_ref_num",
+   "fieldname": "invoice_ref_number",
    "fieldtype": "Data",
-   "label": "NF Ref. Number"
+   "label": "Invoice Ref. Number"
   },
   {
-   "fieldname": "nf_ref_access_key",
+   "fieldname": "invoice_ref_access_key",
    "fieldtype": "Data",
-   "label": "NF Ref. Access Key"
+   "label": "Invoice Ref. Access Key"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_return_invoice",
+   "fieldtype": "Check",
+   "label": "Is Return Invoice"
   },
   {
    "fieldname": "section_break_goab",
@@ -225,6 +233,45 @@
    "label": "Additional Information"
   },
   {
+   "fieldname": "taxes_section",
+   "fieldtype": "Section Break",
+   "label": "Individual Taxes"
+  },
+  {
+   "fieldname": "icms_value",
+   "fieldtype": "Currency",
+   "label": "ICMS Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ipi_value",
+   "fieldtype": "Currency",
+   "label": "IPI Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_taxes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pis_value",
+   "fieldtype": "Currency",
+   "label": "PIS Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cofins_value",
+   "fieldtype": "Currency",
+   "label": "COFINS Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "difal_value",
+   "fieldtype": "Currency",
+   "label": "DIFAL Value",
+   "read_only": 1
+  },
+  {
    "fieldname": "totals_section",
    "fieldtype": "Section Break",
    "label": "Totals"
@@ -268,9 +315,16 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "total_tax",
+   "fieldname": "total_of_taxes",
    "fieldtype": "Currency",
-   "label": "Total + Taxes"
+   "label": "Total of Taxes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_with_taxes",
+   "fieldtype": "Currency",
+   "label": "Total + Taxes",
+   "read_only": 1
   },
   {
    "fieldname": "product_section",
@@ -358,6 +412,11 @@
    "label": "Invoice Serie"
   },
   {
+   "fieldname": "invoice_access_key",
+   "fieldtype": "Data",
+   "label": "Invoice Access Key"
+  },
+  {
    "fieldname": "column_break_pbac",
    "fieldtype": "Column Break"
   },
@@ -379,12 +438,6 @@
    "fieldname": "errors_field",
    "fieldtype": "Long Text",
    "label": "Logs:"
-  },
-  {
-   "default": "0",
-   "fieldname": "nf_de_retorno",
-   "fieldtype": "Check",
-   "label": "Return NF?"
   },
   {
    "fieldname": "internal_tab",
@@ -414,45 +467,6 @@
    "label": "Tax Template",
    "options": "Tax",
    "get_query": "frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.get_tax_template_query"
-  },
-  {
-   "fieldname": "taxes_section",
-   "fieldtype": "Section Break",
-   "label": "Individual Taxes"
-  },
-  {
-   "fieldname": "icms_value",
-   "fieldtype": "Currency",
-   "label": "ICMS Value",
-   "read_only": 1
-  },
-  {
-   "fieldname": "ipi_value",
-   "fieldtype": "Currency",
-   "label": "IPI Value",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_taxes",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "pis_value",
-   "fieldtype": "Currency",
-   "label": "PIS Value",
-   "read_only": 1
-  },
-  {
-   "fieldname": "cofins_value",
-   "fieldtype": "Currency",
-   "label": "COFINS Value",
-   "read_only": 1
-  },
-  {
-   "fieldname": "difal_value",
-   "fieldtype": "Currency",
-   "label": "DIFAL Value",
-   "read_only": 1
   }
  ],
  "grid_page_length": 50,

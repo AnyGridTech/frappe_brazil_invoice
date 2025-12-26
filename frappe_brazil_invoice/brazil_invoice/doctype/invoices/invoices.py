@@ -36,6 +36,12 @@ class Invoices(Document):
         # Validate tax fields are calculated before Processing
         self.validate_tax_calculation()
 
+        # Validate return invoice reference fields
+        self.validate_return_invoice_fields()
+
+        # Validate invoice access key field
+        self.validate_invoice_access_key()
+
         # Validate required fields when transitioning to Submitted
         self.validate_submitted_fields()
 
@@ -249,18 +255,67 @@ class Invoices(Document):
                         "Tax Validation Error",
                     )
 
+    def validate_return_invoice_fields(self):
+        """Validate that reference fields are filled when is_return_invoice is checked
+
+        When is_return_invoice is checked, the following fields become mandatory:
+        - invoice_ref_series
+        - invoice_ref_number
+        - invoice_ref_access_key
+        """
+        if self.is_return_invoice:
+            required_fields = [
+                ("invoice_ref_series", "Invoice Ref. Series"),
+                ("invoice_ref_number", "Invoice Ref. Number"),
+                ("invoice_ref_access_key", "Invoice Ref. Access Key"),
+            ]
+
+            missing_fields = []
+            for field_name, field_label in required_fields:
+                field_value = getattr(self, field_name, None)
+                if not field_value or (
+                    isinstance(field_value, str) and not field_value.strip()
+                ):
+                    missing_fields.append(field_label)
+
+            if missing_fields:
+                frappe.throw(
+                    _(
+                        "The following fields are mandatory when 'Is Return Invoice' is checked: {0}"
+                    ).format(", ".join(missing_fields))
+                )
+
+    def validate_invoice_access_key(self):
+        """Validate invoice_access_key field based on status
+
+        The invoice_access_key field should be filled when invoice reaches certain statuses.
+        Similar behavior to other Sefaz Events fields like invoice_id, invoice_serie, etc.
+        """
+        # Invoice Access Key is typically filled during Processing or Submitted status
+        # It should be present when invoice_id exists (meaning it's been sent to Sefaz)
+        if self.invoice_status in [
+            "Processing",
+            "Submitted",
+            "Rejected",
+            "Contingency",
+        ]:
+            if self.invoice_id and not self.invoice_access_key:
+                # This is a warning rather than blocking validation
+                # since access key might be generated asynchronously
+                pass
+
     def validate_submitted_fields(self):
         """Validate that required fields are filled when transitioning to Submitted status
 
         When an invoice moves from Processing to Submitted status, the following fields
-        must be filled: NF Ref. Series, NF Ref. Number, NF Ref. Access Key,
+        must be filled: Invoice Ref. Series, Invoice Ref. Number, Invoice Ref. Access Key,
         Invoice Serie, Invoice Number, and Invoice Link.
         """
         if self.invoice_status == "Submitted":
             required_fields = [
-                ("nf_ref_series", "NF Ref. Series"),
-                ("nf_ref_number", "NF Ref. Number"),
-                ("nf_ref_access_key", "NF Ref. Access Key"),
+                ("invoice_ref_series", "Invoice Ref. Series"),
+                ("invoice_ref_number", "Invoice Ref. Number"),
+                ("invoice_ref_access_key", "Invoice Ref. Access Key"),
                 ("invoice_serie", "Invoice Serie"),
                 ("invoice_number", "Invoice Number"),
                 ("invoice_link", "Invoice Link"),
@@ -351,6 +406,18 @@ class Invoices(Document):
             - flt(self.total_discount)
         )
 
+        # Calculate total of taxes (sum of all individual tax values)
+        self.total_of_taxes = (
+            flt(self.icms_value or 0)
+            + flt(self.ipi_value or 0)
+            + flt(self.pis_value or 0)
+            + flt(self.cofins_value or 0)
+            + flt(self.difal_value or 0)
+        )
+        
+        # Calculate total with taxes (total + total_of_taxes)
+        self.total_with_taxes = self.total + self.total_of_taxes
+
     def calculate_taxes_from_template(self):
         """Calculate tax values from template - either from template values or automatically
 
@@ -358,7 +425,8 @@ class Invoices(Document):
         1. Gets tax template if selected
         2. For each tax (ICMS, IPI, PIS, COFINS):
            - If template requires automatic calculation: Call calculation API
-           - If template doesn't require automatic calculation: Set field to zero
+           - If template has manual rate: Apply the rate manually
+           - Otherwise: Set field to zero
         """
         if not self.tax_template:
             return
@@ -380,7 +448,14 @@ class Invoices(Document):
             # Call NFe.io API for automatic calculation
             nfeio.calculate_taxes(self, tax_template)
 
-        # For taxes that don't require automatic calculation, set to zero
+        # Calculate base for manual tax calculations (total product value)
+        base_value = (
+            sum(item.amount for item in self.invoice_items_table)
+            if self.invoice_items_table
+            else 0
+        )
+
+        # For taxes that don't require automatic calculation, apply manual rates or set to zero
         if not tax_template.calculate_automatically_icms:
             # Set ICMS value to zero (non-taxed)
             self.icms_value = 0.0
@@ -390,12 +465,18 @@ class Invoices(Document):
             self.ipi_value = 0.0
 
         if not tax_template.calculate_automatically_pis:
-            # Set PIS value to zero (non-taxed)
-            self.pis_value = 0.0
+            # Apply manual PIS rate if configured, otherwise set to zero
+            if hasattr(tax_template, "pis_rate") and tax_template.pis_rate:
+                self.pis_value = base_value * (float(tax_template.pis_rate) / 100)
+            else:
+                self.pis_value = 0.0
 
         if not tax_template.calculate_automatically_cofins:
-            # Set COFINS value to zero (non-taxed)
-            self.cofins_value = 0.0
+            # Apply manual COFINS rate if configured, otherwise set to zero
+            if hasattr(tax_template, "cofins_rate") and tax_template.cofins_rate:
+                self.cofins_value = base_value * (float(tax_template.cofins_rate) / 100)
+            else:
+                self.cofins_value = 0.0
 
         # DIFAL is typically not in templates, set to 0 for now
         if not hasattr(self, "difal_value") or self.difal_value is None:
@@ -559,10 +640,10 @@ def create_invoice(
     total_tax=None,
     tax_template=None,
     invoice_items_table=None,
-    nf_ref_serie=None,
-    nf_ref_num=None,
-    nf_ref_access_key=None,
-    nf_de_retorno=None,
+    invoice_ref_series=None,
+    invoice_ref_number=None,
+    invoice_ref_access_key=None,
+    is_return_invoice=None,
 ):
     """
     API endpoint for creating invoices from automation systems.
@@ -733,22 +814,21 @@ def create_invoice(
             invoice_doc.total_insurance = total_insurance
         if other_expenses:
             invoice_doc.other_expenses = other_expenses
-        if total_tax:
-            invoice_doc.total_tax = total_tax
+        # Note: total_of_taxes and total_with_taxes are calculated automatically
 
         # Set tax template
         if tax_template:
             invoice_doc.tax_template = tax_template
 
-        # Set reference NF information
-        if nf_ref_serie:
-            invoice_doc.nf_ref_serie = nf_ref_serie
-        if nf_ref_num:
-            invoice_doc.nf_ref_num = nf_ref_num
-        if nf_ref_access_key:
-            invoice_doc.nf_ref_access_key = nf_ref_access_key
-        if nf_de_retorno is not None:
-            invoice_doc.nf_de_retorno = nf_de_retorno
+        # Set reference invoice information
+        if invoice_ref_series:
+            invoice_doc.invoice_ref_series = invoice_ref_series
+        if invoice_ref_number:
+            invoice_doc.invoice_ref_number = invoice_ref_number
+        if invoice_ref_access_key:
+            invoice_doc.invoice_ref_access_key = invoice_ref_access_key
+        if is_return_invoice is not None:
+            invoice_doc.is_return_invoice = is_return_invoice
 
         # Add invoice items (child table)
         for item in parsed_items:
