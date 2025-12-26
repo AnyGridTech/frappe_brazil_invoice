@@ -514,6 +514,20 @@ def print_invoice_details(invoice, tax_doc=None, show_items=True, client_data=No
     print(f"  Total: R$ {float(invoice.total or 0):.2f}")
     print(f"  Gross Weight: {float(invoice.product_gross_weight or 0)} kg")
     print(f"  Net Weight: {float(invoice.product_net_weight or 0)} kg")
+    
+    # Individual tax values
+    if hasattr(invoice, 'icms_value') or hasattr(invoice, 'ipi_value') or hasattr(invoice, 'pis_value') or hasattr(invoice, 'cofins_value'):
+        print("  Individual Tax Values:")
+        if hasattr(invoice, 'icms_value') and invoice.icms_value is not None:
+            print(f"    ICMS: R$ {float(invoice.icms_value):.2f}")
+        if hasattr(invoice, 'ipi_value') and invoice.ipi_value is not None:
+            print(f"    IPI: R$ {float(invoice.ipi_value):.2f}")
+        if hasattr(invoice, 'pis_value') and invoice.pis_value is not None:
+            print(f"    PIS: R$ {float(invoice.pis_value):.2f}")
+        if hasattr(invoice, 'cofins_value') and invoice.cofins_value is not None:
+            print(f"    COFINS: R$ {float(invoice.cofins_value):.2f}")
+        if hasattr(invoice, 'difal_value') and invoice.difal_value is not None and invoice.difal_value > 0:
+            print(f"    DIFAL: R$ {float(invoice.difal_value):.2f}")
 
     if tax_doc:
         print("  Tax Details:")
