@@ -142,6 +142,171 @@ def generate_random_serial_number():
     return f"{prefix}{suffix}"
 
 
+def generate_random_phone_number():
+    """Generate a random Brazilian phone number matching Frappe Phone field validation
+
+    Returns:
+        str: Brazilian phone number with format +55 11 91234-5678
+    """
+    import random
+
+    # Brazilian area codes
+    area_code = random.choice(
+        ["11", "21", "31", "41", "51", "61", "71", "81", "85", "91"]
+    )
+    # Generate first part (4-5 digits) and second part (4 digits)
+    first_part = f"9{random.randint(1000, 9999)}"
+    second_part = f"{random.randint(1000, 9999)}"
+    return f"+55 {area_code} {first_part}-{second_part}"
+
+
+def generate_random_client(client_type=None):
+    """Generate random client information for PF (individual) or PJ (company)
+
+    Args:
+        client_type (str, optional): 'Company' for PJ or 'Individual' for PF.
+                                     If None, randomly chosen.
+
+    Returns:
+        dict: Dictionary with client_name, email, phone, client_id_number,
+              icms_contributor, client_type, and state_registration
+    """
+    import random
+    import string
+
+    # Randomly choose if not specified
+    if client_type is None:
+        client_type = random.choice(["Company", "Individual"])
+
+    # Generate base data
+    first_names = [
+        "João",
+        "Maria",
+        "José",
+        "Ana",
+        "Pedro",
+        "Paula",
+        "Carlos",
+        "Juliana",
+        "Lucas",
+        "Fernanda",
+    ]
+    last_names = [
+        "Silva",
+        "Santos",
+        "Oliveira",
+        "Souza",
+        "Lima",
+        "Pereira",
+        "Costa",
+        "Ferreira",
+        "Alves",
+        "Rodrigues",
+    ]
+
+    def generate_cpf():
+        """Generate a valid CPF number"""
+
+        def calculate_digit(digits):
+            s = sum(int(d) * w for d, w in zip(digits, range(len(digits) + 1, 1, -1)))
+            digit = 11 - (s % 11)
+            return 0 if digit > 9 else digit
+
+        # Generate first 9 digits
+        cpf = [random.randint(0, 9) for _ in range(9)]
+        # Calculate verification digits
+        cpf.append(calculate_digit(cpf))
+        cpf.append(calculate_digit(cpf))
+        # Format as XXX.XXX.XXX-XX
+        cpf_str = "".join(map(str, cpf))
+        return f"{cpf_str[:3]}.{cpf_str[3:6]}.{cpf_str[6:9]}-{cpf_str[9:]}"
+
+    def generate_cnpj():
+        """Generate a valid CNPJ number"""
+
+        def calculate_digit(digits, weights):
+            s = sum(int(d) * w for d, w in zip(digits, weights))
+            digit = 11 - (s % 11)
+            return 0 if digit > 9 else digit
+
+        # Generate first 8 digits (base) + 4 digits (branch)
+        cnpj = [random.randint(0, 9) for _ in range(8)] + [0, 0, 0, 1]
+        # Calculate first verification digit
+        weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        cnpj.append(calculate_digit(cnpj, weights1))
+        # Calculate second verification digit
+        weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        cnpj.append(calculate_digit(cnpj, weights2))
+        # Format as XX.XXX.XXX/XXXX-XX
+        cnpj_str = "".join(map(str, cnpj))
+        return f"{cnpj_str[:2]}.{cnpj_str[2:5]}.{cnpj_str[5:8]}/{cnpj_str[8:12]}-{cnpj_str[12:]}"
+
+    if client_type == "Company":
+        # Generate company (PJ) data
+        company_suffixes = ["Ltda", "S.A.", "ME", "EPP", "EIRELI"]
+        business_types = [
+            "Comércio",
+            "Indústria",
+            "Serviços",
+            "Tecnologia",
+            "Distribuidora",
+        ]
+
+        client_name = f"{random.choice(business_types)} {random.choice(last_names)} {random.choice(company_suffixes)}"
+        client_id_number = generate_cnpj()
+        icms_contributor = "Taxpayer"  # Companies are typically taxpayers
+        # Generate state registration (9 digits)
+        state_registration = "".join([str(random.randint(0, 9)) for _ in range(9)])
+    else:
+        # Generate individual (PF) data
+        client_name = f"{random.choice(first_names)} {random.choice(last_names)}"
+        client_id_number = generate_cpf()
+        icms_contributor = "Non-Taxpayer"  # Individuals are typically non-taxpayers
+        state_registration = "ISENTO"  # Exempt for individuals
+
+    # Generate contact info
+    email_name = (
+        client_name.lower()
+        .replace(" ", ".")
+        .replace("ltda", "")
+        .replace("s.a.", "")
+        .replace("me", "")
+        .replace("epp", "")
+        .replace("eireli", "")
+        .strip(".")
+    )
+    email = f"{email_name}@test.com"
+
+    # Generate Brazilian phone number using helper function
+    phone = generate_random_phone_number()
+
+    return {
+        "client_name": client_name,
+        "email": email,
+        "phone": phone,
+        "client_id_number": client_id_number,
+        "icms_contributor": icms_contributor,
+        "client_type": client_type,
+        "state_registration": state_registration,
+    }
+
+
+def generate_random_totals():
+    """Generate random values for invoice totals
+
+    Returns:
+        dict: Dictionary with total_freight, total_discount, total_insurance, other_expenses
+    """
+    import random
+
+    return {
+        "total_freight": round(random.uniform(20.00, 150.00), 2),
+        "total_discount": round(random.uniform(0.00, 100.00), 2),
+        "total_insurance": round(random.uniform(5.00, 50.00), 2),
+        "other_expenses": round(random.uniform(0.00, 30.00), 2),
+    }
+
+
 def generate_random_address():
     """Generate random address and contact information for testing
 
@@ -251,9 +416,8 @@ def generate_random_address():
     # Select random city
     city_data = random.choice(cities_data)
 
-    # Generate random phone number in format +55-11977747309
-    area_code = random.choice(["11", "21", "31", "41", "51", "85", "71", "81"])
-    phone_number = f"+55-{area_code}{random.randint(900000000, 999999999)}"
+    # Generate random phone number using helper function
+    phone_number = generate_random_phone_number()
 
     # Generate random address
     street_type = random.choice(street_types)
@@ -609,19 +773,25 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         # Prepare invoice items - only serial_number required, system auto-fills the rest
         invoice_items = [{"serial_number": serial["serial_no"]}]
 
+        # Generate random client data (Company/PJ)
+        client_data = generate_random_client(client_type="Company")
+
         # Generate random address data
         address_data = generate_random_address()
 
+        # Generate random totals
+        totals_data = generate_random_totals()
+
         # Create invoice with tax template that has automatic ICMS and IPI calculation
         result = create_test_invoice_with_token(
-            client_type="Company",
+            client_type=client_data["client_type"],
             freight_modality="0 - Freight Contracted by Sender (CIF)",
-            client_name="Test Customer Ltda",
-            client_email="customer@test.com",
-            client_phone=address_data["phone"],
-            client_id_number="12.345.678/0001-90",
-            contribuinte_icms="Taxpayer",
-            inscricao_estadual="123456789",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
             delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
@@ -637,10 +807,10 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
                 "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
             ),
             additional_information="Test invoice for automatic ICMS and IPI calculation",
-            total_freight=50.00,
-            total_discount=0.00,
-            total_insurance=10.00,
-            other_expenses=5.00,
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
             tax_template=frappe.db.get_value(
                 "Tax", {"template_name": "Remessa em Garantia"}, "name"
             ),
@@ -658,7 +828,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Verify basic fields
-        self.assertEqual(invoice.client_name, "Test Customer Ltda")
+        self.assertEqual(invoice.client_name, client_data["client_name"])
         self.assertEqual(invoice.product_brand, "Growatt")
         tax_template_name = frappe.db.get_value(
             "Tax", {"template_name": "Remessa em Garantia"}, "name"
@@ -698,6 +868,12 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
         """
         frappe.set_user("Administrator")
 
+        # Generate random client data (Individual/PF)
+        client_data = generate_random_client(client_type="Individual")
+
+        # Generate random totals
+        totals_data = generate_random_totals()
+
         # Get test item
         item = items_array[1]
 
@@ -714,14 +890,14 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
 
         # Create invoice
         result = create_test_invoice_with_token(
-            client_type="Company",
+            client_type=client_data["client_type"],
             freight_modality="0 - Freight Contracted by Sender (CIF)",
-            client_name="Direct Item Test Company",
-            client_email="itemtest@test.com",
-            client_phone=address_data["phone"],
-            client_id_number="11.222.333/0001-44",
-            contribuinte_icms="Taxpayer",
-            inscricao_estadual="999888777",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
             delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
@@ -737,10 +913,10 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
                 "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
             ),
             additional_information="Test invoice with item_code only (no serial number)",
-            total_freight=0.00,
-            total_discount=0.00,
-            total_insurance=0.00,
-            other_expenses=0.00,
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
             tax_template=frappe.db.get_value(
                 "Tax", {"template_name": "Remessa em Garantia"}, "name"
             ),
@@ -801,8 +977,8 @@ class TestResponsibleValidation(FrappeTestCase):
             client_email="noresponsible@test.com",
             client_phone=address_data["phone"],
             client_id_number="99.888.777/0001-11",
-            contribuinte_icms="Taxpayer",
-            inscricao_estadual="999888777",
+            icms_contributor="Taxpayer",
+            state_registration="999888777",
             delivery_supervisor=None,  # Explicitly set to None
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
@@ -875,8 +1051,8 @@ class TestResponsibleValidation(FrappeTestCase):
             client_email="respchange@test.com",
             client_phone=address_data["phone"],
             client_id_number="88.777.666/0001-22",
-            contribuinte_icms="Taxpayer",
-            inscricao_estadual="888777666",
+            icms_contributor="Taxpayer",
+            state_registration="888777666",
             delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
@@ -1001,8 +1177,8 @@ class TestInvoiceProcessing(FrappeTestCase):
             client_email="multiitem.a@test.com",
             client_phone=address_data["phone"],
             client_id_number="22.333.444/0001-55",
-            contribuinte_icms="Taxpayer",
-            inscricao_estadual="111222333",
+            icms_contributor="Taxpayer",
+            state_registration="111222333",
             delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
@@ -1147,8 +1323,8 @@ class TestInvoiceProcessing(FrappeTestCase):
             client_email="multiitem.b@test.com",
             client_phone=address_data["phone"],
             client_id_number="33.444.555/0001-66",
-            contribuinte_icms="Taxpayer",
-            inscricao_estadual="444555666",
+            icms_contributor="Taxpayer",
+            state_registration="444555666",
             delivery_supervisor=address_data["responsible"],
             delivery_cep=address_data["cep"],
             delivery_address=address_data["address"],
