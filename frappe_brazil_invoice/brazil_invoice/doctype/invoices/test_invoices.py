@@ -2069,14 +2069,14 @@ class TestInvoiceSubmitted(FrappeTestCase):
             carrier=frappe.db.get_value(
                 "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
             ),
-            additional_information="Test submitted invoice - company with all fields",
+            additional_information="Test submitted invoice - company with all fields (no auto tax)",
             total_freight=totals_data["total_freight"],
             total_discount=totals_data["total_discount"],
             total_insurance=totals_data["total_insurance"],
             other_expenses=totals_data["other_expenses"],
             tax_template=frappe.db.get_value(
-                "Tax", {"template_name": "Remessa em Garantia"}, "name"
-            ),
+                "Tax", {"template_name": "Remessa para Conserto"}, "name"
+            ),  # Template without auto calculation
             invoice_items_table=invoice_items,
         )
 
@@ -2166,14 +2166,14 @@ class TestInvoiceSubmitted(FrappeTestCase):
             carrier=frappe.db.get_value(
                 "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
             ),
-            additional_information="Test submitted invoice - individual with serial",
+            additional_information="Test submitted invoice - individual with serial (no auto tax)",
             total_freight=totals_data["total_freight"],
             total_discount=totals_data["total_discount"],
             total_insurance=totals_data["total_insurance"],
             other_expenses=totals_data["other_expenses"],
             tax_template=frappe.db.get_value(
-                "Tax", {"template_name": "Remessa em Garantia"}, "name"
-            ),
+                "Tax", {"template_name": "Remessa para Conserto"}, "name"
+            ),  # Template without auto calculation
             invoice_items_table=invoice_items,
         )
 
@@ -2258,14 +2258,14 @@ class TestInvoiceSubmitted(FrappeTestCase):
             carrier=frappe.db.get_value(
                 "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
             ),
-            additional_information="Test submitted invoice - with Return NF",
+            additional_information="Test submitted invoice - with Return NF (no auto tax)",
             total_freight=totals_data["total_freight"],
             total_discount=totals_data["total_discount"],
             total_insurance=totals_data["total_insurance"],
             other_expenses=totals_data["other_expenses"],
             tax_template=frappe.db.get_value(
-                "Tax", {"template_name": "Remessa em Garantia"}, "name"
-            ),
+                "Tax", {"template_name": "Remessa para Conserto"}, "name"
+            ),  # Template without auto calculation
             invoice_items_table=invoice_items,
             nf_de_retorno=True,  # Enable Return NF flag
             nf_ref_serie="5",
@@ -2512,14 +2512,14 @@ class TestInvoiceSubmitted(FrappeTestCase):
             carrier=frappe.db.get_value(
                 "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
             ),
-            additional_information="Test submitted invoice - multiple items",
+            additional_information="Test submitted invoice - multiple items (no auto tax)",
             total_freight=totals_data["total_freight"],
             total_discount=totals_data["total_discount"],
             total_insurance=totals_data["total_insurance"],
             other_expenses=totals_data["other_expenses"],
             tax_template=frappe.db.get_value(
-                "Tax", {"template_name": "Remessa em Garantia"}, "name"
-            ),
+                "Tax", {"template_name": "Remessa para Conserto"}, "name"
+            ),  # Template without auto calculation
             invoice_items_table=invoice_items,
         )
 
