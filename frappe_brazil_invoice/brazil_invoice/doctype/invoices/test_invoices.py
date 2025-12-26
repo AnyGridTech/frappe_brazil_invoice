@@ -171,7 +171,6 @@ def generate_random_client(client_type=None):
               icms_contributor, client_type, and state_registration
     """
     import random
-    import string
 
     # Randomly choose if not specified
     if client_type is None:
@@ -484,7 +483,7 @@ def print_invoice_details(invoice, tax_doc=None, show_items=True, client_data=No
         if invoice.nf_ref_series:
             print(f"  NF Ref. Series: {invoice.nf_ref_series}")
         if invoice.nf_de_retorno:
-            print(f"  Return NF: Enabled ✓")
+            print("  Return NF: Enabled ✓")
         if invoice.invoice_link:
             print(f"  Invoice Link: {invoice.invoice_link[:50]}...")
     
