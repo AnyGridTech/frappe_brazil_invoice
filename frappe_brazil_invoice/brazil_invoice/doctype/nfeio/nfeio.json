@@ -1,41 +1,63 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-11-13 16:07:01.996621",
+ "creation": "2025-12-26 10:39:38.809973",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "api_endpoint",
-  "api_token"
+  "config_name",
+  "company_name",
+  "company_id",
+  "api_token",
+  "is_test_config"
  ],
  "fields": [
   {
-   "fieldname": "api_endpoint",
+   "fieldname": "config_name",
    "fieldtype": "Data",
-   "label": "API Endpoint"
+   "in_list_view": 1,
+   "label": "Config Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "company_name",
+   "fieldtype": "Data",
+   "label": "Company Name"
+  },
+  {
+   "fieldname": "company_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Company ID"
   },
   {
    "fieldname": "api_token",
-   "fieldtype": "Password",
+   "fieldtype": "Data",
    "label": "API Token"
+  },
+  {
+   "fieldname": "is_test_config",
+   "fieldtype": "Check",
+   "label": "Is Test Config"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "issingle": 1,
  "links": [],
- "modified": "2025-11-13 16:07:41.314828",
+ "modified": "2025-12-26 10:41:28.561810",
  "modified_by": "Administrator",
  "module": "Brazil Invoice",
- "name": "Invoice Params",
+ "name": "NFeIO",
  "owner": "Administrator",
  "permissions": [
   {
    "create": 1,
    "delete": 1,
    "email": 1,
+   "export": 1,
    "print": 1,
    "read": 1,
+   "report": 1,
    "role": "System Manager",
    "share": 1,
    "write": 1

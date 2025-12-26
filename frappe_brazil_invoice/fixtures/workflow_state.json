@@ -1,8 +1,8 @@
 [
   {
     "doctype": "Workflow State",
-    "name": "Created",
-    "workflow_state_name": "Created",
+    "name": "Non Processed",
+    "workflow_state_name": "Non Processed",
     "icon": "file",
     "style": "Info"
   },
@@ -15,6 +15,13 @@
   },
   {
     "doctype": "Workflow State",
+    "name": "Processing Error",
+    "workflow_state_name": "Processing Error",
+    "icon": "exclamation-triangle",
+    "style": "Danger"
+  },
+  {
+    "doctype": "Workflow State",
     "name": "Contingency",
     "workflow_state_name": "Contingency",
     "icon": "exclamation-sign",
@@ -22,8 +29,8 @@
   },
   {
     "doctype": "Workflow State",
-    "name": "Submitted",
-    "workflow_state_name": "Submitted",
+    "name": "Issued",
+    "workflow_state_name": "Issued",
     "icon": "ok-sign",
     "style": "Success"
   },

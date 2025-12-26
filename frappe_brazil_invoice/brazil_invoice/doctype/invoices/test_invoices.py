@@ -449,9 +449,9 @@ def print_invoice_details(invoice, tax_doc=None, show_items=True, client_data=No
     """
     status_emoji = {
         "Draft": "📝",
-        "Created": "✅",
+        "Non Processed": "✅",
         "Processing": "⚙️",
-        "Submitted": "📄",
+        "Issued": "📄",
         "Rejected": "❌",
         "Contingency": "⚠️",
         "Unused": "🗑️",
@@ -474,8 +474,8 @@ def print_invoice_details(invoice, tax_doc=None, show_items=True, client_data=No
     if invoice.invoice_id:
         print(f"  Invoice ID: {invoice.invoice_id}")
     
-    # Submitted invoice fields
-    if invoice.invoice_status == "Submitted":
+    # Issued invoice fields
+    if invoice.invoice_status == "Issued":
         if invoice.invoice_serie:
             print(f"  Invoice Serie: {invoice.invoice_serie}")
         if invoice.invoice_number:
@@ -1086,7 +1086,7 @@ class TestResponsibleValidation(FrappeTestCase):
         )
 
         # Try to set status to Created
-        invoice.invoice_status = "Created"
+        invoice.invoice_status = "Non Processed"
 
         with self.assertRaises(frappe.ValidationError) as context:
             invoice.save()
@@ -1574,8 +1574,8 @@ class TestInvoiceRejected(FrappeTestCase):
 
         # Follow proper workflow: Draft → Created → Processing → Rejected
         # First ensure it's in Created status (respecting validations)
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -1662,8 +1662,8 @@ class TestInvoiceRejected(FrappeTestCase):
 
         # Follow proper workflow: Draft → Created → Processing → Rejected
         # First ensure it's in Created status (respecting validations)
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -1762,8 +1762,8 @@ class TestInvoiceContingency(FrappeTestCase):
 
         # Follow proper workflow: Draft → Created → Processing → Contingency
         # First ensure it's in Created status (respecting validations)
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -1850,8 +1850,8 @@ class TestInvoiceContingency(FrappeTestCase):
 
         # Follow proper workflow: Draft → Created → Processing → Contingency
         # First ensure it's in Created status (respecting validations)
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -1945,7 +1945,7 @@ class TestInvoiceUnused(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Move to Created first
-        invoice.invoice_status = "Created"
+        invoice.invoice_status = "Non Processed"
         invoice.save()
         frappe.db.commit()
 
@@ -2023,7 +2023,7 @@ class TestInvoiceUnused(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Move to Created first
-        invoice.invoice_status = "Created"
+        invoice.invoice_status = "Non Processed"
         invoice.save()
         frappe.db.commit()
 
@@ -2040,15 +2040,15 @@ class TestInvoiceUnused(FrappeTestCase):
 
 
 # =============================================================================
-# Submitted Status Tests
+# Issued Status Tests
 # =============================================================================
 
 
-class TestInvoiceSubmitted(FrappeTestCase):
-    """Test creating Submitted invoices with proper workflow validation"""
+class TestInvoiceIssued(FrappeTestCase):
+    """Test creating Issued invoices with proper workflow validation"""
 
     def test_create_submitted_invoice_company_with_all_fields(self):
-        """Test creating a Submitted invoice for company (PJ) with all required fields"""
+        """Test creating a Issued invoice for company (PJ) with all required fields"""
         frappe.set_user("Administrator")
 
         # Generate random client data (Company/PJ)
@@ -2111,10 +2111,10 @@ class TestInvoiceSubmitted(FrappeTestCase):
         # Fetch invoice
         invoice = frappe.get_doc("Invoices", invoice_name)
 
-        # Follow proper workflow: Draft → Created → Processing → Submitted
+        # Follow proper workflow: Draft → Created → Processing → Issued
         # First ensure it's in Created status
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2125,9 +2125,9 @@ class TestInvoiceSubmitted(FrappeTestCase):
         invoice.save()
         frappe.db.commit()
 
-        # Finally transition to Submitted (must have all required fields)
+        # Finally transition to Issued (must have all required fields)
         invoice.reload()
-        invoice.invoice_status = "Submitted"
+        invoice.invoice_status = "Issued"
         invoice.invoice_ref_series = "1"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
@@ -2138,7 +2138,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         frappe.db.commit()
 
         # Verify status and fields
-        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.invoice_status, "Issued")
         self.assertEqual(invoice.client_type, "Company")
         self.assertIsNotNone(invoice.invoice_id)
         self.assertIsNotNone(invoice.invoice_ref_series)
@@ -2147,7 +2147,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         print_invoice_details(invoice, show_items=True, client_data=client_data)
 
     def test_create_submitted_invoice_individual_with_serial(self):
-        """Test creating a Submitted invoice for individual (PF) with serial number"""
+        """Test creating a Issued invoice for individual (PF) with serial number"""
         frappe.set_user("Administrator")
 
         # Generate random client data (Individual/PF)
@@ -2209,8 +2209,8 @@ class TestInvoiceSubmitted(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Follow proper workflow with all validations
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2221,7 +2221,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         frappe.db.commit()
 
         invoice.reload()
-        invoice.invoice_status = "Submitted"
+        invoice.invoice_status = "Issued"
         invoice.invoice_ref_series = "2"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
@@ -2232,13 +2232,13 @@ class TestInvoiceSubmitted(FrappeTestCase):
         frappe.db.commit()
 
         # Verify
-        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.invoice_status, "Issued")
         self.assertEqual(invoice.client_type, "Individual")
 
         print_invoice_details(invoice, show_items=True, client_data=client_data)
 
     def test_create_submitted_invoice_with_return_invoice(self):
-        """Test creating a Submitted invoice with Return Invoice flag enabled"""
+        """Test creating a Issued invoice with Return Invoice flag enabled"""
         frappe.set_user("Administrator")
 
         # Generate random client data (Company/PJ)
@@ -2305,8 +2305,8 @@ class TestInvoiceSubmitted(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Follow proper workflow
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2317,7 +2317,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         frappe.db.commit()
 
         invoice.reload()
-        invoice.invoice_status = "Submitted"
+        invoice.invoice_status = "Issued"
         invoice.invoice_ref_series = "5"
         invoice.invoice_ref_number = "987654321"
         invoice.invoice_serie = "5"
@@ -2327,7 +2327,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         frappe.db.commit()
 
         # Verify Return Invoice is set
-        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.invoice_status, "Issued")
         self.assertEqual(invoice.is_return_invoice, 1)  # Check if Return Invoice is enabled
         self.assertIsNotNone(invoice.invoice_ref_access_key)
 
@@ -2382,8 +2382,8 @@ class TestInvoiceSubmitted(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Ensure Created status
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2401,7 +2401,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         print(f"  Error: {str(context.exception)[:100]}...")
 
     def test_submitted_validation_missing_required_fields(self):
-        """Test that validation prevents Submitted without required NF fields"""
+        """Test that validation prevents Issued without required NF fields"""
         frappe.set_user("Administrator")
 
         # Generate random client data
@@ -2450,8 +2450,8 @@ class TestInvoiceSubmitted(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Move to Created
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2462,16 +2462,16 @@ class TestInvoiceSubmitted(FrappeTestCase):
         invoice.save()
         frappe.db.commit()
 
-        # Try to move to Submitted without required fields (should fail)
+        # Try to move to Issued without required fields (should fail)
         invoice.reload()
-        invoice.invoice_status = "Submitted"
+        invoice.invoice_status = "Issued"
         # Do NOT set required NF fields - this should trigger validation error
 
         with self.assertRaises(Exception) as context:
             invoice.save()
 
         error_message = str(context.exception)
-        self.assertIn("mandatory when moving to Submitted", error_message)
+        self.assertIn("mandatory when moving to Issued", error_message)
         # Check that it mentions missing fields
         self.assertTrue(
             any(
@@ -2486,11 +2486,11 @@ class TestInvoiceSubmitted(FrappeTestCase):
             )
         )
 
-        print("\n✓ Validation correctly prevents Submitted without required NF fields")
+        print("\n✓ Validation correctly prevents Issued without required NF fields")
         print(f"  Error: {error_message[:120]}...")
 
     def test_create_submitted_invoice_with_multiple_items(self):
-        """Test creating a Submitted invoice with multiple different items"""
+        """Test creating a Issued invoice with multiple different items"""
         frappe.set_user("Administrator")
 
         # Generate random client data (Company/PJ)
@@ -2555,8 +2555,8 @@ class TestInvoiceSubmitted(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Follow proper workflow
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2567,7 +2567,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         frappe.db.commit()
 
         invoice.reload()
-        invoice.invoice_status = "Submitted"
+        invoice.invoice_status = "Issued"
         invoice.invoice_ref_series = "3"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
@@ -2578,7 +2578,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         frappe.db.commit()
 
         # Verify
-        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.invoice_status, "Issued")
         self.assertEqual(len(invoice.invoice_items_table), 3)
         self.assertEqual(invoice.product_quantity, "6")  # 2+3+1
 
@@ -2643,8 +2643,8 @@ class TestTaxCalculationValidation(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Move to Created first
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2713,8 +2713,8 @@ class TestTaxCalculationValidation(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Move to Created first
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2737,15 +2737,15 @@ class TestTaxCalculationValidation(FrappeTestCase):
 
 
 # =============================================================================
-# Submitted Status Tests with Auto Tax Calculation
+# Issued Status Tests with Auto Tax Calculation
 # =============================================================================
 
 
-class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
-    """Test creating Submitted invoices with automatic tax calculation (Remessa em Garantia template)"""
+class TestInvoiceIssuedWithAutoTaxCalculation(FrappeTestCase):
+    """Test creating Issued invoices with automatic tax calculation (Remessa em Garantia template)"""
 
     def test_create_submitted_invoice_company_with_auto_tax_calculation(self):
-        """Test creating a Submitted invoice for company with automatic ICMS and IPI calculation"""
+        """Test creating a Issued invoice for company with automatic ICMS and IPI calculation"""
         frappe.set_user("Administrator")
 
         # Generate random client data (Company/PJ)
@@ -2808,9 +2808,9 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         # Fetch invoice
         invoice = frappe.get_doc("Invoices", invoice_name)
 
-        # Follow proper workflow: Draft → Created → Processing → Submitted
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        # Follow proper workflow: Draft → Created → Processing → Issued
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2826,8 +2826,8 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         self.assertIsNotNone(invoice.icms_value, "ICMS value should be calculated")
         self.assertIsNotNone(invoice.ipi_value, "IPI value should be calculated")
 
-        # Transition to Submitted
-        invoice.invoice_status = "Submitted"
+        # Transition to Issued
+        invoice.invoice_status = "Issued"
         invoice.invoice_ref_series = "1"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
@@ -2838,9 +2838,9 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         frappe.db.commit()
 
         # Verify status and tax fields
-        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.invoice_status, "Issued")
         print(
-            f"\n✓ Submitted invoice with auto tax calculation created successfully: {invoice.name}"
+            f"\n✓ Issued invoice with auto tax calculation created successfully: {invoice.name}"
         )
         print(f"  ICMS Value: R$ {invoice.icms_value:.2f}")
         print(f"  IPI Value: R$ {invoice.ipi_value:.2f}")
@@ -2850,7 +2850,7 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         print_invoice_details(invoice, show_items=True, client_data=client_data)
 
     def test_create_submitted_invoice_individual_multiple_items_with_auto_tax(self):
-        """Test creating a Submitted invoice for individual with multiple items and automatic tax calculation"""
+        """Test creating a Issued invoice for individual with multiple items and automatic tax calculation"""
         frappe.set_user("Administrator")
 
         # Generate random client data (Individual/PF)
@@ -2903,8 +2903,8 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Follow workflow
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -2919,8 +2919,8 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         self.assertIsNotNone(invoice.icms_value)
         self.assertIsNotNone(invoice.ipi_value)
 
-        # Move to Submitted
-        invoice.invoice_status = "Submitted"
+        # Move to Issued
+        invoice.invoice_status = "Issued"
         invoice.invoice_ref_series = "2"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
@@ -2930,18 +2930,18 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         invoice.save()
         frappe.db.commit()
 
-        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.invoice_status, "Issued")
         self.assertEqual(invoice.product_quantity, "5")
 
         print(
-            f"\n✓ Submitted invoice (Individual, 5 items) with auto tax: {invoice.name}"
+            f"\n✓ Issued invoice (Individual, 5 items) with auto tax: {invoice.name}"
         )
         print(f"  ICMS: R$ {invoice.icms_value:.2f}, IPI: R$ {invoice.ipi_value:.2f}")
 
         print_invoice_details(invoice, show_items=True, client_data=client_data)
 
     def test_create_submitted_invoice_with_serial_and_auto_tax(self):
-        """Test creating a Submitted invoice with serial number and automatic tax calculation"""
+        """Test creating a Issued invoice with serial number and automatic tax calculation"""
         frappe.set_user("Administrator")
 
         # Generate random client data (Company/PJ)
@@ -2992,8 +2992,8 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Follow workflow
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -3008,8 +3008,8 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         self.assertIsNotNone(invoice.icms_value)
         self.assertIsNotNone(invoice.ipi_value)
 
-        # Move to Submitted
-        invoice.invoice_status = "Submitted"
+        # Move to Issued
+        invoice.invoice_status = "Issued"
         invoice.invoice_ref_series = "3"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
@@ -3019,15 +3019,15 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         invoice.save()
         frappe.db.commit()
 
-        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.invoice_status, "Issued")
 
-        print(f"\n✓ Submitted invoice (serial) with auto tax: {invoice.name}")
+        print(f"\n✓ Issued invoice (serial) with auto tax: {invoice.name}")
         print(f"  ICMS: R$ {invoice.icms_value:.2f}, IPI: R$ {invoice.ipi_value:.2f}")
 
         print_invoice_details(invoice, show_items=True, client_data=client_data)
 
     def test_create_submitted_invoice_with_return_invoice_and_auto_tax(self):
-        """Test creating a Submitted invoice with Return Invoice and automatic tax calculation"""
+        """Test creating a Issued invoice with Return Invoice and automatic tax calculation"""
         frappe.set_user("Administrator")
 
         # Generate random client data (Company/PJ)
@@ -3082,8 +3082,8 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         invoice = frappe.get_doc("Invoices", invoice_name)
 
         # Follow workflow
-        if invoice.invoice_status != "Created":
-            invoice.invoice_status = "Created"
+        if invoice.invoice_status != "Non Processed":
+            invoice.invoice_status = "Non Processed"
             invoice.save()
             frappe.db.commit()
 
@@ -3098,8 +3098,8 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         self.assertIsNotNone(invoice.icms_value)
         self.assertIsNotNone(invoice.ipi_value)
 
-        # Move to Submitted
-        invoice.invoice_status = "Submitted"
+        # Move to Issued
+        invoice.invoice_status = "Issued"
         invoice.invoice_ref_series = "5"
         invoice.invoice_ref_number = "123456789"
         invoice.invoice_serie = "5"
@@ -3108,10 +3108,10 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
         invoice.save()
         frappe.db.commit()
 
-        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.invoice_status, "Issued")
         self.assertEqual(invoice.is_return_invoice, 1)
 
-        print(f"\n✓ Submitted invoice (Return Invoice) with auto tax: {invoice.name}")
+        print(f"\n✓ Issued invoice (Return Invoice) with auto tax: {invoice.name}")
         print(f"  ICMS: R$ {invoice.icms_value:.2f}, IPI: R$ {invoice.ipi_value:.2f}")
 
         print_invoice_details(invoice, show_items=True, client_data=client_data)
@@ -3135,7 +3135,7 @@ class TestInvoicesSummary(FrappeTestCase):
         # Normalize workflow distribution: keep exactly 2 per non-submitted status
         # Any additional invoices in these statuses should be submitted
         statuses_to_limit = [
-            "Created",
+            "Non Processed",
             "Processing",
             "Rejected",
             "Contingency",
@@ -3184,13 +3184,13 @@ class TestInvoicesSummary(FrappeTestCase):
                 keep_names = {rows[0]["name"], rows[1]["name"]}
                 extra_names = [r["name"] for r in rows if r["name"] not in keep_names]
                 if extra_names:
-                    # Set a default PDF link if missing and mark as Submitted
+                    # Set a default PDF link if missing and mark as Issued
                     # Update in batches to avoid overly long queries
                     placeholders = ",".join(["%s"] * len(extra_names))
                     frappe.db.sql(
                         f"""
                         UPDATE `tabInvoices`
-                        SET invoice_status = 'Submitted',
+                        SET invoice_status = 'Issued',
                             docstatus = 1,
                             invoice_link = COALESCE(invoice_link, 'https://example.com/invoices/auto-submit.pdf')
                         WHERE name IN ({placeholders})
@@ -3268,7 +3268,7 @@ class TestInvoicesSummary(FrappeTestCase):
                 pdf_counts[status]["without_pdf"] += 1
 
             # Track submitted invoices without PDF (should be 0!)
-            if status == "Submitted" and not inv.invoice_link:
+            if status == "Issued" and not inv.invoice_link:
                 submitted_without_pdf.append(inv.name)
 
         # Print comprehensive summary
@@ -3295,7 +3295,7 @@ class TestInvoicesSummary(FrappeTestCase):
         print("\n✅ PDF VALIDATION CHECK:")
         if submitted_without_pdf:
             print(
-                f"   ❌ FAILED: {len(submitted_without_pdf)} Submitted invoice(s) missing PDF!"
+                f"   ❌ FAILED: {len(submitted_without_pdf)} Issued invoice(s) missing PDF!"
             )
             for inv_name in submitted_without_pdf:
                 print(f"      - {inv_name}")
@@ -3303,9 +3303,9 @@ class TestInvoicesSummary(FrappeTestCase):
                 f"Found {len(submitted_without_pdf)} submitted invoices without PDF URLs"
             )
         else:
-            submitted_count = status_counts.get("Submitted", 0)
+            submitted_count = status_counts.get("Issued", 0)
             print(
-                f"   ✅ PASSED: All {submitted_count} Submitted invoices have PDF URLs"
+                f"   ✅ PASSED: All {submitted_count} Issued invoices have PDF URLs"
             )
 
         # Workflow Distribution Validation
@@ -3313,10 +3313,10 @@ class TestInvoicesSummary(FrappeTestCase):
         print(
             "   Requirement: EXACTLY 2 for Created/Processing/Rejected/Contingency/Unused."
         )
-        print("   All remaining invoices must be Submitted.")
+        print("   All remaining invoices must be Issued.")
         print()
         required_distribution = {
-            "Created": 2,
+            "Non Processed": 2,
             "Processing": 2,
             "Rejected": 2,
             "Contingency": 2,
@@ -3336,9 +3336,9 @@ class TestInvoicesSummary(FrappeTestCase):
                 )
                 distribution_valid = False
 
-        submitted_count = status_counts.get("Submitted", 0)
+        submitted_count = status_counts.get("Issued", 0)
         print(
-            f"   ℹ️  Submitted: {submitted_count} (Remaining after required distributions)"
+            f"   ℹ️  Issued: {submitted_count} (Remaining after required distributions)"
         )
 
         if distribution_valid:

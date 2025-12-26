@@ -246,7 +246,7 @@ app_license = "mit"
 # --------
 # Export fixtures (data) to be loaded during app installation
 fixtures = [
-	{"dt": "Workflow State", "filters": [["workflow_state_name", "in", ["Created", "Processing", "Contingency", "Submitted", "Rejected", "Cancelled", "Unused"]]]},
+	{"dt": "Workflow State", "filters": [["workflow_state_name", "in", ["Non Processed", "Processing", "Contingency", "Issued", "Rejected", "Cancelled", "Unused"]]]},
 	{"dt": "Workflow Action Master", "filters": [["workflow_action_name", "in", ["Process", "Submit", "Reject", "Move to Contingency", "Mark as Unused", "Cancel"]]]},
 	{"dt": "Workflow", "filters": [["workflow_name", "=", "Invoice Workflow"]]}
 ]

@@ -6,10 +6,33 @@ from frappe import _
 from frappe.model.document import Document
 import requests
 import json
-from . import nfeio
+from datetime import datetime
+from ..nfeio import tax as nfeio_tax
 
 
 class Invoices(Document):
+    def _handle_processing_error(self, error_type, error_message):
+        """
+        Handle errors that occur during Processing status by changing status to Processing Error
+        and logging the error details.
+
+        Args:
+            error_type: Type of error (e.g., 'Tax Calculation Error', 'API Error')
+            error_message: Detailed error message
+        """
+        # Change status to Processing Error
+        self.invoice_status = "Processing Error"
+
+        # Log the error using the standard logging format
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] [ERROR] {error_type}\n  {error_message}"
+
+        # Append to errors_field
+        if self.errors_field:
+            self.errors_field = self.errors_field + "\n\n" + log_entry
+        else:
+            self.errors_field = log_entry
+
     def before_save(self):
         """Actions before saving the document"""
         # Set operation_type from tax template if tax_template is selected
@@ -42,7 +65,7 @@ class Invoices(Document):
         # Validate invoice access key field
         self.validate_invoice_access_key()
 
-        # Validate required fields when transitioning to Submitted
+        # Validate required fields when transitioning to Issued
         self.validate_submitted_fields()
 
         # Must have at least one item row
@@ -52,7 +75,7 @@ class Invoices(Document):
             )
 
         # Guard status changes that require items
-        restricted_statuses = {"Created", "Processing", "Submitted"}
+        restricted_statuses = {"Non Processed", "Processing", "Issued"}
         if getattr(self, "invoice_status", None) in restricted_statuses:
             # Redundant due to above, but explicit for clarity
             if not self.invoice_items_table or len(self.invoice_items_table) == 0:
@@ -63,7 +86,7 @@ class Invoices(Document):
                 )
 
         # Calculate taxes automatically if in Draft or Created status
-        if self.invoice_status in [None, "Draft", "Created"]:
+        if self.invoice_status in [None, "Draft", "Non Processed"]:
             self.calculate_automatic_taxes()
 
     def process_invoice_items(self):
@@ -118,7 +141,7 @@ class Invoices(Document):
             old_doc = self.get_doc_before_save()
             if old_doc and old_doc.invoice_status in [
                 "Processing",
-                "Submitted",
+                "Issued",
                 "Rejected",
                 "Contingency",
                 "Unused",
@@ -169,9 +192,9 @@ class Invoices(Document):
         reaches Created status and must never be empty afterwards.
         """
         statuses_requiring_responsible = [
-            "Created",
+            "Non Processed",
             "Processing",
-            "Submitted",
+            "Issued",
             "Rejected",
             "Contingency",
             "Unused",
@@ -188,15 +211,20 @@ class Invoices(Document):
     def validate_invoice_id(self):
         """Validate that Invoice ID is mandatory when transitioning to Processing status
 
-        When an invoice moves from Created to Processing status, the Invoice ID
+        When an invoice moves from Created to Processing and onwards status, the Invoice ID
         field must be filled.
         """
-        if self.invoice_status == "Processing":
+        statuses_requiring_invoice_id = [
+            "Processing",
+            "Issued",
+            "Rejected",
+            "Contingency",
+            "Unused",
+        ]
+        if self.invoice_status in statuses_requiring_invoice_id:
             if not self.invoice_id or not self.invoice_id.strip():
                 frappe.throw(
-                    _(
-                        "Invoice ID is mandatory when moving to Processing status. Please provide the Invoice ID."
-                    )
+                    _("Invoice ID is mandatory. Please provide the Invoice ID.")
                 )
 
     def validate_tax_calculation(self):
@@ -291,11 +319,11 @@ class Invoices(Document):
         The invoice_access_key field should be filled when invoice reaches certain statuses.
         Similar behavior to other Sefaz Events fields like invoice_id, invoice_serie, etc.
         """
-        # Invoice Access Key is typically filled during Processing or Submitted status
+        # Invoice Access Key is typically filled during Processing or Issued status
         # It should be present when invoice_id exists (meaning it's been sent to Sefaz)
         if self.invoice_status in [
             "Processing",
-            "Submitted",
+            "Issued",
             "Rejected",
             "Contingency",
         ]:
@@ -305,13 +333,13 @@ class Invoices(Document):
                 pass
 
     def validate_submitted_fields(self):
-        """Validate that required fields are filled when transitioning to Submitted status
+        """Validate that required fields are filled when transitioning to Issued status
 
-        When an invoice moves from Processing to Submitted status, the following fields
+        When an invoice moves from Processing to Issued status, the following fields
         must be filled: Invoice Ref. Series, Invoice Ref. Number, Invoice Ref. Access Key,
         Invoice Serie, Invoice Number, and Invoice Link.
         """
-        if self.invoice_status == "Submitted":
+        if self.invoice_status == "Issued":
             required_fields = [
                 ("invoice_ref_series", "Invoice Ref. Series"),
                 ("invoice_ref_number", "Invoice Ref. Number"),
@@ -332,7 +360,7 @@ class Invoices(Document):
             if missing_fields:
                 frappe.throw(
                     _(
-                        "The following fields are mandatory when moving to Submitted status: {0}"
+                        "The following fields are mandatory when moving to Issued status: {0}"
                     ).format(", ".join(missing_fields))
                 )
 
@@ -420,20 +448,31 @@ class Invoices(Document):
 
     def calculate_taxes_from_template(self):
         """Calculate tax values from template - either from template values or automatically
-
+        The document must be in Draft or Created status to perform calculations.
         This method:
         1. Gets tax template if selected
         2. For each tax (ICMS, IPI, PIS, COFINS):
            - If template requires automatic calculation: Call calculation API
            - If template has manual rate: Apply the rate manually
            - Otherwise: Set field to zero
+
+        If an error occurs during Processing status, the status will be changed to Processing Error.
         """
         if not self.tax_template:
             return
 
+        status_allowed = ["Draft", "Non Processed", "Processing"]
+        if self.invoice_status not in status_allowed:
+            return
+
         try:
             tax_template = frappe.get_doc("Tax", self.tax_template)
-        except Exception:
+        except Exception as e:
+            # If error occurs during Processing, change status to Processing Error
+            if self.invoice_status == "Processing":
+                self._handle_processing_error(
+                    "Tax Template Error", f"Failed to fetch tax template: {str(e)}"
+                )
             return
 
         # Check if any tax requires automatic calculation
@@ -446,7 +485,18 @@ class Invoices(Document):
 
         if needs_auto_calculation:
             # Call NFe.io API for automatic calculation
-            nfeio.calculate_taxes(self, tax_template)
+            try:
+                nfeio_tax.calculate_taxes(self, tax_template)
+            except Exception as e:
+                # If error occurs during Processing, change status to Processing Error
+                if self.invoice_status == "Processing":
+                    self._handle_processing_error(
+                        "Tax Calculation Error", f"NFe.io API call failed: {str(e)}"
+                    )
+                    return
+                else:
+                    # Re-raise the exception for other statuses
+                    raise
 
         # Calculate base for manual tax calculations (total product value)
         base_value = (
@@ -498,7 +548,7 @@ class Invoices(Document):
             tax_template.calculate_automatically_icms
             or tax_template.calculate_automatically_ipi
         ):
-            nfeio.calculate_taxes(self, tax_template)
+            nfeio_tax.calculate_taxes(self, tax_template)
 
     def on_update(self):
         frappe.log_error(f"Invoice document updated: {self.name}")
