@@ -2128,7 +2128,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         # Finally transition to Submitted (must have all required fields)
         invoice.reload()
         invoice.invoice_status = "Submitted"
-        invoice.invoice_ref_seriess = "1"
+        invoice.invoice_ref_series = "1"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
         invoice.invoice_serie = "1"
@@ -2141,7 +2141,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
         self.assertEqual(invoice.invoice_status, "Submitted")
         self.assertEqual(invoice.client_type, "Company")
         self.assertIsNotNone(invoice.invoice_id)
-        self.assertIsNotNone(invoice.invoice_ref_seriess)
+        self.assertIsNotNone(invoice.invoice_ref_series)
         self.assertIsNotNone(invoice.invoice_link)
 
         print_invoice_details(invoice, show_items=True, client_data=client_data)
@@ -2222,7 +2222,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
 
         invoice.reload()
         invoice.invoice_status = "Submitted"
-        invoice.invoice_ref_seriess = "2"
+        invoice.invoice_ref_series = "2"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
         invoice.invoice_serie = "2"
@@ -2289,7 +2289,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
             ),  # Template without auto calculation
             invoice_items_table=invoice_items,
             is_return_invoice=True,  # Enable Return Invoice flag
-            invoice_ref_seriess="5",
+            invoice_ref_series="5",
             invoice_ref_number="987654321",
             invoice_ref_access_key=frappe.generate_hash(length=44),
         )
@@ -2318,7 +2318,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
 
         invoice.reload()
         invoice.invoice_status = "Submitted"
-        invoice.invoice_ref_seriess = "5"
+        invoice.invoice_ref_series = "5"
         invoice.invoice_ref_number = "987654321"
         invoice.invoice_serie = "5"
         invoice.invoice_number = f"{frappe.utils.random_string(9)}"
@@ -2568,7 +2568,7 @@ class TestInvoiceSubmitted(FrappeTestCase):
 
         invoice.reload()
         invoice.invoice_status = "Submitted"
-        invoice.invoice_ref_seriess = "3"
+        invoice.invoice_ref_series = "3"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
         invoice.invoice_serie = "3"
@@ -2828,7 +2828,7 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
 
         # Transition to Submitted
         invoice.invoice_status = "Submitted"
-        invoice.invoice_ref_seriess = "1"
+        invoice.invoice_ref_series = "1"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
         invoice.invoice_serie = "1"
@@ -2921,7 +2921,7 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
 
         # Move to Submitted
         invoice.invoice_status = "Submitted"
-        invoice.invoice_ref_seriess = "2"
+        invoice.invoice_ref_series = "2"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
         invoice.invoice_serie = "2"
@@ -3010,7 +3010,7 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
 
         # Move to Submitted
         invoice.invoice_status = "Submitted"
-        invoice.invoice_ref_seriess = "3"
+        invoice.invoice_ref_series = "3"
         invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
         invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
         invoice.invoice_serie = "3"
@@ -3072,7 +3072,7 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
             ),
             invoice_items_table=invoice_items,
             is_return_invoice=True,
-            nf_ref_serie="5",
+            invoice_ref_series="5",
             invoice_ref_number="123456789",
             invoice_ref_access_key=frappe.generate_hash(length=44),
         )
@@ -3100,7 +3100,7 @@ class TestInvoiceSubmittedWithAutoTaxCalculation(FrappeTestCase):
 
         # Move to Submitted
         invoice.invoice_status = "Submitted"
-        invoice.invoice_ref_seriess = "5"
+        invoice.invoice_ref_series = "5"
         invoice.invoice_ref_number = "123456789"
         invoice.invoice_serie = "5"
         invoice.invoice_number = f"{frappe.utils.random_string(9)}"

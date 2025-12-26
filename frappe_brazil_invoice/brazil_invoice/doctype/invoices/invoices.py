@@ -414,7 +414,7 @@ class Invoices(Document):
             + flt(self.cofins_value or 0)
             + flt(self.difal_value or 0)
         )
-        
+
         # Calculate total with taxes (total + total_of_taxes)
         self.total_with_taxes = self.total + self.total_of_taxes
 
