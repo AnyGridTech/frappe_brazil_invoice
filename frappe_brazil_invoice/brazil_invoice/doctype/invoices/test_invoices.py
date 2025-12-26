@@ -146,7 +146,7 @@ def generate_random_phone_number():
     """Generate a random Brazilian phone number matching Frappe Phone field validation
 
     Returns:
-        str: Brazilian phone number with format +55 11 91234-5678
+        str: Brazilian phone number with format +55-XX9XXXXXXXX
     """
     import random
 
@@ -154,10 +154,9 @@ def generate_random_phone_number():
     area_code = random.choice(
         ["11", "21", "31", "41", "51", "61", "71", "81", "85", "91"]
     )
-    # Generate first part (4-5 digits) and second part (4 digits)
-    first_part = f"9{random.randint(1000, 9999)}"
-    second_part = f"{random.randint(1000, 9999)}"
-    return f"+55 {area_code} {first_part}-{second_part}"
+    # Generate 8 digits (9XXXXXXX format for mobile)
+    phone_number = f"9{random.randint(10000000, 99999999)}"
+    return f"+55-{area_code}{phone_number}"
 
 
 def generate_random_client(client_type=None):
@@ -440,56 +439,93 @@ def generate_random_address():
     }
 
 
-def print_invoice_details(invoice, tax_doc=None, show_items=True):
-    """Print formatted invoice details
+def print_invoice_details(invoice, tax_doc=None, show_items=True, client_data=None):
+    """Print formatted invoice details with enhanced information
 
     Args:
         invoice: Invoice document
         tax_doc: Tax template document (optional)
         show_items: Whether to show detailed item information (default: True)
+        client_data: Client data dict with client_id_number (optional)
     """
-    print(f"✓ Invoice created successfully: {invoice.name}")
-    print(f"  - Client: {invoice.client_name}")
-    print(f"  - Status: {invoice.invoice_status}")
-    print(f"  - Brand: {invoice.product_brand}")
-    print(f"  - Tax Template: {invoice.tax_template}")
-
+    status_emoji = {
+        "Draft": "📝",
+        "Created": "✅",
+        "Processing": "⚙️",
+        "Submitted": "📄",
+        "Rejected": "❌",
+        "Contingency": "⚠️",
+        "Unused": "🗑️",
+    }
+    
+    emoji = status_emoji.get(invoice.invoice_status, "✓")
+    print(f"\n{emoji} {invoice.invoice_status} invoice created successfully: {invoice.name}")
+    
+    # Client information
+    print(f"  Client: {invoice.client_name}")
+    if client_data and "client_id_number" in client_data:
+        print(f"  {invoice.client_type}: {client_data['client_id_number']}")
+    elif invoice.client_type:
+        client_label = "CNPJ" if invoice.client_type == "Company" else "CPF"
+        if invoice.client_id_number:
+            print(f"  {client_label}: {invoice.client_id_number}")
+    
+    # Status and workflow fields
+    print(f"  Status: {invoice.invoice_status}")
+    if invoice.invoice_id:
+        print(f"  Invoice ID: {invoice.invoice_id}")
+    
+    # Submitted invoice fields
+    if invoice.invoice_status == "Submitted":
+        if invoice.invoice_serie:
+            print(f"  Invoice Serie: {invoice.invoice_serie}")
+        if invoice.invoice_number:
+            print(f"  Invoice Number: {invoice.invoice_number}")
+        if invoice.nf_ref_series:
+            print(f"  NF Ref. Series: {invoice.nf_ref_series}")
+        if invoice.nf_de_retorno:
+            print(f"  Return NF: Enabled ✓")
+        if invoice.invoice_link:
+            print(f"  Invoice Link: {invoice.invoice_link[:50]}...")
+    
+    # Product and items information
     if show_items and invoice.invoice_items_table:
-        print(f"  - Items ({len(invoice.invoice_items_table)}):")
+        print(f"  Items: {len(invoice.invoice_items_table)} (Total: {invoice.product_quantity} units)")
         for idx, item in enumerate(invoice.invoice_items_table, 1):
             print(f"    {idx}. {item.item_name}")
-            print(f"       - Code: {item.item_code}")
-            print(f"       - Quantity: {item.quantity}")
-            print(f"       - Rate: R$ {item.rate:.2f}")
-            print(f"       - Amount: R$ {item.amount:.2f}")
+            print(f"       Code: {item.item_code}")
+            print(f"       Quantity: {item.quantity}")
+            print(f"       Rate: R$ {item.rate:.2f}")
+            print(f"       Amount: R$ {item.amount:.2f}")
             if hasattr(item, "serial_number") and item.serial_number:
-                print(f"       - Serial: {item.serial_number}")
+                print(f"       Serial: {item.serial_number}")
     else:
-        print(
-            f"  - Items: {len(invoice.invoice_items_table) if invoice.invoice_items_table else 0}"
-        )
-
+        item_count = len(invoice.invoice_items_table) if invoice.invoice_items_table else 0
+        print(f"  Items: {item_count} (Total: {invoice.product_quantity} units)")
+    
+    # Financial totals
+    print(f"  Brand: {invoice.product_brand}")
     print(
-        f"  - Total Product Value: R$ {sum(item.amount for item in invoice.invoice_items_table):.2f}"
+        f"  Total Product Value: R$ {sum(item.amount for item in invoice.invoice_items_table):.2f}"
     )
-    print(f"  - Freight: R$ {float(invoice.total_freight or 0):.2f}")
-    print(f"  - Insurance: R$ {float(invoice.total_insurance or 0):.2f}")
-    print(f"  - Other Expenses: R$ {float(invoice.other_expenses or 0):.2f}")
-    print(f"  - Discount: R$ {float(invoice.total_discount or 0):.2f}")
-    print(f"  - Total: R$ {float(invoice.total or 0):.2f}")
-    print(f"  - Gross Weight: {float(invoice.product_gross_weight or 0)} kg")
-    print(f"  - Net Weight: {float(invoice.product_net_weight or 0)} kg")
+    print(f"  Freight: R$ {float(invoice.total_freight or 0):.2f}")
+    print(f"  Insurance: R$ {float(invoice.total_insurance or 0):.2f}")
+    print(f"  Other Expenses: R$ {float(invoice.other_expenses or 0):.2f}")
+    print(f"  Discount: R$ {float(invoice.total_discount or 0):.2f}")
+    print(f"  Total: R$ {float(invoice.total or 0):.2f}")
+    print(f"  Gross Weight: {float(invoice.product_gross_weight or 0)} kg")
+    print(f"  Net Weight: {float(invoice.product_net_weight or 0)} kg")
 
     if tax_doc:
-        print("  - Tax Details:")
+        print("  Tax Details:")
         print(
-            f"    - ICMS Base: R$ {tax_doc.base_calc_icms if tax_doc.base_calc_icms else 0:.2f}"
+            f"    ICMS Base: R$ {tax_doc.base_calc_icms if tax_doc.base_calc_icms else 0:.2f}"
         )
-        print(f"    - ICMS Rate: {tax_doc.icms_rate if tax_doc.icms_rate else 0}%")
+        print(f"    ICMS Rate: {tax_doc.icms_rate if tax_doc.icms_rate else 0}%")
         print(
-            f"    - IPI Base: R$ {tax_doc.ipi_calculation_base if tax_doc.ipi_calculation_base else 0:.2f}"
+            f"    IPI Base: R$ {tax_doc.ipi_calculation_base if tax_doc.ipi_calculation_base else 0:.2f}"
         )
-        print(f"    - IPI Rate: {tax_doc.ipi_rate if tax_doc.ipi_rate else 0}%")
+        print(f"    IPI Rate: {tax_doc.ipi_rate if tax_doc.ipi_rate else 0}%")
 
 
 # =============================================================================
@@ -585,6 +621,18 @@ serial_no_array = [
     },
     {
         "item_code": "TEST_SMART_ENERGY_003",
+        "serial_no": generate_random_serial_number(),
+    },
+    {
+        "item_code": "TEST_INVERTER_001",
+        "serial_no": generate_random_serial_number(),
+    },
+    {
+        "item_code": "TEST_INVERTER_002",
+        "serial_no": generate_random_serial_number(),
+    },
+    {
+        "item_code": "TEST_INVERTER_003",
         "serial_no": generate_random_serial_number(),
     },
 ]
@@ -1214,8 +1262,9 @@ class TestInvoiceProcessing(FrappeTestCase):
         # Fetch and verify invoice
         invoice = frappe.get_doc("Invoices", invoice_name)
 
-        # Update status to Processing
+        # Update status to Processing (must provide Invoice ID)
         invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
         invoice.save()
         frappe.db.commit()
 
@@ -1360,8 +1409,9 @@ class TestInvoiceProcessing(FrappeTestCase):
         # Fetch and verify invoice
         invoice = frappe.get_doc("Invoices", invoice_name)
 
-        # Update status to Processing
+        # Update status to Processing (must provide Invoice ID)
         invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
         invoice.save()
         frappe.db.commit()
 
@@ -1512,6 +1562,7 @@ class TestInvoiceRejected(FrappeTestCase):
         # Transition to Processing (respecting workflow validations)
         invoice.reload()
         invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
         invoice.save()
         frappe.db.commit()
 
@@ -1526,10 +1577,7 @@ class TestInvoiceRejected(FrappeTestCase):
         self.assertEqual(invoice.client_name, client_data["client_name"])
         self.assertEqual(invoice.client_type, "Company")
 
-        print("\n✓ Rejected invoice created successfully for Company (PJ)")
-        print(f"  Client: {client_data['client_name']}")
-        print(f"  CNPJ: {client_data['client_id_number']}")
-        print(f"  Status: {invoice.invoice_status}")
+        print_invoice_details(invoice, show_items=False, client_data=client_data)
 
     def test_create_rejected_invoice_individual(self):
         """Test creating a Rejected invoice for an individual (PF)"""
@@ -1602,6 +1650,7 @@ class TestInvoiceRejected(FrappeTestCase):
         # Transition to Processing (respecting workflow validations)
         invoice.reload()
         invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
         invoice.save()
         frappe.db.commit()
 
@@ -1616,10 +1665,7 @@ class TestInvoiceRejected(FrappeTestCase):
         self.assertEqual(invoice.client_name, client_data["client_name"])
         self.assertEqual(invoice.client_type, "Individual")
 
-        print("\n✓ Rejected invoice created successfully for Individual (PF)")
-        print(f"  Client: {client_data['client_name']}")
-        print(f"  CPF: {client_data['client_id_number']}")
-        print(f"  Status: {invoice.invoice_status}")
+        print_invoice_details(invoice, show_items=False, client_data=client_data)
 
 
 # =============================================================================
@@ -1704,6 +1750,7 @@ class TestInvoiceContingency(FrappeTestCase):
         # Transition to Processing (respecting workflow validations)
         invoice.reload()
         invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
         invoice.save()
         frappe.db.commit()
 
@@ -1718,10 +1765,7 @@ class TestInvoiceContingency(FrappeTestCase):
         self.assertEqual(len(invoice.invoice_items_table), 2)
         self.assertEqual(invoice.product_quantity, "5")
 
-        print("\n✓ Contingency invoice created successfully with multiple items")
-        print(f"  Client: {client_data['client_name']} (Company)")
-        print(f"  Items: 2 different products, 5 total units")
-        print(f"  Status: {invoice.invoice_status}")
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
 
     def test_create_contingency_invoice_individual(self):
         """Test creating a Contingency invoice for individual (PF)"""
@@ -1794,6 +1838,7 @@ class TestInvoiceContingency(FrappeTestCase):
         # Transition to Processing (respecting workflow validations)
         invoice.reload()
         invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
         invoice.save()
         frappe.db.commit()
 
@@ -1807,11 +1852,7 @@ class TestInvoiceContingency(FrappeTestCase):
         self.assertEqual(invoice.invoice_status, "Contingency")
         self.assertEqual(invoice.client_type, "Individual")
 
-        print("\n✓ Contingency invoice created successfully for Individual (PF)")
-        print(f"  Client: {client_data['client_name']}")
-        print(f"  CPF: {client_data['client_id_number']}")
-        print(f"  Item: {items_array[8]['item_code']}")
-        print(f"  Status: {invoice.invoice_status}")
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
 
 
 # =============================================================================
@@ -1898,11 +1939,7 @@ class TestInvoiceUnused(FrappeTestCase):
         self.assertEqual(invoice.client_type, "Company")
         self.assertEqual(invoice.product_quantity, "4")
 
-        print("\n✓ Unused invoice created successfully for Company (PJ)")
-        print(f"  Client: {client_data['client_name']}")
-        print(f"  CNPJ: {client_data['client_id_number']}")
-        print(f"  Quantity: 4 units")
-        print(f"  Status: {invoice.invoice_status}")
+        print_invoice_details(invoice, show_items=False, client_data=client_data)
 
     def test_create_unused_invoice_individual(self):
         """Test creating an Unused invoice for individual (PF)"""
@@ -1979,11 +2016,553 @@ class TestInvoiceUnused(FrappeTestCase):
         self.assertEqual(invoice.invoice_status, "Unused")
         self.assertEqual(invoice.client_type, "Individual")
 
-        print("\n✓ Unused invoice created successfully for Individual (PF)")
-        print(f"  Client: {client_data['client_name']}")
-        print(f"  CPF: {client_data['client_id_number']}")
-        print(f"  Serial: {serial_no_array[5]['serial_no']}")
-        print(f"  Status: {invoice.invoice_status}")
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
+
+
+# =============================================================================
+# Submitted Status Tests
+# =============================================================================
+
+
+class TestInvoiceSubmitted(FrappeTestCase):
+    """Test creating Submitted invoices with proper workflow validation"""
+
+    def test_create_submitted_invoice_company_with_all_fields(self):
+        """Test creating a Submitted invoice for company (PJ) with all required fields"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data (Company/PJ)
+        client_data = generate_random_client(client_type="Company")
+
+        # Generate random totals
+        totals_data = generate_random_totals()
+
+        # Generate random address data
+        address_data = generate_random_address()
+
+        # Prepare invoice items
+        invoice_items = [
+            {"item_code": items_array[0]["item_code"], "quantity": 2},
+            {"item_code": items_array[1]["item_code"], "quantity": 1},
+        ]
+
+        # Create invoice
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="1 - Freight Contracted by Recipient (FOB)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Growatt",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test submitted invoice - company with all fields",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+        )
+
+        # Verify invoice was created
+        self.assertTrue(
+            result.get("success"), f"Invoice creation failed: {result.get('message')}"
+        )
+        invoice_name = result.get("docname")
+        self.assertIsNotNone(invoice_name)
+
+        # Fetch invoice
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Follow proper workflow: Draft → Created → Processing → Submitted
+        # First ensure it's in Created status
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        # Transition to Processing (must have Invoice ID)
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Finally transition to Submitted (must have all required fields)
+        invoice.reload()
+        invoice.invoice_status = "Submitted"
+        invoice.nf_ref_series = "1"
+        invoice.nf_ref_number = f"{frappe.utils.random_string(9)}"
+        invoice.nf_ref_access_key = frappe.generate_hash(length=44)
+        invoice.invoice_serie = "1"
+        invoice.invoice_number = f"{frappe.utils.random_string(9)}"
+        invoice.invoice_link = f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify status and fields
+        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.client_type, "Company")
+        self.assertIsNotNone(invoice.invoice_id)
+        self.assertIsNotNone(invoice.nf_ref_series)
+        self.assertIsNotNone(invoice.invoice_link)
+
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
+
+    def test_create_submitted_invoice_individual_with_serial(self):
+        """Test creating a Submitted invoice for individual (PF) with serial number"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data (Individual/PF)
+        client_data = generate_random_client(client_type="Individual")
+
+        # Generate random totals
+        totals_data = generate_random_totals()
+
+        # Generate random address data
+        address_data = generate_random_address()
+
+        # Use serial number (automatically sets quantity to 1)
+        invoice_items = [
+            {"serial_number": serial_no_array[6]["serial_no"]},
+        ]
+
+        # Create invoice
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Sungrow",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test submitted invoice - individual with serial",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+        )
+
+        # Verify invoice was created
+        self.assertTrue(
+            result.get("success"), f"Invoice creation failed: {result.get('message')}"
+        )
+        invoice_name = result.get("docname")
+        self.assertIsNotNone(invoice_name)
+
+        # Fetch invoice
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Follow proper workflow with all validations
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        invoice.reload()
+        invoice.invoice_status = "Submitted"
+        invoice.nf_ref_series = "2"
+        invoice.nf_ref_number = f"{frappe.utils.random_string(9)}"
+        invoice.nf_ref_access_key = frappe.generate_hash(length=44)
+        invoice.invoice_serie = "2"
+        invoice.invoice_number = f"{frappe.utils.random_string(9)}"
+        invoice.invoice_link = f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify
+        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.client_type, "Individual")
+
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
+
+    def test_create_submitted_invoice_with_return_nf(self):
+        """Test creating a Submitted invoice with Return NF flag enabled"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data (Company/PJ)
+        client_data = generate_random_client(client_type="Company")
+
+        # Generate random totals
+        totals_data = generate_random_totals()
+
+        # Generate random address data
+        address_data = generate_random_address()
+
+        # Prepare invoice items
+        invoice_items = [
+            {"item_code": items_array[2]["item_code"], "quantity": 3},
+        ]
+
+        # Create invoice with Return NF flag
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="1 - Freight Contracted by Recipient (FOB)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Fronius",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test submitted invoice - with Return NF",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+            nf_de_retorno=True,  # Enable Return NF flag
+            nf_ref_serie="5",
+            nf_ref_num="987654321",
+            nf_ref_access_key=frappe.generate_hash(length=44),
+        )
+
+        # Verify invoice was created
+        self.assertTrue(
+            result.get("success"), f"Invoice creation failed: {result.get('message')}"
+        )
+        invoice_name = result.get("docname")
+        self.assertIsNotNone(invoice_name)
+
+        # Fetch invoice
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Follow proper workflow
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        invoice.reload()
+        invoice.invoice_status = "Submitted"
+        invoice.nf_ref_series = "5"
+        invoice.nf_ref_number = "987654321"
+        invoice.invoice_serie = "5"
+        invoice.invoice_number = f"{frappe.utils.random_string(9)}"
+        invoice.invoice_link = f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify Return NF is set
+        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(invoice.nf_de_retorno, 1)  # Check if Return NF is enabled
+        self.assertIsNotNone(invoice.nf_ref_access_key)
+
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
+
+    def test_submitted_validation_missing_invoice_id(self):
+        """Test that validation prevents Processing without Invoice ID"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data
+        client_data = generate_random_client(client_type="Individual")
+        address_data = generate_random_address()
+        totals_data = generate_random_totals()
+
+        # Create invoice
+        invoice_items = [{"item_code": items_array[3]["item_code"], "quantity": 1}]
+
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Huawei",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test validation - missing Invoice ID",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+        )
+
+        invoice_name = result.get("docname")
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Ensure Created status
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        # Try to move to Processing without Invoice ID (should fail)
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        # Do NOT set invoice_id - this should trigger validation error
+
+        with self.assertRaises(Exception) as context:
+            invoice.save()
+
+        self.assertIn("Invoice ID is mandatory", str(context.exception))
+
+        print("\n✓ Validation correctly prevents Processing without Invoice ID")
+        print(f"  Error: {str(context.exception)[:100]}...")
+
+    def test_submitted_validation_missing_required_fields(self):
+        """Test that validation prevents Submitted without required NF fields"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data
+        client_data = generate_random_client(client_type="Company")
+        address_data = generate_random_address()
+        totals_data = generate_random_totals()
+
+        # Create invoice
+        invoice_items = [{"item_code": items_array[4]["item_code"], "quantity": 2}]
+
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="1 - Freight Contracted by Recipient (FOB)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="Canadian Solar",
+            product_type="Módulo Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test validation - missing NF fields",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+        )
+
+        invoice_name = result.get("docname")
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Move to Created
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        # Move to Processing with Invoice ID
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Try to move to Submitted without required fields (should fail)
+        invoice.reload()
+        invoice.invoice_status = "Submitted"
+        # Do NOT set required NF fields - this should trigger validation error
+
+        with self.assertRaises(Exception) as context:
+            invoice.save()
+
+        error_message = str(context.exception)
+        self.assertIn("mandatory when moving to Submitted", error_message)
+        # Check that it mentions missing fields
+        self.assertTrue(
+            any(
+                field in error_message
+                for field in [
+                    "NF Ref. Series",
+                    "NF Ref. Number",
+                    "Invoice Serie",
+                    "Invoice Number",
+                    "Invoice Link",
+                ]
+            )
+        )
+
+        print("\n✓ Validation correctly prevents Submitted without required NF fields")
+        print(f"  Error: {error_message[:120]}...")
+
+    def test_create_submitted_invoice_with_multiple_items(self):
+        """Test creating a Submitted invoice with multiple different items"""
+        frappe.set_user("Administrator")
+
+        # Generate random client data (Company/PJ)
+        client_data = generate_random_client(client_type="Company")
+
+        # Generate random totals
+        totals_data = generate_random_totals()
+
+        # Generate random address data
+        address_data = generate_random_address()
+
+        # Prepare invoice items - multiple items with different quantities
+        invoice_items = [
+            {"item_code": items_array[5]["item_code"], "quantity": 2},
+            {"item_code": items_array[6]["item_code"], "quantity": 3},
+            {"item_code": items_array[7]["item_code"], "quantity": 1},
+        ]
+
+        # Create invoice
+        result = create_test_invoice_with_token(
+            client_type=client_data["client_type"],
+            freight_modality="0 - Freight Contracted by Sender (CIF)",
+            client_name=client_data["client_name"],
+            client_email=client_data["email"],
+            client_phone=client_data["phone"],
+            client_id_number=client_data["client_id_number"],
+            icms_contributor=client_data["icms_contributor"],
+            state_registration=client_data["state_registration"],
+            delivery_supervisor=address_data["responsible"],
+            delivery_cep=address_data["cep"],
+            delivery_address=address_data["address"],
+            delivery_neighborhood=address_data["neighborhood"],
+            delivery_state=address_data["state"],
+            city=address_data["city"],
+            delivery_number_address=address_data["address_number"],
+            delivery_ibge=address_data["ibge"],
+            delivery_phone=address_data["phone"],
+            product_brand="SolarEdge",
+            product_type="Inversor Solar",
+            carrier=frappe.db.get_value(
+                "Carrier", {"fantasy_name": "Transportadora Teste"}, "name"
+            ),
+            additional_information="Test submitted invoice - multiple items",
+            total_freight=totals_data["total_freight"],
+            total_discount=totals_data["total_discount"],
+            total_insurance=totals_data["total_insurance"],
+            other_expenses=totals_data["other_expenses"],
+            tax_template=frappe.db.get_value(
+                "Tax", {"template_name": "Remessa em Garantia"}, "name"
+            ),
+            invoice_items_table=invoice_items,
+        )
+
+        # Verify invoice was created
+        self.assertTrue(
+            result.get("success"), f"Invoice creation failed: {result.get('message')}"
+        )
+        invoice_name = result.get("docname")
+        self.assertIsNotNone(invoice_name)
+
+        # Fetch invoice
+        invoice = frappe.get_doc("Invoices", invoice_name)
+
+        # Follow proper workflow
+        if invoice.invoice_status != "Created":
+            invoice.invoice_status = "Created"
+            invoice.save()
+            frappe.db.commit()
+
+        invoice.reload()
+        invoice.invoice_status = "Processing"
+        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
+        invoice.save()
+        frappe.db.commit()
+
+        invoice.reload()
+        invoice.invoice_status = "Submitted"
+        invoice.nf_ref_series = "3"
+        invoice.nf_ref_number = f"{frappe.utils.random_string(9)}"
+        invoice.nf_ref_access_key = frappe.generate_hash(length=44)
+        invoice.invoice_serie = "3"
+        invoice.invoice_number = f"{frappe.utils.random_string(9)}"
+        invoice.invoice_link = f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
+        invoice.save()
+        frappe.db.commit()
+
+        # Verify
+        self.assertEqual(invoice.invoice_status, "Submitted")
+        self.assertEqual(len(invoice.invoice_items_table), 3)
+        self.assertEqual(invoice.product_quantity, "6")  # 2+3+1
+
+        print_invoice_details(invoice, show_items=True, client_data=client_data)
 
 
 # =============================================================================

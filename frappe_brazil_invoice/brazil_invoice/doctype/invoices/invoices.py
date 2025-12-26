@@ -28,6 +28,12 @@ class Invoices(Document):
         # Validate responsible field is mandatory for Created status and beyond
         self.validate_responsible()
 
+        # Validate Invoice ID is mandatory when transitioning to Processing
+        self.validate_invoice_id()
+
+        # Validate required fields when transitioning to Submitted
+        self.validate_submitted_fields()
+
         # Must have at least one item row
         if not self.invoice_items_table or len(self.invoice_items_table) == 0:
             frappe.throw(
@@ -166,6 +172,52 @@ class Invoices(Document):
                     _(
                         "Responsible field is mandatory for invoice status '{0}'. Please specify who is responsible for this invoice."
                     ).format(self.invoice_status)
+                )
+
+    def validate_invoice_id(self):
+        """Validate that Invoice ID is mandatory when transitioning to Processing status
+
+        When an invoice moves from Created to Processing status, the Invoice ID
+        field must be filled.
+        """
+        if self.invoice_status == "Processing":
+            if not self.invoice_id or not self.invoice_id.strip():
+                frappe.throw(
+                    _(
+                        "Invoice ID is mandatory when moving to Processing status. Please provide the Invoice ID."
+                    )
+                )
+
+    def validate_submitted_fields(self):
+        """Validate that required fields are filled when transitioning to Submitted status
+
+        When an invoice moves from Processing to Submitted status, the following fields
+        must be filled: NF Ref. Series, NF Ref. Number, NF Ref. Access Key,
+        Invoice Serie, Invoice Number, and Invoice Link.
+        """
+        if self.invoice_status == "Submitted":
+            required_fields = [
+                ("nf_ref_series", "NF Ref. Series"),
+                ("nf_ref_number", "NF Ref. Number"),
+                ("nf_ref_access_key", "NF Ref. Access Key"),
+                ("invoice_serie", "Invoice Serie"),
+                ("invoice_number", "Invoice Number"),
+                ("invoice_link", "Invoice Link"),
+            ]
+
+            missing_fields = []
+            for field_name, field_label in required_fields:
+                field_value = getattr(self, field_name, None)
+                if not field_value or (
+                    isinstance(field_value, str) and not field_value.strip()
+                ):
+                    missing_fields.append(field_label)
+
+            if missing_fields:
+                frappe.throw(
+                    _(
+                        "The following fields are mandatory when moving to Submitted status: {0}"
+                    ).format(", ".join(missing_fields))
                 )
 
     def set_operation_type_from_template(self):
