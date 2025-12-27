@@ -3500,6 +3500,7 @@ class TestInvoiceIssuedWithAutoTaxCalculation(FrappeTestCase):
                 client_phone=client_data["phone"],
                 client_id_number=client_data["client_id_number"],
                 icms_contributor=client_data["icms_contributor"],
+                state_registration=client_data["state_registration"],
                 delivery_supervisor=address_data["responsible"],
                 delivery_cep=address_data["cep"],
                 delivery_address=address_data["address"],
@@ -3525,44 +3526,44 @@ class TestInvoiceIssuedWithAutoTaxCalculation(FrappeTestCase):
                 invoice_items_table=invoice_items,
             )
 
-        self.assertTrue(result.get("success"))
-        invoice_name = result.get("docname")
-        invoice = frappe.get_doc("Invoices", invoice_name)
+            self.assertTrue(result.get("success"))
+            invoice_name = result.get("docname")
+            invoice = frappe.get_doc("Invoices", invoice_name)
 
-        # Follow workflow
-        if invoice.invoice_status != "Non Processed":
-            invoice.invoice_status = "Non Processed"
+            # Follow workflow
+            if invoice.invoice_status != "Non Processed":
+                invoice.invoice_status = "Non Processed"
+                invoice.save()
+                frappe.db.commit()
+
+            invoice.reload()
+            invoice.invoice_status = "Processing"
+            invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
             invoice.save()
             frappe.db.commit()
 
-        invoice.reload()
-        invoice.invoice_status = "Processing"
-        invoice.invoice_id = f"INV-{frappe.generate_hash(length=8)}"
-        invoice.save()
-        frappe.db.commit()
+            # Verify taxes calculated
+            invoice.reload()
+            self.assertIsNotNone(invoice.icms_value)
+            self.assertIsNotNone(invoice.ipi_value)
+            self.assertGreater(invoice.icms_value, 0)
+            self.assertGreater(invoice.ipi_value, 0)
 
-        # Verify taxes calculated
-        invoice.reload()
-        self.assertIsNotNone(invoice.icms_value)
-        self.assertIsNotNone(invoice.ipi_value)
-        self.assertGreater(invoice.icms_value, 0)
-        self.assertGreater(invoice.ipi_value, 0)
+            # Move to Issued
+            invoice.invoice_status = "Issued"
+            invoice.invoice_ref_series = "2"
+            invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
+            invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
+            invoice.invoice_serie = "2"
+            invoice.invoice_number = f"{frappe.utils.random_string(9)}"
+            invoice.invoice_link = (
+                f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
+            )
+            invoice.save()
+            frappe.db.commit()
 
-        # Move to Issued
-        invoice.invoice_status = "Issued"
-        invoice.invoice_ref_series = "2"
-        invoice.invoice_ref_number = f"{frappe.utils.random_string(9)}"
-        invoice.invoice_ref_access_key = frappe.generate_hash(length=44)
-        invoice.invoice_serie = "2"
-        invoice.invoice_number = f"{frappe.utils.random_string(9)}"
-        invoice.invoice_link = (
-            f"https://nfe.io/v1/invoices/{frappe.generate_hash(length=12)}"
-        )
-        invoice.save()
-        frappe.db.commit()
-
-        self.assertEqual(invoice.invoice_status, "Issued")
-        self.assertEqual(invoice.product_quantity, "5")
+            self.assertEqual(invoice.invoice_status, "Issued")
+            self.assertEqual(invoice.product_quantity, "5")
 
         print(f"\n✓ Issued invoice (Individual, 5 items) with auto tax: {invoice.name}")
         print(f"  ICMS: R$ {invoice.icms_value:.2f}, IPI: R$ {invoice.ipi_value:.2f}")

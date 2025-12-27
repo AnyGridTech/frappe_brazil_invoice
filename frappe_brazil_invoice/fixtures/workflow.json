@@ -91,6 +91,14 @@
       },
       {
         "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Mark as Processing Error",
+        "next_state": "Processing Error",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
         "state": "Processing Error",
         "action": "Submit",
         "next_state": "Issued",

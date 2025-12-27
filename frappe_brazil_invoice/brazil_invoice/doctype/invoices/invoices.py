@@ -58,10 +58,9 @@ class Invoices(Document):
     def before_save(self):
         """Actions before saving the document
 
-        If invoice is in Processing status and an error occurs,
-        it will be automatically transitioned to Processing Error status.
-        If invoice is in Draft/Non Processed status and a tax calculation error occurs,
-        it will be automatically transitioned to Tax Calculation Error status.
+        Validation errors at Non Processed should just raise - they should NOT
+        auto-transition to Processing Error. Processing Error is only for errors
+        that occur during API processing (when status is Processing).
         """
         try:
             # Set operation_type from tax template if tax_template is selected
@@ -72,29 +71,29 @@ class Invoices(Document):
             self.calculate_total()
         except Exception as e:
             # If we're in Processing status, catch the error and transition to Processing Error
-            if self.invoice_status == "Processing":
+            # This is the ONLY case where auto-transition to Processing Error should happen
+            if self.invoice_status == "Processing" and getattr(self.flags, "ignore_processing_lock", False):
                 error_type = type(e).__name__
                 error_msg = str(e)
                 self._handle_processing_error(
                     f"Processing Failed: {error_type}", error_msg
                 )
                 # Don't re-raise - allow the save to continue with Processing Error status
-            # If we're in Draft or Non Processed status, catch the error and transition to Tax Calculation Error
-            elif self.invoice_status in ["Draft", "Non Processed"]:
-                error_type = type(e).__name__
-                error_msg = str(e)
-                self._handle_tax_calculation_error(
-                    f"Tax Calculation Failed: {error_type}", error_msg
-                )
-                # Don't re-raise - allow the save to continue with Tax Calculation Error status
             else:
-                # For other statuses, re-raise the exception
+                # For all other cases (including Non Processed), re-raise the exception
+                # Users will see the validation error and must fix it
                 raise
 
     def validate(self):
         """Ensure invoice has items and prevent status changes without items"""
         # Process invoice items to auto-fill from serial numbers
         self.process_invoice_items()
+
+        # Block user modifications when invoice is in Processing status
+        self.validate_processing_lock()
+
+        # Validate workflow transitions follow business rules
+        self.validate_workflow_transitions()
 
         # Lock invoice_items_table changes at Processing status and forward
         self.validate_items_lock()
@@ -233,6 +232,72 @@ class Invoices(Document):
                                         "Cannot modify invoice items when invoice status is {0}"
                                     ).format(old_doc.invoice_status)
                                 )
+
+    def validate_processing_lock(self):
+        """Validate that users cannot modify invoices in Processing status
+        
+        When an invoice is in Processing status, it has been sent to external API
+        for processing. To prevent false positives and data inconsistencies, users
+        are blocked from making any modifications to the invoice.
+        
+        Backend/API can bypass this restriction by setting:
+        invoice.flags.ignore_processing_lock = True
+        """
+        if not self.is_new():
+            old_doc = self.get_doc_before_save()
+            if old_doc and old_doc.invoice_status == "Processing":
+                # Check if backend/API is making the change
+                if not getattr(self.flags, "ignore_processing_lock", False):
+                    # This is a user modification - check if anything changed
+                    # Exclude standard meta fields, child tables, workflow status, and Sefaz event fields
+                    exclude_fields = ['modified', 'modified_by', 'idx', 'docstatus', 
+                                    'invoice_items_table', '_comments', '_assign', '_liked_by',
+                                    'invoice_status',  # Allow status transitions
+                                    # Allow Sefaz event fields (set during workflow transitions)
+                                    'invoice_ref_series', 'invoice_ref_number', 'invoice_ref_access_key',
+                                    'invoice_serie', 'invoice_number', 'invoice_link', 'invoice_access_key',
+                                    'errors_field']  # Allow error logging
+                    
+                    for field in self.meta.get_valid_columns():
+                        if field in exclude_fields:
+                            continue
+                        
+                        old_value = getattr(old_doc, field, None)
+                        new_value = getattr(self, field, None)
+                        
+                        if old_value != new_value:
+                            frappe.throw(
+                                _(
+                                    "Cannot modify invoice in Processing status. "
+                                    "The invoice has been sent to the external API and "
+                                    "is currently being processed. Please wait for the "
+                                    "processing to complete."
+                                ),
+                                frappe.PermissionError
+                            )
+
+    def validate_workflow_transitions(self):
+        """Validate that workflow transitions follow business rules
+        
+        Key rule: Processing Error status can only be reached from Processing status.
+        This prevents validation errors at Non Processed from incorrectly moving to
+        Processing Error (which should only happen during API processing failures).
+        """
+        if not self.is_new():
+            old_doc = self.get_doc_before_save()
+            if old_doc and old_doc.invoice_status != self.invoice_status:
+                # Status is changing - validate transitions
+                
+                # Processing Error can only come from Processing
+                if self.invoice_status == "Processing Error":
+                    if old_doc.invoice_status != "Processing":
+                        frappe.throw(
+                            _(
+                                "Processing Error status can only be reached from Processing status. "
+                                "Current status is '{0}'. If you encountered a validation error, "
+                                "please fix the issue and try again."
+                            ).format(old_doc.invoice_status)
+                        )
 
     def validate_responsible(self):
         """Validate that Responsible field is mandatory for Created status and beyond
