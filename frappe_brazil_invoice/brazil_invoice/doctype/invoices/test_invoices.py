@@ -18,7 +18,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import now_datetime
 import uuid
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices import (
     create_invoice,
 )
