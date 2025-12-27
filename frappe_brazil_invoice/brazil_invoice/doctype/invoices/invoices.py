@@ -33,14 +33,63 @@ class Invoices(Document):
         else:
             self.errors_field = log_entry
 
+    def _handle_tax_calculation_error(self, error_type, error_message):
+        """
+        Handle errors that occur during tax calculation at Draft/Non Processed status
+        by changing status to Tax Calculation Error and logging the error details.
+
+        Args:
+            error_type: Type of error (e.g., 'API Error', 'Configuration Error')
+            error_message: Detailed error message
+        """
+        # Change status to Tax Calculation Error
+        self.invoice_status = "Tax Calculation Error"
+
+        # Log the error using the standard logging format
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] [ERROR] {error_type}\n  {error_message}"
+
+        # Append to errors_field
+        if self.errors_field:
+            self.errors_field = self.errors_field + "\n\n" + log_entry
+        else:
+            self.errors_field = log_entry
+
     def before_save(self):
-        """Actions before saving the document"""
-        # Set operation_type from tax template if tax_template is selected
-        self.set_operation_type_from_template()
-        # Calculate taxes from template or automatically
-        self.calculate_taxes_from_template()
-        # Calculate total and product fields
-        self.calculate_total()
+        """Actions before saving the document
+
+        If invoice is in Processing status and an error occurs,
+        it will be automatically transitioned to Processing Error status.
+        If invoice is in Draft/Non Processed status and a tax calculation error occurs,
+        it will be automatically transitioned to Tax Calculation Error status.
+        """
+        try:
+            # Set operation_type from tax template if tax_template is selected
+            self.set_operation_type_from_template()
+            # Calculate taxes from template or automatically
+            self.calculate_taxes_from_template()
+            # Calculate total and product fields
+            self.calculate_total()
+        except Exception as e:
+            # If we're in Processing status, catch the error and transition to Processing Error
+            if self.invoice_status == "Processing":
+                error_type = type(e).__name__
+                error_msg = str(e)
+                self._handle_processing_error(
+                    f"Processing Failed: {error_type}", error_msg
+                )
+                # Don't re-raise - allow the save to continue with Processing Error status
+            # If we're in Draft or Non Processed status, catch the error and transition to Tax Calculation Error
+            elif self.invoice_status in ["Draft", "Non Processed"]:
+                error_type = type(e).__name__
+                error_msg = str(e)
+                self._handle_tax_calculation_error(
+                    f"Tax Calculation Failed: {error_type}", error_msg
+                )
+                # Don't re-raise - allow the save to continue with Tax Calculation Error status
+            else:
+                # For other statuses, re-raise the exception
+                raise
 
     def validate(self):
         """Ensure invoice has items and prevent status changes without items"""
