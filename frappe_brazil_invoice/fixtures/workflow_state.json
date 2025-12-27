@@ -8,6 +8,13 @@
   },
   {
     "doctype": "Workflow State",
+    "name": "Tax Calculation Error",
+    "workflow_state_name": "Tax Calculation Error",
+    "icon": "alert",
+    "style": "Danger"
+  },
+  {
+    "doctype": "Workflow State",
     "name": "Processing",
     "workflow_state_name": "Processing",
     "icon": "cog",

@@ -11,7 +11,13 @@
     "states": [
       {
         "doctype": "Workflow Document State",
-        "state": "Created",
+        "state": "Non Processed",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Tax Calculation Error",
         "doc_status": "0",
         "allow_edit": "System Manager"
       },
@@ -23,13 +29,19 @@
       },
       {
         "doctype": "Workflow Document State",
+        "state": "Processing Error",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
         "state": "Contingency",
         "doc_status": "0",
         "allow_edit": "System Manager"
       },
       {
         "doctype": "Workflow Document State",
-        "state": "Submitted",
+        "state": "Issued",
         "doc_status": "1",
         "allow_edit": "System Manager"
       },
@@ -55,7 +67,15 @@
     "transitions": [
       {
         "doctype": "Workflow Transition",
-        "state": "Created",
+        "state": "Non Processed",
+        "action": "Process",
+        "next_state": "Processing",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Tax Calculation Error",
         "action": "Process",
         "next_state": "Processing",
         "allowed": "System Manager",
@@ -65,7 +85,15 @@
         "doctype": "Workflow Transition",
         "state": "Processing",
         "action": "Submit",
-        "next_state": "Submitted",
+        "next_state": "Issued",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing Error",
+        "action": "Submit",
+        "next_state": "Issued",
         "allowed": "System Manager",
         "allow_self_approval": 1
       },
@@ -81,13 +109,13 @@
         "doctype": "Workflow Transition",
         "state": "Contingency",
         "action": "Submit",
-        "next_state": "Submitted",
+        "next_state": "Issued",
         "allowed": "System Manager",
         "allow_self_approval": 1
       },
       {
         "doctype": "Workflow Transition",
-        "state": "Created",
+        "state": "Non Processed",
         "action": "Mark as Unused",
         "next_state": "Unused",
         "allowed": "System Manager",
