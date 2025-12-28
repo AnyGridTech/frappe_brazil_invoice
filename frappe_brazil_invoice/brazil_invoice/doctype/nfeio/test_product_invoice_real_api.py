@@ -86,7 +86,7 @@ def print_test_dashboard():
         print(f"\n⏱  Duration: {duration.total_seconds():.2f}s")
     
     # Test summary
-    print(f"\n📊 TEST SUMMARY")
+    print("\n📊 TEST SUMMARY")
     print(f"   Total Tests:    {test_results['total']}")
     print(f"   ✓ Passed:       {test_results['passed']} ({test_results['passed']/max(test_results['total'],1)*100:.1f}%)")
     print(f"   ✗ Failed:       {test_results['failed']}")
@@ -94,24 +94,24 @@ def print_test_dashboard():
     
     # Invoice information
     if test_results["invoice_ids"]:
-        print(f"\n📄 INVOICES CREATED")
+        print("\n📄 INVOICES CREATED")
         for idx, invoice_id in enumerate(test_results["invoice_ids"], 1):
             print(f"   Invoice {idx}: {invoice_id}")
     
     # Error details
     if test_results["errors"]:
-        print(f"\n⚠  ERRORS & WARNINGS")
+        print("\n⚠  ERRORS & WARNINGS")
         for error in test_results["errors"][:5]:  # Show max 5 errors
             print(f"   • {error}")
         if len(test_results["errors"]) > 5:
             print(f"   ... and {len(test_results['errors']) - 5} more")
     
     # Status interpretation
-    print(f"\n💡 TEST ENVIRONMENT NOTES")
-    print(f"   • Invoices should reach 'Issued' status even in homologation")
-    print(f"   • Using test CNPJ: 99999999000191")
-    print(f"   • Skipped tests indicate invoices still processing after retries")
-    print(f"   • Error status indicates a problem that needs investigation")
+    print("\n💡 TEST ENVIRONMENT NOTES")
+    print("   • Invoices should reach 'Issued' status even in homologation")
+    print("   • Using test CNPJ: 99999999000191")
+    print("   • Skipped tests indicate invoices still processing after retries")
+    print("   • Error status indicates a problem that needs investigation")
     
     print("\n" + "=" * width)
     print()
@@ -219,12 +219,23 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         # Check test outcome
         if hasattr(self, '_outcome'):
             result = self._outcome.result
-            if result.errors and result.errors[-1][0] == self:
+            
+            # Check for failures first (AssertionError from self.fail())
+            if result.failures and any(test == self for test, _ in result.failures):
                 test_results["failed"] += 1
-                error_msg = str(result.errors[-1][1])[:100]
+                failure_info = next((traceback for test, traceback in result.failures if test == self), "Unknown failure")
+                error_msg = str(failure_info).split('\n')[-1][:150]
                 test_results["errors"].append(f"{self._testMethodName}: {error_msg}")
-            elif result.skipped and result.skipped[-1][0] == self:
+            # Then check for errors (exceptions)
+            elif result.errors and any(test == self for test, _ in result.errors):
+                test_results["failed"] += 1
+                error_info = next((traceback for test, traceback in result.errors if test == self), "Unknown error")
+                error_msg = str(error_info).split('\n')[-1][:150]
+                test_results["errors"].append(f"{self._testMethodName}: {error_msg}")
+            # Then check for skipped
+            elif result.skipped and any(test == self for test, _ in result.skipped):
                 test_results["skipped"] += 1
+            # Otherwise it passed
             else:
                 test_results["passed"] += 1
     
@@ -418,7 +429,6 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping get by ID test")
         
-        import time
         max_retries = 10
         retry_delay = 2  # seconds
         
@@ -453,7 +463,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                             test_logger.warning(f"Invoice 1 failed to reach 'Issued' status after {max_retries} attempts. Status: {status}")
                             self.skipTest(f"Invoice 1 still {status} after {max_retries} attempts")
                     elif status == "Error":
-                        test_logger.error(f"Invoice 1 has Error status - investigation required")
+                        test_logger.error("Invoice 1 has Error status - investigation required")
                         test_logger.error(f"  ID: {result.get('id')}")
                         test_logger.error(f"  Number: {result.get('number')}")
                         test_logger.error(f"  Full response: {result}")
@@ -522,7 +532,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                             test_logger.warning(f"Invoice 2 failed to reach 'Issued' status after {max_retries} attempts. Status: {status}")
                             self.skipTest(f"Invoice 2 still {status} after {max_retries} attempts")
                     elif status == "Error":
-                        test_logger.error(f"Invoice 2 has Error status - investigation required")
+                        test_logger.error("Invoice 2 has Error status - investigation required")
                         test_logger.error(f"  ID: {result.get('id')}")
                         test_logger.error(f"  Number: {result.get('number')}")
                         test_logger.error(f"  Full response: {result}")
