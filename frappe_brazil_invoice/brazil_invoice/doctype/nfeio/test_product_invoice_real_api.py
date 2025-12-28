@@ -419,8 +419,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             self.skipTest("Invoice 1 not created - skipping get by ID test")
         
         import time
-        max_retries = 5
-        retry_delay = 3  # seconds
+        max_retries = 10
+        retry_delay = 2  # seconds
         
         for attempt in range(1, max_retries + 1):
             try:
@@ -456,11 +456,13 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                         test_logger.error(f"Invoice 1 has Error status - investigation required")
                         test_logger.error(f"  ID: {result.get('id')}")
                         test_logger.error(f"  Number: {result.get('number')}")
+                        test_logger.error(f"  Full response: {result}")
                         if result.get('messages'):
                             test_logger.error(f"  Messages: {result.get('messages')}")
                         if result.get('errors'):
                             test_logger.error(f"  Errors: {result.get('errors')}")
-                        self.fail(f"Invoice 1 failed with Error status. Messages: {result.get('messages')}")
+                        error_details = result.get('messages') or result.get('errors') or 'No error details available'
+                        self.fail(f"Invoice 1 failed with Error status. Details: {error_details}")
                     else:
                         test_logger.warning(f"Invoice 1 has unexpected status: {status}")
                         self.skipTest(f"Unexpected invoice status: {status}")
@@ -481,8 +483,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             self.skipTest("Invoice 2 not created - skipping get by ID test")
         
         import time
-        max_retries = 5
-        retry_delay = 3  # seconds
+        max_retries = 10
+        retry_delay = 2  # seconds
         
         for attempt in range(1, max_retries + 1):
             try:
@@ -523,11 +525,13 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                         test_logger.error(f"Invoice 2 has Error status - investigation required")
                         test_logger.error(f"  ID: {result.get('id')}")
                         test_logger.error(f"  Number: {result.get('number')}")
+                        test_logger.error(f"  Full response: {result}")
                         if result.get('messages'):
                             test_logger.error(f"  Messages: {result.get('messages')}")
                         if result.get('errors'):
                             test_logger.error(f"  Errors: {result.get('errors')}")
-                        self.fail(f"Invoice 2 failed with Error status. Messages: {result.get('messages')}")
+                        error_details = result.get('messages') or result.get('errors') or 'No error details available'
+                        self.fail(f"Invoice 2 failed with Error status. Details: {error_details}")
                     else:
                         test_logger.warning(f"Invoice 2 has unexpected status: {status}")
                         self.skipTest(f"Unexpected invoice status: {status}")
