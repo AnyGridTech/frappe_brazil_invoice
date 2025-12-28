@@ -8,12 +8,12 @@ These tests verify the correct workflow behavior for invoice status transitions,
 particularly around error handling and user/API permission separation.
 
 To run these tests:
-    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.invoices.test_workflow_validation
+    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.test_workflow_validation
 """
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe_brazil_invoice.brazil_invoice.doctype.invoices.test_invoices import (
+from . import (
     create_test_invoice_with_token,
     generate_random_client,
     generate_random_address,
@@ -78,7 +78,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
 
         self.assertTrue(result.get("success"))
         invoice_name = result.get("docname")
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Verify invoice is in Non Processed status
         self.assertEqual(invoice.invoice_status, "Non Processed")
@@ -102,7 +102,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
             "Status should NOT auto-transition to Processing Error on validation error at Non Processed"
         )
 
-        print(f"✅ Validation error at Non Processed correctly raised error without status change")
+        print("✅ Validation error at Non Processed correctly raised error without status change")
         print(f"   Original status: {original_status}")
         print(f"   Status after error: {invoice.invoice_status}")
         print(f"   Error message: {str(context.exception)}")
@@ -156,7 +156,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
 
         self.assertTrue(result.get("success"))
         invoice_name = result.get("docname")
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Transition to Processing status
         invoice.invoice_status = "Processing"
@@ -184,7 +184,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
             "Error message should mention Processing status"
         )
 
-        print(f"✅ User modification correctly blocked at Processing status")
+        print("✅ User modification correctly blocked at Processing status")
         print(f"   Error message: {error_message}")
 
     def test_backend_can_modify_invoice_in_processing_status(self):
@@ -235,7 +235,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
 
         self.assertTrue(result.get("success"))
         invoice_name = result.get("docname")
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Transition to Processing status
         invoice.invoice_status = "Processing"
@@ -261,7 +261,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
             "Backend should be able to modify invoice in Processing status"
         )
 
-        print(f"✅ Backend modification correctly allowed at Processing status")
+        print("✅ Backend modification correctly allowed at Processing status")
 
     def test_processing_error_transition_from_processing_only(self):
         """Test that Processing Error status can only be reached from Processing status.
@@ -312,7 +312,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
 
         self.assertTrue(result.get("success"))
         invoice_name = result.get("docname")
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Verify invoice is in Non Processed status
         self.assertEqual(invoice.invoice_status, "Non Processed")
@@ -327,7 +327,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
         self.assertIn("Non Processed", error_message)
         self.assertIn("Processing Error", error_message)
 
-        print(f"✅ Direct transition from Non Processed to Processing Error correctly blocked")
+        print("✅ Direct transition from Non Processed to Processing Error correctly blocked")
         print(f"   Error: {error_message}")
 
         # Now follow correct workflow: Non Processed → Processing → Processing Error
@@ -349,7 +349,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
         invoice.reload()
         self.assertEqual(invoice.invoice_status, "Processing Error")
 
-        print(f"✅ Correct transition Processing → Processing Error succeeded")
+        print("✅ Correct transition Processing → Processing Error succeeded")
 
     def test_validation_error_detail_preserved(self):
         """Test that validation error details are preserved and not lost 
@@ -400,7 +400,7 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
 
         self.assertTrue(result.get("success"))
         invoice_name = result.get("docname")
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Clear a required field to trigger specific validation error
         invoice.delivery_supervisor = None  # Responsible is required for Non Processed
@@ -425,5 +425,5 @@ class TestWorkflowValidationBehavior(FrappeTestCase):
             "Error message should not mention Processing Error status"
         )
 
-        print(f"✅ Validation error detail preserved correctly")
+        print("✅ Validation error detail preserved correctly")
         print(f"   Error message: {error_message}")

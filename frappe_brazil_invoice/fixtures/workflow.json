@@ -3,7 +3,7 @@
     "doctype": "Workflow",
     "name": "Invoice Workflow",
     "workflow_name": "Invoice Workflow",
-    "document_type": "Invoices",
+    "document_type": "Product Invoice",
     "is_active": 1,
     "override_status": 0,
     "send_email_alert": 0,

@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 "use strict";
 (() => {
-  // brazil_invoice/doctype/invoices/ts/cep.ts
+  // brazil_invoice/doctype/product_invoice/ts/cep.ts
   function formatCEP(cep) {
     const cleaned = cep.replace(/\D/g, "");
     if (cleaned.length === 8) {
@@ -106,7 +106,7 @@
     }
   }
 
-  // brazil_invoice/doctype/invoices/ts/tax.ts
+  // brazil_invoice/doctype/product_invoice/ts/tax.ts
   function calcSimpleTaxes(value, tax) {
     return value * tax / 100;
   }
@@ -200,8 +200,8 @@
     sumTotalItems(frm);
   }
 
-  // brazil_invoice/doctype/invoices/ts/index.ts
-  frappe.ui.form.on("Invoices", "before_save", async (form) => {
+  // brazil_invoice/doctype/product_invoice/ts/index.ts
+  frappe.ui.form.on("Product Invoice", "before_save", async (form) => {
     var clientType = form.doc.client_type;
     if (clientType === "PF") {
       if (!cpfValid(form.doc.client_id_number || "")) {
@@ -216,7 +216,7 @@
       }
     }
   });
-  frappe.ui.form.on("Invoices", {
+  frappe.ui.form.on("Product Invoice", {
     onload: function(frm) {
       setupCEPField(frm);
     },

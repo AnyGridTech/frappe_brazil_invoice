@@ -4,7 +4,7 @@ import { setupCEPField, processCEPLookup } from "./cep";
 
 
 
-frappe.ui.form.on<InvoicesDoc>("Invoices", "before_save", async (form) => {
+frappe.ui.form.on<InvoicesDoc>("Product Invoice", "before_save", async (form) => {
   var clientType = form.doc.client_type;
   if (clientType === "PF") {
     if (!cpfValid(form.doc.client_id_number || "")) {
@@ -21,7 +21,7 @@ frappe.ui.form.on<InvoicesDoc>("Invoices", "before_save", async (form) => {
 
 });
 
-frappe.ui.form.on<InvoicesDoc>("Invoices", {
+frappe.ui.form.on<InvoicesDoc>("Product Invoice", {
   onload: function (frm) {
     setupCEPField(frm);
   },

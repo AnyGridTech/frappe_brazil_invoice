@@ -49,7 +49,7 @@ def calculate_invoice_taxes(invoice_name, tax_template_name, use_fallback=False)
     """
     try:
         # Get invoice and tax template documents
-        invoice_doc = frappe.get_doc("Invoices", invoice_name)
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
         tax_template = frappe.get_doc("Tax", tax_template_name)
 
         # Check for valid (non-test) NFe.io configuration

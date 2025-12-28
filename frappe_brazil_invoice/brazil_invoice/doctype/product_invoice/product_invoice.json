@@ -109,7 +109,7 @@
    "fieldtype": "Link",
    "label": "Amended From",
    "no_copy": 1,
-   "options": "Invoices",
+   "options": "Product Invoice",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
@@ -466,7 +466,7 @@
    "fieldtype": "Link",
    "label": "Tax Template",
    "options": "Tax",
-   "get_query": "frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.get_tax_template_query"
+   "get_query": "frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.product_invoice.get_tax_template_query"
   }
  ],
  "grid_page_length": 50,
@@ -476,7 +476,7 @@
  "modified": "2025-11-26 18:01:54.394673",
  "modified_by": "Administrator",
  "module": "Brazil Invoice",
- "name": "Invoices",
+ "name": "Product Invoice",
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [

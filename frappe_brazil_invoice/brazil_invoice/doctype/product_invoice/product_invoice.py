@@ -10,7 +10,7 @@ from datetime import datetime
 from ..nfeio import tax as nfeio_tax
 
 
-class Invoices(Document):
+class ProductInvoice(Document):
     def _handle_processing_error(self, error_type, error_message):
         """
         Handle errors that occur during Processing status by changing status to Processing Error
@@ -703,7 +703,7 @@ def process_invoice(invoice_name):
             result = response.json()
 
             # Update invoice with NFe.io response
-            invoice_doc = frappe.get_doc("Invoices", invoice_name)
+            invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
             invoice_doc.invoice_id = result.get("id")
             invoice_doc.invoice_link = result.get("pdf")
             invoice_doc.db_update()
@@ -748,7 +748,7 @@ def get_invoice_status(invoice_name):
     Get the current status of an NFe invoice
     """
     try:
-        invoice_doc = frappe.get_doc("Invoices", invoice_name)
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
 
         if not invoice_doc.invoice_id:
             return {"success": False, "message": "Invoice has not been created yet"}
@@ -913,7 +913,7 @@ def create_invoice(
             }
 
         # Create new Invoice document
-        invoice_doc = frappe.new_doc("Invoices")
+        invoice_doc = frappe.new_doc("Product Invoice")
 
         # Set basic fields
         if operation_type:
@@ -1060,7 +1060,7 @@ def get_invoice_details(docname):
             }
 
         # Check if invoice exists
-        if not frappe.db.exists("Invoices", docname):
+        if not frappe.db.exists("Product Invoice", docname):
             return {
                 "success": False,
                 "message": f"Invoice {docname} does not exist",
@@ -1068,7 +1068,7 @@ def get_invoice_details(docname):
             }
 
         # Get the invoice document
-        invoice_doc = frappe.get_doc("Invoices", docname)
+        invoice_doc = frappe.get_doc("Product Invoice", docname)
 
         # Check permissions
         if not invoice_doc.has_permission("read"):
@@ -1124,11 +1124,11 @@ def update_invoice_status(
             return {"success": False, "message": "Invoice docname is required"}
 
         # Check if invoice exists
-        if not frappe.db.exists("Invoices", docname):
+        if not frappe.db.exists("Product Invoice", docname):
             return {"success": False, "message": f"Invoice {docname} does not exist"}
 
         # Get the invoice document
-        invoice_doc = frappe.get_doc("Invoices", docname)
+        invoice_doc = frappe.get_doc("Product Invoice", docname)
 
         # Update fields
         if invoice_id:

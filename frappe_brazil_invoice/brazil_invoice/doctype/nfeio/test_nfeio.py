@@ -385,7 +385,7 @@ class TestNFeIOAPI(FrappeTestCase):
             mock_calculate_taxes.side_effect = update_invoice_taxes
 
         def get_doc_side_effect(doctype, name=None, **kwargs):
-            if doctype == "Invoices":
+            if doctype == "Product Invoice":
                 return mock_invoice
             elif doctype == "Tax":
                 return mock_tax_template
@@ -429,7 +429,7 @@ class TestNFeIOAPI(FrappeTestCase):
                 with patch("frappe.get_doc") as mock_get_doc:
 
                     def get_doc_side_effect(doctype, name):
-                        if doctype == "Invoices":
+                        if doctype == "Product Invoice":
                             return mock_invoice
                         elif doctype == "Tax":
                             return mock_tax_template
@@ -480,7 +480,7 @@ class TestNFeIOAPI(FrappeTestCase):
         mock_calculate_fallback.side_effect = update_invoice_taxes_fallback
 
         def get_doc_side_effect(doctype, name=None, **kwargs):
-            if doctype == "Invoices":
+            if doctype == "Product Invoice":
                 return mock_invoice
             elif doctype == "Tax":
                 return mock_tax_template
@@ -650,7 +650,7 @@ class TestNFeIOIntegration(FrappeTestCase):
         mock_tax_template.add_other_expenses_icms = False
 
         def get_doc_side_effect(doctype, name=None, **kwargs):
-            if doctype == "Invoices":
+            if doctype == "Product Invoice":
                 return mock_invoice
             elif doctype == "Tax":
                 return mock_tax_template

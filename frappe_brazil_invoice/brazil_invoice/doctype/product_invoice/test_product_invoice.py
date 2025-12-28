@@ -5,13 +5,13 @@
 Invoice Tests
 
 To run these tests:
-    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.invoices.test_invoices
+    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.test_product_invoice
 
 To run a specific test class:
-    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.invoices.test_invoices --test TestInvoiceAPI
+    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.test_product_invoice --test TestInvoiceAPI
 
 To run a specific test method:
-    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.invoices.test_invoices --test TestInvoiceAPI.test_create_invoice_success
+    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.test_product_invoice --test TestInvoiceAPI.test_create_invoice_success
 """
 
 import frappe
@@ -19,7 +19,7 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import now_datetime
 import uuid
 from unittest.mock import patch
-from frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices import (
+from frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.product_invoice import (
     create_invoice,
 )
 
@@ -979,7 +979,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             self.assertIsNotNone(invoice_name, "Invoice name should not be None")
 
             # Fetch the created invoice
-            invoice = frappe.get_doc("Invoices", invoice_name)
+            invoice = frappe.get_doc("Product Invoice", invoice_name)
 
             # Verify basic fields
             self.assertEqual(invoice.client_name, client_data["client_name"])
@@ -1084,7 +1084,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             self.assertIsNotNone(invoice_name, "Invoice name should not be None")
 
             # Fetch the created invoice
-            invoice = frappe.get_doc("Invoices", invoice_name)
+            invoice = frappe.get_doc("Product Invoice", invoice_name)
 
             # Verify invoice items were auto-filled
             self.assertEqual(len(invoice.invoice_items_table), 1)
@@ -1165,7 +1165,7 @@ class TestResponsibleValidation(FrappeTestCase):
         invoice_name = result.get("docname")
 
         # Now try to change status to Created without responsible field
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
         self.assertIsNone(
             invoice.delivery_supervisor or None, "Responsible should be None"
         )
@@ -1238,7 +1238,7 @@ class TestResponsibleValidation(FrappeTestCase):
         invoice_name = result.get("docname")
 
         # Fetch the invoice and verify responsible field is set
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
         self.assertEqual(invoice.delivery_supervisor, address_data["responsible"])
         initial_status = invoice.invoice_status
 
@@ -1365,7 +1365,7 @@ class TestInvoiceProcessing(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch and verify invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Update status to Processing (must provide Invoice ID)
         invoice.invoice_status = "Processing"
@@ -1512,7 +1512,7 @@ class TestInvoiceProcessing(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch and verify invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Update status to Processing (must provide Invoice ID)
         invoice.invoice_status = "Processing"
@@ -1655,7 +1655,7 @@ class TestInvoiceTaxCalculationError(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice and manually set to Tax Calculation Error (bypass workflow)
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
         invoice.db_set("invoice_status", "Tax Calculation Error", update_modified=False)
         frappe.db.commit()
         invoice.reload()
@@ -1726,7 +1726,7 @@ class TestInvoiceTaxCalculationError(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice and manually set to Tax Calculation Error (bypass workflow)
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
         invoice.db_set("invoice_status", "Tax Calculation Error", update_modified=False)
         frappe.db.commit()
         invoice.reload()
@@ -1807,7 +1807,7 @@ class TestInvoiceProcessingError(FrappeTestCase):
 
         # Fetch invoice and transition to Processing Error
         # Follow proper workflow: Draft → Non Processed → Processing → Processing Error
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Ensure in Non Processed status
         if invoice.invoice_status != "Non Processed":
@@ -1895,7 +1895,7 @@ class TestInvoiceProcessingError(FrappeTestCase):
 
         # Fetch invoice and transition to Processing Error
         # Follow proper workflow: Draft → Non Processed → Processing → Processing Error
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Ensure in Non Processed status
         if invoice.invoice_status != "Non Processed":
@@ -1991,7 +1991,7 @@ class TestInvoiceNonProcessed(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice and ensure it's in Non Processed status
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
         if invoice.invoice_status != "Non Processed":
             invoice.invoice_status = "Non Processed"
             invoice.save()
@@ -2062,7 +2062,7 @@ class TestInvoiceNonProcessed(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice and ensure it's in Non Processed status
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
         if invoice.invoice_status != "Non Processed":
             invoice.invoice_status = "Non Processed"
             invoice.save()
@@ -2142,7 +2142,7 @@ class TestInvoiceRejected(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow proper workflow: Draft → Created → Processing → Rejected
         # First ensure it's in Created status (respecting validations)
@@ -2230,7 +2230,7 @@ class TestInvoiceRejected(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow proper workflow: Draft → Created → Processing → Rejected
         # First ensure it's in Created status (respecting validations)
@@ -2330,7 +2330,7 @@ class TestInvoiceContingency(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow proper workflow: Draft → Created → Processing → Contingency
         # First ensure it's in Created status (respecting validations)
@@ -2418,7 +2418,7 @@ class TestInvoiceContingency(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow proper workflow: Draft → Created → Processing → Contingency
         # First ensure it's in Created status (respecting validations)
@@ -2514,7 +2514,7 @@ class TestInvoiceUnused(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch and update status through proper workflow: Draft → Created → Unused
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Move to Created first and add invoice_id (required for Unused status)
         invoice.invoice_status = "Non Processed"
@@ -2593,7 +2593,7 @@ class TestInvoiceUnused(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch and update status through proper workflow: Draft → Created → Unused
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Move to Created first and add invoice_id (required for Unused status)
         invoice.invoice_status = "Non Processed"
@@ -2683,7 +2683,7 @@ class TestInvoiceIssued(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow proper workflow: Draft → Created → Processing → Issued
         # First ensure it's in Created status
@@ -2782,7 +2782,7 @@ class TestInvoiceIssued(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow proper workflow with all validations
         if invoice.invoice_status != "Non Processed":
@@ -2880,7 +2880,7 @@ class TestInvoiceIssued(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow proper workflow
         if invoice.invoice_status != "Non Processed":
@@ -2966,7 +2966,7 @@ class TestInvoiceIssued(FrappeTestCase):
         )
         invoice_name = result.get("docname")
         self.assertIsNotNone(invoice_name)
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Ensure Created status
         if invoice.invoice_status != "Non Processed":
@@ -3039,7 +3039,7 @@ class TestInvoiceIssued(FrappeTestCase):
         )
         invoice_name = result.get("docname")
         self.assertIsNotNone(invoice_name)
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Move to Created
         if invoice.invoice_status != "Non Processed":
@@ -3144,7 +3144,7 @@ class TestInvoiceIssued(FrappeTestCase):
         self.assertIsNotNone(invoice_name)
 
         # Fetch invoice
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow proper workflow
         if invoice.invoice_status != "Non Processed":
@@ -3239,7 +3239,7 @@ class TestTaxCalculationValidation(FrappeTestCase):
         )
         invoice_name = result.get("docname")
         self.assertIsNotNone(invoice_name)
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Move to Created first
         if invoice.invoice_status != "Non Processed":
@@ -3315,7 +3315,7 @@ class TestTaxCalculationValidation(FrappeTestCase):
         )
 
         invoice_name = result.get("docname")
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Move to Created first
         if invoice.invoice_status != "Non Processed":
@@ -3417,7 +3417,7 @@ class TestInvoiceIssuedWithAutoTaxCalculation(FrappeTestCase):
             self.assertIsNotNone(invoice_name)
 
             # Fetch invoice
-            invoice = frappe.get_doc("Invoices", invoice_name)
+            invoice = frappe.get_doc("Product Invoice", invoice_name)
 
             # Follow proper workflow: Draft → Created → Processing → Issued
             if invoice.invoice_status != "Non Processed":
@@ -3528,7 +3528,7 @@ class TestInvoiceIssuedWithAutoTaxCalculation(FrappeTestCase):
 
             self.assertTrue(result.get("success"))
             invoice_name = result.get("docname")
-            invoice = frappe.get_doc("Invoices", invoice_name)
+            invoice = frappe.get_doc("Product Invoice", invoice_name)
 
             # Follow workflow
             if invoice.invoice_status != "Non Processed":
@@ -3619,7 +3619,7 @@ class TestInvoiceIssuedWithAutoTaxCalculation(FrappeTestCase):
 
         self.assertTrue(result.get("success"))
         invoice_name = result.get("docname")
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow workflow
         if invoice.invoice_status != "Non Processed":
@@ -3711,7 +3711,7 @@ class TestInvoiceIssuedWithAutoTaxCalculation(FrappeTestCase):
 
         self.assertTrue(result.get("success"))
         invoice_name = result.get("docname")
-        invoice = frappe.get_doc("Invoices", invoice_name)
+        invoice = frappe.get_doc("Product Invoice", invoice_name)
 
         # Follow workflow
         if invoice.invoice_status != "Non Processed":
