@@ -199,6 +199,10 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
     invoice_id_1 = None
     invoice_id_2 = None
     
+    # Track whether invoices were successfully issued
+    invoice_1_issued = False
+    invoice_2_issued = False
+    
     @classmethod
     def setUpClass(cls):
         """Set up for real API tests"""
@@ -475,6 +479,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                         test_logger.info(f"  Number: {result.get('number')}")
                         if result.get('accessKey'):
                             test_logger.info(f"  Access Key: {result.get('accessKey')}")
+                        TestProductInvoiceRealAPI.invoice_1_issued = True
                         return  # Success!
                     elif status in ["Processing", "Created", "Queued"]:
                         if attempt < max_retries:
@@ -545,6 +550,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                             test_logger.info(f"  Items count: {len(result['items'])}")
                         if result.get('flowStatus'):
                             test_logger.info(f"  Flow Status: {result.get('flowStatus')}")
+                        TestProductInvoiceRealAPI.invoice_2_issued = True
                         return  # Success!
                     elif status in ["Processing", "Created", "Queued"]:
                         if attempt < max_retries:
@@ -584,6 +590,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Test querying invoice events with real API - using invoice 1"""
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping event query test")
+        if not self.invoice_1_issued:
+            self.skipTest("Invoice 1 not successfully issued - skipping event query test")
         
         try:
             # Wait a moment for processing
@@ -613,6 +621,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Test querying invoice events with pagination - using invoice 2"""
         if not self.invoice_id_2:
             self.skipTest("Invoice 2 not created - skipping pagination test")
+        if not self.invoice_2_issued:
+            self.skipTest("Invoice 2 not successfully issued - skipping pagination test")
         
         try:
             # Wait a moment for processing
@@ -641,6 +651,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Test getting invoice XML with real API - using invoice 1"""
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping XML test")
+        if not self.invoice_1_issued:
+            self.skipTest("Invoice 1 not successfully issued - skipping XML test")
         
         try:
             # Wait for processing
@@ -694,6 +706,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Test getting invoice PDF with real API - using invoice 1"""
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping PDF test")
+        if not self.invoice_1_issued:
+            self.skipTest("Invoice 1 not successfully issued - skipping PDF test")
         
         try:
             # Wait for processing
@@ -722,6 +736,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Test getting invoice PDF with force parameter - using invoice 2"""
         if not self.invoice_id_2:
             self.skipTest("Invoice 2 not created - skipping PDF force test")
+        if not self.invoice_2_issued:
+            self.skipTest("Invoice 2 not successfully issued - skipping PDF force test")
         
         try:
             # Wait for processing
@@ -747,6 +763,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Test canceling product invoice with real API - canceling invoice 1"""
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping cancellation test")
+        if not self.invoice_1_issued:
+            self.skipTest("Invoice 1 not successfully issued - skipping cancellation test")
         
         reason = "Teste de cancelamento via integração automatizada - Invoice 1"
         
@@ -774,6 +792,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Test canceling with a longer reason message - canceling invoice 2"""
         if not self.invoice_id_2:
             self.skipTest("Invoice 2 not created - skipping cancellation test")
+        if not self.invoice_2_issued:
+            self.skipTest("Invoice 2 not successfully issued - skipping cancellation test")
         
         reason = "Cancelamento solicitado pelo cliente devido a erro no pedido. " \
                  "O cliente solicitou a reemissão com os dados corretos. " \
