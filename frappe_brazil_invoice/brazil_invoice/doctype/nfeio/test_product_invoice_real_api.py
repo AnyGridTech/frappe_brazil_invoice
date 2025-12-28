@@ -311,6 +311,15 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         }
         
         try:
+            print("\n" + "="*80)
+            print("INVOICE 1 CREATION REQUEST")
+            print("="*80)
+            print(f"Operation Nature: {invoice_data.get('operationNature')}")
+            print(f"Buyer CNPJ: {invoice_data['buyer'].get('federalTaxNumber')}")
+            print(f"Items: {len(invoice_data.get('items', []))}")
+            print(f"Total Amount: {invoice_data.get('totals', {}).get('icms', {}).get('invoiceAmount')}")
+            print("="*80)
+            
             result = product_invoice.issue_product_invoice(
                 invoice_data,
                 self.config
@@ -318,6 +327,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             
             # Check that we got a response
             self.assertIsNotNone(result)
+            print("\nINVOICE 1 CREATION RESPONSE:")
+            print(f"Full Response: {result}")
             test_logger.info(f"Issue invoice 1 result: {result}")
             
             # If successful, should have an ID - store it for later tests
@@ -404,12 +415,23 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         }
         
         try:
+            print("\n" + "="*80)
+            print("INVOICE 2 CREATION REQUEST")
+            print("="*80)
+            print(f"Operation Nature: {invoice_data.get('operationNature')}")
+            print(f"Buyer CNPJ: {invoice_data['buyer'].get('federalTaxNumber')}")
+            print(f"Items: {len(invoice_data.get('items', []))}")
+            print(f"Total Amount: {invoice_data.get('totals', {}).get('icms', {}).get('invoiceAmount')}")
+            print("="*80)
+            
             result = product_invoice.issue_product_invoice(
                 invoice_data,
                 self.config
             )
             
             self.assertIsNotNone(result)
+            print("\nINVOICE 2 CREATION RESPONSE:")
+            print(f"Full Response: {result}")
             test_logger.info(f"Issue invoice 2 result: {result}")
             
             # Store ID for later tests
@@ -424,7 +446,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             test_logger.error(f"Failed to issue invoice 2: {str(e)}")
             self.fail(f"Invoice 2 issuance failed: {str(e)}")
     
-    def test_002_5_real_api_get_invoice_by_id_basic(self):
+    def test_003_real_api_get_invoice_by_id_basic(self):
         """Test getting invoice by ID with real API - using invoice 1, wait for Issued status"""
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping get by ID test")
@@ -488,7 +510,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                     test_logger.error(f"Failed to get invoice 1 after {max_retries} attempts: {str(e)}")
                     self.skipTest(f"Failed to get invoice 1: {str(e)}")
     
-    def test_002_6_real_api_get_invoice_by_id_with_details(self):
+    def test_004_real_api_get_invoice_by_id_with_details(self):
         """Test getting invoice by ID with full details - using invoice 2, wait for Issued status"""
         if not self.invoice_id_2:
             self.skipTest("Invoice 2 not created - skipping get by ID test")
@@ -558,7 +580,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                     test_logger.error(f"Failed to get invoice 2 after {max_retries} attempts: {str(e)}")
                     self.skipTest(f"Failed to get invoice 2: {str(e)}")
     
-    def test_003_real_api_query_invoice_events_basic(self):
+    def test_005_real_api_query_invoice_events_basic(self):
         """Test querying invoice events with real API - using invoice 1"""
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping event query test")
@@ -587,7 +609,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             test_logger.warning(f"Query events API error: {str(e)}")
             # Don't fail - invoice might still be processing
     
-    def test_004_real_api_query_invoice_events_with_pagination(self):
+    def test_006_real_api_query_invoice_events_with_pagination(self):
         """Test querying invoice events with pagination - using invoice 2"""
         if not self.invoice_id_2:
             self.skipTest("Invoice 2 not created - skipping pagination test")
@@ -615,7 +637,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         except product_invoice.NFeIOAPIError as e:
             test_logger.warning(f"Pagination query error: {str(e)}")
     
-    def test_005_real_api_get_invoice_xml_basic(self):
+    def test_007_real_api_get_invoice_xml_basic(self):
         """Test getting invoice XML with real API - using invoice 1"""
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping XML test")
@@ -642,7 +664,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             test_logger.warning(f"Get XML API error: {str(e)}")
             # Don't fail - invoice might still be processing
     
-    def test_006_real_api_get_invoice_xml_error_handling(self):
+    def test_008_real_api_get_invoice_xml_error_handling(self):
         """Test XML retrieval error handling with invalid ID"""
         # Use an obviously invalid invoice ID
         invalid_invoice_id = "definitely_not_a_valid_invoice_id_xyz"
@@ -668,7 +690,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                 "404" in str(e)
             )
     
-    def test_007_real_api_get_invoice_pdf_basic(self):
+    def test_009_real_api_get_invoice_pdf_basic(self):
         """Test getting invoice PDF with real API - using invoice 1"""
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping PDF test")
@@ -696,7 +718,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             test_logger.warning(f"Get PDF API error: {str(e)}")
             # Don't fail - invoice might still be processing
     
-    def test_008_real_api_get_invoice_pdf_with_force(self):
+    def test_010_real_api_get_invoice_pdf_with_force(self):
         """Test getting invoice PDF with force parameter - using invoice 2"""
         if not self.invoice_id_2:
             self.skipTest("Invoice 2 not created - skipping PDF force test")
@@ -721,7 +743,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         except product_invoice.NFeIOAPIError as e:
             test_logger.warning(f"Get PDF forced error: {str(e)}")
     
-    def test_009_real_api_cancel_product_invoice_valid(self):
+    def test_011_real_api_cancel_product_invoice_valid(self):
         """Test canceling product invoice with real API - canceling invoice 1"""
         if not self.invoice_id_1:
             self.skipTest("Invoice 1 not created - skipping cancellation test")
@@ -748,7 +770,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             test_logger.warning(f"Cancel invoice 1 API error: {str(e)}")
             # Don't fail the test - invoice might not be ready for cancellation yet
     
-    def test_010_real_api_cancel_product_invoice_with_long_reason(self):
+    def test_012_real_api_cancel_product_invoice_with_long_reason(self):
         """Test canceling with a longer reason message - canceling invoice 2"""
         if not self.invoice_id_2:
             self.skipTest("Invoice 2 not created - skipping cancellation test")
