@@ -4,7 +4,6 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-import requests
 import json
 from datetime import datetime
 from ..nfeio import tax as nfeio_tax
@@ -812,59 +811,51 @@ class ProductInvoice(Document):
 @frappe.whitelist()
 def process_invoice(invoice_name):
     """
-    API endpoint to process and create NFe invoice via Go service
+    API endpoint to process and issue NFe invoice via NFe.io
     This is called from the form button
+    
+    Flow: This endpoint → nfeio.issue_product_invoice() → product_invoice.issue_product_invoice()
     """
     try:
-        # Get Go API endpoint from site config
-        go_api_url = frappe.conf.get("nfe_go_api_url", "http://localhost:3000")
-
-        # Call Go service to create invoice
-        response = requests.post(
-            f"{go_api_url}/issue",
-            json={"invoice_id": invoice_name},
-            headers={"Content-Type": "application/json"},
-            timeout=30,
-        )
-
-        if response.status_code == 200:
-            result = response.json()
-
+        # Import nfeio module to call Layer 2
+        from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
+        
+        # Get invoice document
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
+        
+        # Build invoice data from Product Invoice document
+        invoice_data = _build_invoice_data_from_doc(invoice_doc)
+        
+        # Call Layer 2: nfeio whitelisted endpoint
+        result = nfeio.issue_product_invoice(invoice_data)
+        
+        if result and isinstance(result, dict):
             # Update invoice with NFe.io response
-            invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
             invoice_doc.invoice_id = result.get("id")
-            invoice_doc.invoice_link = result.get("pdf")
-            invoice_doc.db_update()
-
+            invoice_doc.invoice_status = "Processing"
+            
+            # Set flags to allow modifications during Processing status
+            invoice_doc.flags.ignore_processing_lock = True
+            invoice_doc.save()
             frappe.db.commit()
-
+            
             frappe.msgprint(
-                f"Invoice created successfully!<br>"
-                f"ID: {result.get('id')}<br>"
-                f"Status: {result.get('status')}<br>"
-                f"<a href='{result.get('pdf')}' target='_blank'>View PDF</a>",
+                f"Invoice sent to NFe.io successfully!<br>"
+                f"Invoice ID: {result.get('id')}<br>"
+                f"Status: {result.get('status', 'Processing')}<br>"
+                f"The invoice is being processed. Check status for updates.",
                 title="Success",
                 indicator="green",
             )
-
+            
             return {
                 "success": True,
-                "message": "Invoice created successfully",
+                "message": "Invoice sent to NFe.io successfully",
                 "data": result,
             }
         else:
-            error_msg = (
-                f"Go API returned status {response.status_code}: {response.text}"
-            )
-            frappe.log_error(error_msg, "NFe Invoice Creation Error")
-            frappe.throw(f"Failed to create invoice: {error_msg}")
-
-    except requests.exceptions.Timeout:
-        frappe.throw("Request to Go API timed out. Please try again.")
-    except requests.exceptions.ConnectionError:
-        frappe.throw(
-            "Could not connect to Go API. Please ensure the service is running."
-        )
+            frappe.throw("Failed to issue invoice: Invalid response from NFe.io")
+            
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "NFe Invoice Creation Error")
         frappe.throw(f"An error occurred: {str(e)}")
@@ -873,31 +864,192 @@ def process_invoice(invoice_name):
 @frappe.whitelist()
 def get_invoice_status(invoice_name):
     """
-    Get the current status of an NFe invoice
+    Get the current status of an NFe invoice from NFe.io
+    
+    Flow: This endpoint → nfeio.get_product_invoice_by_id() → product_invoice.get_product_invoice_by_id()
     """
     try:
+        # Import nfeio module to call Layer 2
+        from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
+        
+        # Get invoice document
         invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
-
+        
         if not invoice_doc.invoice_id:
-            return {"success": False, "message": "Invoice has not been created yet"}
-
-        go_api_url = frappe.conf.get("nfe_go_api_url", "http://localhost:3000")
-
-        response = requests.get(
-            f"{go_api_url}/invoice/{invoice_doc.invoice_id}", timeout=10
-        )
-
-        if response.status_code == 200:
-            return {"success": True, "data": response.json()}
+            return {"success": False, "message": "Invoice has not been sent to NFe.io yet"}
+        
+        # Call Layer 2: nfeio whitelisted endpoint
+        result = nfeio.get_product_invoice_by_id(invoice_doc.invoice_id)
+        
+        if result and isinstance(result, dict):
+            # Update invoice with latest status from NFe.io
+            _update_invoice_from_nfeio_response(invoice_doc, result)
+            
+            return {"success": True, "data": result}
         else:
             return {
                 "success": False,
-                "message": f"API returned status {response.status_code}",
+                "message": "Failed to retrieve invoice status from NFe.io",
             }
-
+            
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "NFe Status Check Error")
         return {"success": False, "message": str(e)}
+
+
+def _build_invoice_data_from_doc(invoice_doc):
+    """
+    Build invoice data dictionary from Product Invoice document for NFe.io API
+    
+    Args:
+        invoice_doc: Product Invoice document
+        
+    Returns:
+        dict: Invoice data formatted for NFe.io API
+    """
+    # Map client type to NFe.io format
+    client_type_map = {
+        "Individual": 0,  # Pessoa Física
+        "Company": 1,      # Pessoa Jurídica
+    }
+    
+    # Build buyer information
+    buyer = {
+        "name": invoice_doc.client_name,
+        "federalTaxNumber": int(''.join(filter(str.isdigit, str(invoice_doc.client_id_number)))),
+        "type": client_type_map.get(invoice_doc.client_type, 1),
+        "address": {
+            "state": invoice_doc.delivery_state,
+            "city": {
+                "code": invoice_doc.delivery_ibge,
+                "name": invoice_doc.city,
+            },
+            "district": invoice_doc.delivery_neighborhood,
+            "street": invoice_doc.delivery_address,
+            "number": invoice_doc.delivery_number_address or "S/N",
+            "postalCode": ''.join(filter(str.isdigit, str(invoice_doc.delivery_cep))),
+            "country": "Brasil",
+        },
+    }
+    
+    # Add optional buyer fields
+    if invoice_doc.client_email:
+        buyer["email"] = invoice_doc.client_email
+    if invoice_doc.delivery_complement:
+        buyer["address"]["additionalInformation"] = invoice_doc.delivery_complement
+    
+    # Build items list
+    items = []
+    for item in invoice_doc.invoice_items_table:
+        item_data = {
+            "code": item.item_code,
+            "description": item.description or item.item_name,
+            "ncm": item.ncm,
+            "cfop": 5102,  # Default CFOP - should be configurable
+            "unit": "UN",
+            "quantity": float(item.quantity),
+            "unitAmount": float(item.rate),
+            "totalAmount": float(item.amount),
+        }
+        
+        # Add tax information if available
+        # This would need to be enhanced based on tax template
+        item_data["tax"] = {
+            "icms": {
+                "origin": "0",
+                "cst": "00",
+                "baseTax": float(item.amount),
+                "rate": 18.0,
+                "amount": float(item.amount) * 0.18,
+            },
+            "pis": {
+                "cst": "01",
+                "baseTax": float(item.amount),
+                "rate": 1.65,
+                "amount": float(item.amount) * 0.0165,
+            },
+            "cofins": {
+                "cst": "01",
+                "baseTax": float(item.amount),
+                "rate": 7.6,
+                "amount": float(item.amount) * 0.076,
+            },
+        }
+        
+        items.append(item_data)
+    
+    # Calculate totals
+    total_items = sum(float(item.amount) for item in invoice_doc.invoice_items_table)
+    
+    invoice_data = {
+        "operationNature": invoice_doc.operation_type or "VENDA DE MERCADORIA",
+        "operationType": "Outgoing",
+        "consumerType": "FinalConsumer",
+        "body": invoice_doc.additional_information or "Nota fiscal de produto",
+        "buyer": buyer,
+        "items": items,
+        "totals": {
+            "icms": {
+                "baseTax": total_items,
+                "icmsAmount": float(invoice_doc.icms_value or 0),
+                "productAmount": total_items,
+                "pisAmount": float(invoice_doc.pis_value or 0),
+                "cofinsAmount": float(invoice_doc.cofins_value or 0),
+                "invoiceAmount": float(invoice_doc.total or total_items),
+            }
+        },
+    }
+    
+    return invoice_data
+
+
+def _update_invoice_from_nfeio_response(invoice_doc, nfeio_response):
+    """
+    Update Product Invoice document with data from NFe.io response
+    
+    Args:
+        invoice_doc: Product Invoice document
+        nfeio_response: Response from NFe.io API
+    """
+    try:
+        # Update status based on NFe.io status
+        nfeio_status = nfeio_response.get("status")
+        status_map = {
+            "Issued": "Issued",
+            "Processing": "Processing",
+            "Error": "Processing Error",
+            "Rejected": "Rejected",
+        }
+        
+        if nfeio_status in status_map:
+            invoice_doc.invoice_status = status_map[nfeio_status]
+        
+        # Update invoice fields from NFe.io response
+        if nfeio_response.get("serie"):
+            invoice_doc.invoice_serie = str(nfeio_response.get("serie"))
+        if nfeio_response.get("number"):
+            invoice_doc.invoice_number = str(nfeio_response.get("number"))
+        if nfeio_response.get("authorization", {}).get("accessKey"):
+            invoice_doc.invoice_access_key = nfeio_response["authorization"]["accessKey"]
+        
+        # Reference fields for return invoices
+        if nfeio_response.get("serie"):
+            invoice_doc.invoice_ref_series = str(nfeio_response.get("serie"))
+        if nfeio_response.get("number"):
+            invoice_doc.invoice_ref_number = str(nfeio_response.get("number"))
+        if nfeio_response.get("authorization", {}).get("accessKey"):
+            invoice_doc.invoice_ref_access_key = nfeio_response["authorization"]["accessKey"]
+        
+        # Set flags to allow modifications during Processing status
+        invoice_doc.flags.ignore_processing_lock = True
+        invoice_doc.save()
+        frappe.db.commit()
+        
+    except Exception as e:
+        frappe.log_error(
+            f"Error updating invoice from NFe.io response: {str(e)}\n{frappe.get_traceback()}",
+            "Invoice Update Error"
+        )
 
 
 @frappe.whitelist(allow_guest=False)
