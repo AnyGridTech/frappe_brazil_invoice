@@ -10,6 +10,84 @@ from datetime import datetime
 from ..nfeio import tax as nfeio_tax
 
 
+def validate_cpf(cpf):
+    """
+    Validate Brazilian CPF (Cadastro de Pessoas Físicas)
+    
+    Args:
+        cpf: CPF string (can contain dots and hyphens)
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    # Remove non-digit characters
+    cpf = ''.join(filter(str.isdigit, str(cpf)))
+    
+    # CPF must have exactly 11 digits
+    if len(cpf) != 11:
+        return False
+    
+    # Check if all digits are the same (invalid CPFs like 111.111.111-11)
+    if cpf == cpf[0] * 11:
+        return False
+    
+    # Calculate first check digit
+    sum_digits = sum(int(cpf[i]) * (10 - i) for i in range(9))
+    first_digit = (sum_digits * 10 % 11) % 10
+    
+    if int(cpf[9]) != first_digit:
+        return False
+    
+    # Calculate second check digit
+    sum_digits = sum(int(cpf[i]) * (11 - i) for i in range(10))
+    second_digit = (sum_digits * 10 % 11) % 10
+    
+    if int(cpf[10]) != second_digit:
+        return False
+    
+    return True
+
+
+def validate_cnpj(cnpj):
+    """
+    Validate Brazilian CNPJ (Cadastro Nacional da Pessoa Jurídica)
+    
+    Args:
+        cnpj: CNPJ string (can contain dots, slashes, and hyphens)
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    # Remove non-digit characters
+    cnpj = ''.join(filter(str.isdigit, str(cnpj)))
+    
+    # CNPJ must have exactly 14 digits
+    if len(cnpj) != 14:
+        return False
+    
+    # Check if all digits are the same (invalid CNPJs)
+    if cnpj == cnpj[0] * 14:
+        return False
+    
+    # Calculate first check digit
+    weights_first = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    sum_digits = sum(int(cnpj[i]) * weights_first[i] for i in range(12))
+    first_digit = 0 if sum_digits % 11 < 2 else 11 - (sum_digits % 11)
+    
+    if int(cnpj[12]) != first_digit:
+        return False
+    
+    # Calculate second check digit
+    weights_second = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    sum_digits = sum(int(cnpj[i]) * weights_second[i] for i in range(13))
+    second_digit = 0 if sum_digits % 11 < 2 else 11 - (sum_digits % 11)
+    
+    if int(cnpj[13]) != second_digit:
+        return False
+    
+    return True
+
+
 class ProductInvoice(Document):
     def _handle_processing_error(self, error_type, error_message):
         """
@@ -54,6 +132,53 @@ class ProductInvoice(Document):
             self.errors_field = self.errors_field + "\n\n" + log_entry
         else:
             self.errors_field = log_entry
+
+    def validate_client_id_number(self):
+        """Validate CPF or CNPJ format based on client_type
+        
+        For Individual (Pessoa Física): Validates CPF (11 digits)
+        For Company (Pessoa Jurídica): Validates CNPJ (14 digits)
+        """
+        if not self.client_id_number:
+            return  # Field might not be mandatory in all cases
+        
+        # Remove non-digit characters for length check
+        clean_id = ''.join(filter(str.isdigit, str(self.client_id_number)))
+        
+        # Determine expected type based on client_type or number length
+        if self.client_type == "Individual":
+            # Expect CPF
+            if not validate_cpf(self.client_id_number):
+                frappe.throw(
+                    _("Invalid CPF format. Please provide a valid CPF number for Individual client type."),
+                    frappe.ValidationError
+                )
+        elif self.client_type == "Company":
+            # Expect CNPJ
+            if not validate_cnpj(self.client_id_number):
+                frappe.throw(
+                    _("Invalid CNPJ format. Please provide a valid CNPJ number for Company client type."),
+                    frappe.ValidationError
+                )
+        else:
+            # If client_type is not set, infer from number length
+            if len(clean_id) == 11:
+                if not validate_cpf(self.client_id_number):
+                    frappe.throw(
+                        _("Invalid CPF format. The provided number appears to be a CPF (11 digits) but is invalid."),
+                        frappe.ValidationError
+                    )
+            elif len(clean_id) == 14:
+                if not validate_cnpj(self.client_id_number):
+                    frappe.throw(
+                        _("Invalid CNPJ format. The provided number appears to be a CNPJ (14 digits) but is invalid."),
+                        frappe.ValidationError
+                    )
+            else:
+                frappe.throw(
+                    _("Invalid ID number format. Expected CPF (11 digits) or CNPJ (14 digits), got {0} digits.").format(len(clean_id)),
+                    frappe.ValidationError
+                )
 
     def before_save(self):
         """Actions before saving the document
@@ -100,6 +225,9 @@ class ProductInvoice(Document):
 
         # Validate responsible field is mandatory for Created status and beyond
         self.validate_responsible()
+
+        # Validate CPF/CNPJ format
+        self.validate_client_id_number()
 
         # Validate Invoice ID is mandatory when transitioning to Processing
         self.validate_invoice_id()
