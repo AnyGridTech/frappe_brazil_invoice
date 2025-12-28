@@ -2,13 +2,19 @@
 # See license.txt
 
 """
-Tax Calculation Tests
+Mock Unit Tests for Tax Calculation
+
+Tests with mocked API responses cover:
+- Tax calculation functions
+- API payload building
+- Fallback tax calculations
+- Integration with Frappe framework
 
 To run these tests:
-    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.nfeio.test_tax
+    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.nfeio.test_tax_mock
 
 To run a specific test class:
-    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.nfeio.test_tax --test TestTaxCalculation
+    bench --site dev.localhost run-tests --module frappe_brazil_invoice.brazil_invoice.doctype.nfeio.test_tax_mock --test TestTaxCalculation
 """
 
 import frappe
