@@ -108,10 +108,10 @@ def print_test_dashboard():
     
     # Status interpretation
     print(f"\n💡 TEST ENVIRONMENT NOTES")
-    print(f"   • Invoices in 'Error' status are EXPECTED in homologation")
+    print(f"   • Invoices should reach 'Issued' status even in homologation")
     print(f"   • Using test CNPJ: 99999999000191")
-    print(f"   • Skipped tests indicate invoices not reaching 'Issued' status")
-    print(f"   • This is normal behavior for test/sandbox environment")
+    print(f"   • Skipped tests indicate invoices still processing after retries")
+    print(f"   • Error status indicates a problem that needs investigation")
     
     print("\n" + "=" * width)
     print()
@@ -453,12 +453,14 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                             test_logger.warning(f"Invoice 1 failed to reach 'Issued' status after {max_retries} attempts. Status: {status}")
                             self.skipTest(f"Invoice 1 still {status} after {max_retries} attempts")
                     elif status == "Error":
-                        test_logger.warning(f"Invoice 1 has Error status - this is expected for test invoices in homologation environment")
-                        test_logger.info(f"  ID: {result.get('id')}")
-                        test_logger.info(f"  Number: {result.get('number')}")
+                        test_logger.error(f"Invoice 1 has Error status - investigation required")
+                        test_logger.error(f"  ID: {result.get('id')}")
+                        test_logger.error(f"  Number: {result.get('number')}")
                         if result.get('messages'):
-                            test_logger.info(f"  Messages: {result.get('messages')}")
-                        self.skipTest("Invoice in Error status - expected for test environment")
+                            test_logger.error(f"  Messages: {result.get('messages')}")
+                        if result.get('errors'):
+                            test_logger.error(f"  Errors: {result.get('errors')}")
+                        self.fail(f"Invoice 1 failed with Error status. Messages: {result.get('messages')}")
                     else:
                         test_logger.warning(f"Invoice 1 has unexpected status: {status}")
                         self.skipTest(f"Unexpected invoice status: {status}")
@@ -518,12 +520,14 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                             test_logger.warning(f"Invoice 2 failed to reach 'Issued' status after {max_retries} attempts. Status: {status}")
                             self.skipTest(f"Invoice 2 still {status} after {max_retries} attempts")
                     elif status == "Error":
-                        test_logger.warning(f"Invoice 2 has Error status - this is expected for test invoices in homologation environment")
-                        test_logger.info(f"  ID: {result.get('id')}")
-                        test_logger.info(f"  Number: {result.get('number')}")
+                        test_logger.error(f"Invoice 2 has Error status - investigation required")
+                        test_logger.error(f"  ID: {result.get('id')}")
+                        test_logger.error(f"  Number: {result.get('number')}")
                         if result.get('messages'):
-                            test_logger.info(f"  Messages: {result.get('messages')}")
-                        self.skipTest("Invoice in Error status - expected for test environment")
+                            test_logger.error(f"  Messages: {result.get('messages')}")
+                        if result.get('errors'):
+                            test_logger.error(f"  Errors: {result.get('errors')}")
+                        self.fail(f"Invoice 2 failed with Error status. Messages: {result.get('messages')}")
                     else:
                         test_logger.warning(f"Invoice 2 has unexpected status: {status}")
                         self.skipTest(f"Unexpected invoice status: {status}")
