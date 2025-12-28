@@ -20,7 +20,6 @@ Prerequisites:
 - Valid NFe.io API credentials configured in an NFeIO document with is_test_config=1
 """
 
-import json
 import unittest
 import frappe
 from frappe.tests.utils import FrappeTestCase
