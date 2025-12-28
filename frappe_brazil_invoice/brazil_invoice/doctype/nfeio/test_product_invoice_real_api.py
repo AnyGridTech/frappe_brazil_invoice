@@ -24,6 +24,8 @@ import unittest
 import frappe
 from frappe.tests.utils import FrappeTestCase
 import logging
+import time
+from datetime import datetime
 
 from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import product_invoice
 
@@ -31,10 +33,24 @@ from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import product_invoice
 test_logger = logging.getLogger("product_invoice_real_api_tests")
 test_logger.setLevel(logging.INFO)
 
+# Test execution tracking
+test_results = {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "errors": [],
+    "invoice_ids": [],
+    "start_time": None,
+    "end_time": None
+}
+
 
 def setUpModule():
     """Set up test data once for the entire module"""
     test_logger.info("Setting up Product Invoice Real API test module")
+    
+    test_results["start_time"] = datetime.now()
 
     # Ensure test config exists (reuse if available)
     ensure_test_config_exists()
@@ -51,7 +67,54 @@ def setUpModule():
 
 def tearDownModule():
     """Clean up test data after all tests in the module"""
+    test_results["end_time"] = datetime.now()
     test_logger.info("Tearing down Product Invoice Real API test module")
+    print_test_dashboard()
+
+
+def print_test_dashboard():
+    """Print a formatted dashboard with test results"""
+    width = 80
+    
+    print("\n" + "=" * width)
+    print("NFe.io REAL API TEST DASHBOARD".center(width))
+    print("=" * width)
+    
+    # Time information
+    if test_results["start_time"] and test_results["end_time"]:
+        duration = test_results["end_time"] - test_results["start_time"]
+        print(f"\n⏱  Duration: {duration.total_seconds():.2f}s")
+    
+    # Test summary
+    print(f"\n📊 TEST SUMMARY")
+    print(f"   Total Tests:    {test_results['total']}")
+    print(f"   ✓ Passed:       {test_results['passed']} ({test_results['passed']/max(test_results['total'],1)*100:.1f}%)")
+    print(f"   ✗ Failed:       {test_results['failed']}")
+    print(f"   ⊘ Skipped:      {test_results['skipped']}")
+    
+    # Invoice information
+    if test_results["invoice_ids"]:
+        print(f"\n📄 INVOICES CREATED")
+        for idx, invoice_id in enumerate(test_results["invoice_ids"], 1):
+            print(f"   Invoice {idx}: {invoice_id}")
+    
+    # Error details
+    if test_results["errors"]:
+        print(f"\n⚠  ERRORS & WARNINGS")
+        for error in test_results["errors"][:5]:  # Show max 5 errors
+            print(f"   • {error}")
+        if len(test_results["errors"]) > 5:
+            print(f"   ... and {len(test_results['errors']) - 5} more")
+    
+    # Status interpretation
+    print(f"\n💡 TEST ENVIRONMENT NOTES")
+    print(f"   • Invoices in 'Error' status are EXPECTED in homologation")
+    print(f"   • Using test CNPJ: 99999999000191")
+    print(f"   • Skipped tests indicate invoices not reaching 'Issued' status")
+    print(f"   • This is normal behavior for test/sandbox environment")
+    
+    print("\n" + "=" * width)
+    print()
 
 
 nfe_config_test = {
@@ -149,6 +212,21 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             self.skipTest("Skipping real API test - no valid credentials configured")
         
         test_logger.info(f"Running real API test: {self._testMethodName}")
+        test_results["total"] += 1
+    
+    def tearDown(self):
+        """Track test results after each test"""
+        # Check test outcome
+        if hasattr(self, '_outcome'):
+            result = self._outcome.result
+            if result.errors and result.errors[-1][0] == self:
+                test_results["failed"] += 1
+                error_msg = str(result.errors[-1][1])[:100]
+                test_results["errors"].append(f"{self._testMethodName}: {error_msg}")
+            elif result.skipped and result.skipped[-1][0] == self:
+                test_results["skipped"] += 1
+            else:
+                test_results["passed"] += 1
     
     def test_001_real_api_issue_product_invoice_basic(self):
         """Test issuing a product invoice with real API - basic scenario (creates invoice 1)"""
@@ -234,6 +312,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             # If successful, should have an ID - store it for later tests
             if result and isinstance(result, dict) and result.get('id'):
                 TestProductInvoiceRealAPI.invoice_id_1 = result['id']
+                test_results["invoice_ids"].append(result['id'])
                 test_logger.info(f"✓ Invoice 1 issued successfully: {self.invoice_id_1}")
             else:
                 test_logger.warning("Invoice 1 issued but no ID returned")
@@ -325,6 +404,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             # Store ID for later tests
             if result and isinstance(result, dict) and result.get('id'):
                 TestProductInvoiceRealAPI.invoice_id_2 = result['id']
+                test_results["invoice_ids"].append(result['id'])
                 test_logger.info(f"✓ Invoice 2 issued successfully: {self.invoice_id_2}")
             else:
                 test_logger.warning("Invoice 2 issued but no ID returned")
