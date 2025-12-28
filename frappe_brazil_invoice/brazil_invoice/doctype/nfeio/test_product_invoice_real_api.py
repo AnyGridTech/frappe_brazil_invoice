@@ -461,6 +461,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                             continue
                         else:
                             test_logger.warning(f"Invoice 1 failed to reach 'Issued' status after {max_retries} attempts. Status: {status}")
+                            test_logger.warning(f"Final response: {result}")
                             self.skipTest(f"Invoice 1 still {status} after {max_retries} attempts")
                     elif status == "Error":
                         test_logger.error("Invoice 1 has Error status - investigation required")
@@ -530,6 +531,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                             continue
                         else:
                             test_logger.warning(f"Invoice 2 failed to reach 'Issued' status after {max_retries} attempts. Status: {status}")
+                            test_logger.warning(f"Final response: {result}")
                             self.skipTest(f"Invoice 2 still {status} after {max_retries} attempts")
                     elif status == "Error":
                         test_logger.error("Invoice 2 has Error status - investigation required")
