@@ -372,6 +372,74 @@ def query_product_invoice_events(invoice_id, limit=10, starting_after=0):
 
 
 @frappe.whitelist()
+def get_product_invoice_by_id(invoice_id):
+    """
+    API endpoint to get a product invoice (NFe) by ID
+    
+    Retrieves complete invoice details including status, items, taxes, and metadata.
+    This is useful for checking invoice status, retrieving full details, or verifying data.
+    
+    Args:
+        invoice_id: NFe.io invoice ID
+        
+    Returns:
+        dict: Response with invoice data
+        
+    Example:
+        frappe.call({
+            method: "frappe_brazil_invoice.brazil_invoice.doctype.nfeio.nfeio.get_product_invoice_by_id",
+            args: {
+                invoice_id: "abc123"
+            }
+        })
+    """
+    from . import product_invoice
+    
+    try:
+        # Validate input
+        if not invoice_id:
+            return {
+                "success": False,
+                "error": "Invoice ID is required"
+            }
+        
+        # Get valid NFe.io configuration
+        nfeio_config = _get_valid_nfeio_config()
+        if not nfeio_config:
+            return {
+                "success": False,
+                "error": "No valid NFe.io configuration found"
+            }
+        
+        # Get invoice by ID
+        response = product_invoice.get_product_invoice_by_id(invoice_id, nfeio_config)
+        
+        return {
+            "success": True,
+            "data": response
+        }
+        
+    except product_invoice.NFeIOAPIError as e:
+        frappe.log_error(
+            f"NFe.io API Error: {str(e)}\n{frappe.get_traceback()}",
+            "Get NFe By ID API Error"
+        )
+        return {
+            "success": False,
+            "error": str(e)
+        }
+    except Exception as e:
+        frappe.log_error(
+            f"Unexpected error getting product invoice: {str(e)}\n{frappe.get_traceback()}",
+            "Get NFe By ID Error"
+        )
+        return {
+            "success": False,
+            "error": f"Failed to get invoice: {str(e)}"
+        }
+
+
+@frappe.whitelist()
 def get_product_invoice_pdf(invoice_id, force=False):
     """
     API endpoint to get PDF URL for invoice auxiliary document (DANFE)

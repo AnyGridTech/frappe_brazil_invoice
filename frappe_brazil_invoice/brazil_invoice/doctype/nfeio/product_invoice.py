@@ -199,6 +199,52 @@ def cancel_product_invoice(invoice_id, reason, nfeio_config):
         raise
 
 
+def get_product_invoice_by_id(invoice_id, nfeio_config):
+    """
+    Get a product invoice (NFe) by ID via NFe.io API
+    
+    Retrieves complete invoice details including status, items, taxes, and all metadata.
+    
+    Args:
+        invoice_id: NFe.io invoice ID
+        nfeio_config: NFeIO document with API configuration
+        
+    Returns:
+        dict: Complete invoice data
+        
+    Raises:
+        NFeIOAPIError: If API request fails
+        
+    API Endpoint: GET /v2/companies/{companyId}/productinvoices/{invoiceId}
+    Documentation: https://nfe.io/docs/desenvolvedores/rest-api/nota-fiscal-de-produto-v2/consultar-por-id-uma-nota-fiscal-eletronica-nfe/
+    """
+    if not nfeio_config or not nfeio_config.company_id:
+        raise NFeIOAPIError("Company ID not configured in NFeIO settings")
+    
+    if not invoice_id:
+        raise NFeIOAPIError("Invoice ID is required")
+    
+    endpoint = f"/companies/{nfeio_config.company_id}/productinvoices/{invoice_id}"
+    
+    try:
+        response_data = _make_api_request("GET", endpoint, nfeio_config)
+        
+        frappe.logger().info(
+            f"Retrieved invoice {invoice_id}. "
+            f"Status: {response_data.get('status', 'unknown') if response_data else 'no data'}"
+        )
+        
+        return response_data
+        
+    except NFeIOAPIError as e:
+        frappe.log_error(
+            f"Failed to get product invoice: {str(e)}\n"
+            f"Invoice ID: {invoice_id}",
+            "NFe.io Get Invoice Error"
+        )
+        raise
+
+
 def get_invoice_events(invoice_id, nfeio_config, limit=10, starting_after=0):
     """
     Query events for a product invoice (NFe) via NFe.io API
