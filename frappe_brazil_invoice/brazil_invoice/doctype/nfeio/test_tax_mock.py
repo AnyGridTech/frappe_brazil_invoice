@@ -58,6 +58,7 @@ nfe_config_test = {
     "company_id": "test_company_id_123",
     "api_token": "test_api_token_tax_789",  # Different token for tax tests
     "is_test_config": 1,
+    "usage_priority": 1,
 }
 
 

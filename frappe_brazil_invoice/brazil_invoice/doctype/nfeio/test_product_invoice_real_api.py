@@ -124,6 +124,7 @@ nfe_config_test = {
     "company_id": "test_company_product_invoice_123",
     "api_token": "test_api_token_product_invoice_456",
     "is_test_config": 1,
+    "usage_priority": 1,
 }
 
 
@@ -254,6 +255,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             "buyer": {
                 "name": "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL",
                 "federalTaxNumber": 99999999000191,
+                "stateTaxNumberIndicator": "NonTaxPayer",
                 "email": "teste@nfe.io",
                 "type": 1,
                 "address": {
@@ -359,6 +361,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             "buyer": {
                 "name": "NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL",
                 "federalTaxNumber": 99999999000191,
+                "stateTaxNumberIndicator": "NonTaxPayer",
                 "type": 1,
                 "address": {
                     "state": "SP",
