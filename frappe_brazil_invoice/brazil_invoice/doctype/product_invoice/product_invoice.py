@@ -2067,6 +2067,16 @@ def check_invoice_status_and_update(invoice_id, document_name):
         # NFe.io returns status values like: "Issued", "Processing", "Error", "Rejected"
         invoice_status = nfeio_invoice.get("status", "")
         
+        # Print full invoice data for debugging
+        print(f"\n{'='*80}")
+        print(f"INVOICE STATUS CHECK DEBUG - {document_name}")
+        print(f"{'='*80}")
+        print(f"Invoice ID: {invoice_id}")
+        print(f"Status from NFe.io: {invoice_status}")
+        print(f"\nFull NFe.io Response:")
+        print(json.dumps(nfeio_invoice, indent=2, ensure_ascii=False))
+        print(f"{'='*80}\n")
+        
         # Handle error/rejected status
         if invoice_status in ["Error", "Rejected"]:
             # Update document to Processing Error status
@@ -2088,6 +2098,15 @@ def check_invoice_status_and_update(invoice_id, document_name):
             if nfeio_invoice.get("errors"):
                 error_log = json.dumps(nfeio_invoice.get("errors"), indent=2)
                 invoice_doc.errors_field = error_log
+                
+                # Print detailed error information
+                print(f"\n{'='*80}")
+                print(f"INVOICE ERROR DETAILS - {document_name}")
+                print(f"{'='*80}")
+                print(f"Error Message: {error_message}")
+                print(f"\nDetailed Errors from NFe.io:")
+                print(error_log)
+                print(f"{'='*80}\n")
             
             # Set flag to bypass processing lock
             invoice_doc.flags.ignore_processing_lock = True
