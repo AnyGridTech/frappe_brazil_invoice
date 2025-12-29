@@ -428,6 +428,11 @@ def build_invoice_payload(invoice_doc):
     # Add items from invoice
     if invoice_doc.get("items"):
         for item in invoice_doc.items:
+            # Format NCM: remove dots/periods and any other formatting
+            ncm = item.get("ncm", "")
+            if ncm:
+                ncm = ncm.replace(".", "").replace("-", "").strip()
+            
             payload["items"].append({
                 "code": item.get("item_code"),
                 "description": item.get("description"),
@@ -435,7 +440,7 @@ def build_invoice_payload(invoice_doc):
                 "unitAmount": item.get("rate", 0),
                 "totalAmount": item.get("amount", 0),
                 "cfop": item.get("cfop"),
-                "ncm": item.get("ncm"),
+                "ncm": ncm,  # Send NCM without dots/formatting
                 # Add tax details
                 "tax": {
                     "icms": {},

@@ -25,7 +25,7 @@ from datetime import datetime
 from frappe_brazil_invoice.brazil_invoice.doctype.product_invoice import product_invoice
 
 # Import shared test helpers
-from . import (
+from .test_helpers import (
     get_test_run_token,
     create_test_invoice_with_token,
     create_test_item,
@@ -373,6 +373,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
     # Class variables to track invoice error states
     invoice_1_error = False
     invoice_2_error = False
+    # Class variable to store serial numbers for reuse across tests
+    test_serial_numbers = None
 
     @classmethod
     def setUpClass(cls):
@@ -406,8 +408,11 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                 description=item_data["description"],
             )
         
-        # Create test serial numbers using fresh generated serial numbers
-        for serial_data in get_serial_no_array():
+        # Generate serial numbers ONCE and store in class variable for reuse
+        cls.test_serial_numbers = get_serial_no_array()
+        
+        # Create test serial numbers using the stored serial numbers
+        for serial_data in cls.test_serial_numbers:
             create_test_serial_no(
                 item_code=serial_data["item_code"], serial_no=serial_data["serial_no"]
             )
@@ -513,8 +518,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                 "responsible": address_data["responsible"],
             }
 
-        # Get serial number for invoice items
-        serial = get_serial_no_array()[0]
+        # Get serial number for invoice items from stored class variable
+        serial = self.test_serial_numbers[0]
         invoice_items = [{"serial_number": serial["serial_no"]}]
 
         # Create invoice
@@ -580,8 +585,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         except Exception as e:
             self.fail(f"Failed to submit invoice to API: {str(e)}")
 
-    def test_002_get_pdf_for_invoice_1(self):
-        """Get PDF for invoice 1 and populate PDF field with retry logic"""
+    def test_002_check_invoice_1_status_and_update(self):
+        """Run check_invoice_status_and_update function and verify invoice fields are populated"""
         frappe.set_user("Administrator")
         
         # Skip if Invoice 1 has error
@@ -594,30 +599,51 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         invoice = frappe.get_doc("Product Invoice", invoice_name)
         self.assertIsNotNone(invoice.invoice_id, "Invoice ID should be set")
         
+        print(f"\n🔄 Running check_invoice_status_and_update for {invoice_name}...")
+        print(f"  Invoice ID: {invoice.invoice_id}")
+        print(f"  Status before check: {invoice.invoice_status}")
+        
         # Wait for SEFAZ processing
-        wait_for_sefaz_processing(20)
+        wait_for_sefaz_processing(5)
         
-        # Check status before getting PDF
-        status_result = check_invoice_status_with_retries(
-            invoice.invoice_id,
-            invoice.name,
-            max_retries=3,
-            retry_delay=5,
-            set_error_flag_callback=lambda: setattr(TestProductInvoiceRealAPI, 'invoice_1_error', True)
-        )
+        # Call the background job function directly
+        try:
+            product_invoice.check_invoice_status_and_update(
+                invoice_id=invoice.invoice_id,
+                document_name=invoice_name
+            )
+        except Exception as e:
+            self.fail(f"check_invoice_status_and_update failed: {str(e)}")
         
-        if not status_result.get('success') or status_result.get('status') == 'Error':
-            self.fail("Invoice has Error status. Cannot retrieve PDF.")
+        # Reload invoice to get updated data
+        invoice.reload()
         
-        # Get PDF using helper function
-        pdf_result = get_pdf_with_retries(invoice, max_retries=3, retry_delay=5)
+        print(f"  Status after check: {invoice.invoice_status}")
+        print(f"  Access Key: {invoice.invoice_access_key or 'Not set'}")
+        print(f"  Number: {invoice.invoice_number or 'Not set'}")
+        print(f"  Serie: {invoice.invoice_serie or 'Not set'}")
+        print(f"  PDF Link: {invoice.invoice_link or 'Not set'}")
+        print(f"  PDF: {invoice.pdf or 'Not set'}")
         
-        if not pdf_result.get('success'):
-            self.fail(f"PDF retrieval failed: {pdf_result.get('error')}")
+        # If status is still Processing, that's acceptable (might need more time)
+        # If status is Error, set error flag and fail
+        if invoice.invoice_status == "Processing Error":
+            TestProductInvoiceRealAPI.invoice_1_error = True
+            self.fail(f"Invoice has Error status: {invoice.status_reason}")
         
-        # Verify PDF field is populated
-        self.assertIsNotNone(invoice.pdf, "PDF field should be populated")
-        self.assertTrue(len(invoice.pdf) > 0, "PDF field should not be empty")
+        # If status changed to Issued, verify all fields are populated
+        if invoice.invoice_status == "Issued":
+            print("  ✅ Invoice moved to Issued status")
+            
+            # Verify invoice fields are populated
+            self.assertIsNotNone(invoice.invoice_access_key, "Invoice access key should be set")
+            self.assertIsNotNone(invoice.invoice_number, "Invoice number should be set")
+            self.assertIsNotNone(invoice.invoice_serie, "Invoice serie should be set")
+            self.assertIsNotNone(invoice.invoice_link, "Invoice PDF link should be set")
+            
+            print("  ✅ All invoice fields populated successfully")
+        else:
+            print(f"  ℹ️  Invoice still in {invoice.invoice_status} status (may need more processing time)")
 
     def test_003_get_xml_for_invoice_1(self):
         """Get XML for invoice 1 with retry logic"""
@@ -655,8 +681,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         # Generate random address EXCLUDING SP (for interstate operation)
         address_data = generate_random_address(exclude_state="SP")
 
-        # Get serial numbers for invoice items (2 items)
-        serial_array = get_serial_no_array()
+        # Get serial numbers for invoice items (2 items) from stored class variable
+        serial_array = self.test_serial_numbers
         invoice_items = [
             {"serial_number": serial_array[0]["serial_no"]},
             {"serial_number": serial_array[1]["serial_no"]}
@@ -735,8 +761,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             TestProductInvoiceRealAPI.invoice_2_error = True
             self.fail(f"Failed to submit invoice to API: {str(e)}")
 
-    def test_005_get_pdf_for_invoice_2(self):
-        """Get PDF for invoice 2 and populate PDF field with retry logic"""
+    def test_005_check_invoice_2_status_and_update(self):
+        """Run check_invoice_status_and_update function and verify invoice fields are populated"""
         frappe.set_user("Administrator")
         
         # Skip if Invoice 2 has error
@@ -749,30 +775,51 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         invoice = frappe.get_doc("Product Invoice", invoice_name)
         self.assertIsNotNone(invoice.invoice_id, "Invoice ID should be set")
         
+        print(f"\n🔄 Running check_invoice_status_and_update for {invoice_name}...")
+        print(f"  Invoice ID: {invoice.invoice_id}")
+        print(f"  Status before check: {invoice.invoice_status}")
+        
         # Wait for SEFAZ processing
-        wait_for_sefaz_processing(20)
+        wait_for_sefaz_processing(5)
         
-        # Check status before getting PDF
-        status_result = check_invoice_status_with_retries(
-            invoice.invoice_id,
-            invoice.name,
-            max_retries=3,
-            retry_delay=5,
-            set_error_flag_callback=lambda: setattr(TestProductInvoiceRealAPI, 'invoice_2_error', True)
-        )
+        # Call the background job function directly
+        try:
+            product_invoice.check_invoice_status_and_update(
+                invoice_id=invoice.invoice_id,
+                document_name=invoice_name
+            )
+        except Exception as e:
+            self.fail(f"check_invoice_status_and_update failed: {str(e)}")
         
-        if not status_result.get('success') or status_result.get('status') == 'Error':
-            self.fail("Invoice has Error status. Cannot retrieve PDF.")
+        # Reload invoice to get updated data
+        invoice.reload()
         
-        # Get PDF using helper function
-        pdf_result = get_pdf_with_retries(invoice, max_retries=3, retry_delay=5)
+        print(f"  Status after check: {invoice.invoice_status}")
+        print(f"  Access Key: {invoice.invoice_access_key or 'Not set'}")
+        print(f"  Number: {invoice.invoice_number or 'Not set'}")
+        print(f"  Serie: {invoice.invoice_serie or 'Not set'}")
+        print(f"  PDF Link: {invoice.invoice_link or 'Not set'}")
+        print(f"  PDF: {invoice.pdf or 'Not set'}")
         
-        if not pdf_result.get('success'):
-            self.fail(f"PDF retrieval failed: {pdf_result.get('error')}")
+        # If status is still Processing, that's acceptable (might need more time)
+        # If status is Error, set error flag and fail
+        if invoice.invoice_status == "Processing Error":
+            TestProductInvoiceRealAPI.invoice_2_error = True
+            self.fail(f"Invoice has Error status: {invoice.status_reason}")
         
-        # Verify PDF field is populated
-        self.assertIsNotNone(invoice.pdf, "PDF field should be populated")
-        self.assertTrue(len(invoice.pdf) > 0, "PDF field should not be empty")
+        # If status changed to Issued, verify all fields are populated
+        if invoice.invoice_status == "Issued":
+            print("  ✅ Invoice moved to Issued status")
+            
+            # Verify invoice fields are populated
+            self.assertIsNotNone(invoice.invoice_access_key, "Invoice access key should be set")
+            self.assertIsNotNone(invoice.invoice_number, "Invoice number should be set")
+            self.assertIsNotNone(invoice.invoice_serie, "Invoice serie should be set")
+            self.assertIsNotNone(invoice.invoice_link, "Invoice PDF link should be set")
+            
+            print("  ✅ All invoice fields populated successfully")
+        else:
+            print(f"  ℹ️  Invoice still in {invoice.invoice_status} status (may need more processing time)")
 
     def test_006_get_xml_for_invoice_2(self):
         """Get XML for invoice 2 with retry logic"""

@@ -1366,10 +1366,16 @@ def _build_invoice_data_from_doc(invoice_doc):
     # Build items list
     items = []
     for item in invoice_doc.invoice_items_table:
+        # Format NCM: remove dots/periods and any other formatting characters
+        # NFe.io expects NCM without formatting (8 digits max)
+        ncm = item.ncm or ""
+        if ncm:
+            ncm = ncm.replace(".", "").replace("-", "").strip()
+        
         item_data = {
             "code": item.item_code,
             "description": item.description or item.item_name,
-            "ncm": item.ncm,
+            "ncm": ncm,  # NCM without dots/formatting
             "cfop": 5102,  # Default CFOP - should be configurable
             "unit": "UN",
             "quantity": float(item.quantity),
