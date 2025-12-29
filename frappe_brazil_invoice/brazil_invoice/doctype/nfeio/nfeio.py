@@ -133,17 +133,48 @@ def _get_nfeio_config():
 
 
 def _get_valid_nfeio_config():
-    """Helper function to get valid (non-test) NFe.io configuration"""
+    """Helper function to get valid NFe.io configuration (including test configs)
+    
+    This function now accepts both production and test configurations to support
+    testing scenarios. It returns the configuration with the highest usage_priority.
+    
+    Priority system:
+    - Higher usage_priority numbers are chosen first
+    - Default priority is 0 when field is empty
+    - If multiple configs have same priority, chooses randomly
+    - This allows users to control which config is used
+    
+    Returns:
+        NFeIO document or None if no configuration exists
+    """
     try:
-        # Get NFeIO documents where is_test_config is 0 or null
+        # Get all NFeIO documents with priority ordering
         nfeio_list = frappe.get_all(
             "NFeIO",
-            filters=[["is_test_config", "in", [0, ""]]],
-            limit=1
+            fields=["name", "usage_priority"],
+            order_by="usage_priority DESC, name ASC"
         )
-        if nfeio_list:
-            return frappe.get_doc("NFeIO", nfeio_list[0].name)
-        return None
+        
+        if not nfeio_list:
+            return None
+        
+        # Get highest priority value (considering 0 as default for None)
+        highest_priority = nfeio_list[0].get("usage_priority") or 0
+        
+        # Get all configs with the highest priority
+        top_priority_configs = [
+            cfg for cfg in nfeio_list 
+            if (cfg.get("usage_priority") or 0) == highest_priority
+        ]
+        
+        # If multiple configs have same priority, choose randomly
+        if len(top_priority_configs) > 1:
+            import random
+            selected_config = random.choice(top_priority_configs)
+        else:
+            selected_config = top_priority_configs[0]
+        
+        return frappe.get_doc("NFeIO", selected_config["name"])
     except Exception:
         return None
 
@@ -153,7 +184,7 @@ def _get_valid_nfeio_config():
 # ============================================================================
 
 @frappe.whitelist()
-def issue_product_invoice(invoice_data):
+def issue_product_invoice(invoice_data, document_name=None):
     """
     API endpoint to issue/emit a product invoice (NFe) via NFe.io
     
@@ -163,6 +194,7 @@ def issue_product_invoice(invoice_data):
     
     Args:
         invoice_data: JSON string or dict with invoice data in NFe.io format
+        document_name: Name of the Product Invoice document (optional)
         
     Returns:
         dict: Response with success status and invoice details
@@ -170,7 +202,7 @@ def issue_product_invoice(invoice_data):
     Example:
         frappe.call({
             method: "frappe_brazil_invoice.brazil_invoice.doctype.nfeio.nfeio.issue_product_invoice",
-            args: { invoice_data: {...} }
+            args: { invoice_data: {...}, document_name: "INV-2025-12-29-0001" }
         })
     """
     from . import product_invoice
@@ -379,6 +411,8 @@ def get_product_invoice_by_id(invoice_id):
     Retrieves complete invoice details including status, items, taxes, and metadata.
     This is useful for checking invoice status, retrieving full details, or verifying data.
     
+    Includes automatic retry logic: 3 retries with 3 seconds delay between attempts.
+    
     Args:
         invoice_id: NFe.io invoice ID
         
@@ -394,49 +428,66 @@ def get_product_invoice_by_id(invoice_id):
         })
     """
     from . import product_invoice
+    import time
     
-    try:
-        # Validate input
-        if not invoice_id:
+    max_retries = 3
+    retry_delay = 3  # seconds
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Validate input
+            if not invoice_id:
+                return {
+                    "success": False,
+                    "error": "Invoice ID is required"
+                }
+            
+            # Get valid NFe.io configuration
+            nfeio_config = _get_valid_nfeio_config()
+            if not nfeio_config:
+                return {
+                    "success": False,
+                    "error": "No valid NFe.io configuration found"
+                }
+            
+            # Get invoice by ID
+            response = product_invoice.get_product_invoice_by_id(invoice_id, nfeio_config)
+            
             return {
-                "success": False,
-                "error": "Invoice ID is required"
+                "success": True,
+                "data": response
             }
-        
-        # Get valid NFe.io configuration
-        nfeio_config = _get_valid_nfeio_config()
-        if not nfeio_config:
-            return {
-                "success": False,
-                "error": "No valid NFe.io configuration found"
-            }
-        
-        # Get invoice by ID
-        response = product_invoice.get_product_invoice_by_id(invoice_id, nfeio_config)
-        
-        return {
-            "success": True,
-            "data": response
-        }
-        
-    except product_invoice.NFeIOAPIError as e:
-        frappe.log_error(
-            f"NFe.io API Error: {str(e)}\n{frappe.get_traceback()}",
-            "Get NFe By ID API Error"
-        )
-        return {
-            "success": False,
-            "error": str(e)
-        }
-    except Exception as e:
-        frappe.log_error(
-            f"Unexpected error getting product invoice: {str(e)}\n{frappe.get_traceback()}",
-            "Get NFe By ID Error"
-        )
-        return {
-            "success": False,
-            "error": f"Failed to get invoice: {str(e)}"
-        }
+            
+        except product_invoice.NFeIOAPIError as e:
+            if attempt < max_retries:
+                frappe.logger().warning(
+                    f"NFe.io API error on attempt {attempt}/{max_retries}: {str(e)}. Retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                frappe.log_error(
+                    f"NFe.io API Error after {max_retries} attempts: {str(e)}\n{frappe.get_traceback()}",
+                    "Get NFe By ID API Error"
+                )
+                return {
+                    "success": False,
+                    "error": str(e)
+                }
+        except Exception as e:
+            if attempt < max_retries:
+                frappe.logger().warning(
+                    f"Unexpected error on attempt {attempt}/{max_retries}: {str(e)}. Retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                frappe.log_error(
+                    f"Unexpected error after {max_retries} attempts: {str(e)}\n{frappe.get_traceback()}",
+                    "Get NFe By ID Error"
+                )
+                return {
+                    "success": False,
+                    "error": f"Failed to get invoice: {str(e)}"
+                }
 
 
 @frappe.whitelist()
@@ -445,6 +496,8 @@ def get_product_invoice_pdf(invoice_id, force=False):
     API endpoint to get PDF URL for invoice auxiliary document (DANFE)
     
     Returns the URL to download the DANFE (Documento Auxiliar da Nota Fiscal Eletrônica) PDF.
+    
+    Includes automatic retry logic: 3 retries with 3 seconds delay between attempts.
     
     Args:
         invoice_id: NFe.io invoice ID
@@ -463,54 +516,71 @@ def get_product_invoice_pdf(invoice_id, force=False):
         })
     """
     from . import product_invoice
+    import time
     
-    try:
-        # Validate input
-        if not invoice_id:
+    max_retries = 3
+    retry_delay = 3  # seconds
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Validate input
+            if not invoice_id:
+                return {
+                    "success": False,
+                    "error": "Invoice ID is required"
+                }
+            
+            # Get valid NFe.io configuration
+            nfeio_config = _get_valid_nfeio_config()
+            if not nfeio_config:
+                return {
+                    "success": False,
+                    "error": "No valid NFe.io configuration found"
+                }
+            
+            # Get PDF URL
+            response = product_invoice.get_invoice_pdf(
+                invoice_id, 
+                nfeio_config, 
+                force=bool(force)
+            )
+            
             return {
-                "success": False,
-                "error": "Invoice ID is required"
+                "success": True,
+                "data": response,
+                "pdf_url": response.get("uri") if response else None
             }
-        
-        # Get valid NFe.io configuration
-        nfeio_config = _get_valid_nfeio_config()
-        if not nfeio_config:
-            return {
-                "success": False,
-                "error": "No valid NFe.io configuration found"
-            }
-        
-        # Get PDF URL
-        response = product_invoice.get_invoice_pdf(
-            invoice_id, 
-            nfeio_config, 
-            force=bool(force)
-        )
-        
-        return {
-            "success": True,
-            "data": response,
-            "pdf_url": response.get("uri") if response else None
-        }
-        
-    except product_invoice.NFeIOAPIError as e:
-        frappe.log_error(
-            f"NFe.io API Error: {str(e)}\n{frappe.get_traceback()}",
-            "Get NFe PDF API Error"
-        )
-        return {
-            "success": False,
-            "error": str(e)
-        }
-    except Exception as e:
-        frappe.log_error(
-            f"Error getting NFe PDF: {str(e)}\n{frappe.get_traceback()}",
-            "Get NFe PDF Error"
-        )
-        return {
-            "success": False,
-            "error": str(e)
-        }
+            
+        except product_invoice.NFeIOAPIError as e:
+            if attempt < max_retries:
+                frappe.logger().warning(
+                    f"NFe.io API error getting PDF on attempt {attempt}/{max_retries}: {str(e)}. Retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                frappe.log_error(
+                    f"NFe.io API Error after {max_retries} attempts: {str(e)}\n{frappe.get_traceback()}",
+                    "Get NFe PDF API Error"
+                )
+                return {
+                    "success": False,
+                    "error": str(e)
+                }
+        except Exception as e:
+            if attempt < max_retries:
+                frappe.logger().warning(
+                    f"Unexpected error getting PDF on attempt {attempt}/{max_retries}: {str(e)}. Retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                frappe.log_error(
+                    f"Unexpected error after {max_retries} attempts: {str(e)}\n{frappe.get_traceback()}",
+                    "Get NFe PDF Error"
+                )
+                return {
+                    "success": False,
+                    "error": f"Failed to get PDF: {str(e)}"
+                }
 
 
 @frappe.whitelist()
@@ -519,6 +589,8 @@ def get_product_invoice_xml(invoice_id):
     API endpoint to get XML URL for product invoice (NFe)
     
     Returns the URL to download the official NFe XML document.
+    
+    Includes automatic retry logic: 3 retries with 3 seconds delay between attempts.
     
     Args:
         invoice_id: NFe.io invoice ID
@@ -533,50 +605,66 @@ def get_product_invoice_xml(invoice_id):
         })
     """
     from . import product_invoice
+    import time
     
-    try:
-        # Validate input
-        if not invoice_id:
+    max_retries = 3
+    retry_delay = 3  # seconds
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Validate input
+            if not invoice_id:
+                return {
+                    "success": False,
+                    "error": "Invoice ID is required"
+                }
+            
+            # Get valid NFe.io configuration
+            nfeio_config = _get_valid_nfeio_config()
+            if not nfeio_config:
+                return {
+                    "success": False,
+                    "error": "No valid NFe.io configuration found"
+                }
+            
+            # Get XML URL
+            response = product_invoice.get_invoice_xml(invoice_id, nfeio_config)
+            
             return {
-                "success": False,
-                "error": "Invoice ID is required"
+                "success": True,
+                "xml_url": response.get("uri") if response else None
             }
-        
-        # Get valid NFe.io configuration
-        nfeio_config = _get_valid_nfeio_config()
-        if not nfeio_config:
-            return {
-                "success": False,
-                "error": "No valid NFe.io configuration found"
-            }
-        
-        # Get XML URL
-        response = product_invoice.get_invoice_xml(invoice_id, nfeio_config)
-        
-        return {
-            "success": True,
-            "data": response,
-            "xml_url": response.get("uri") if response else None
-        }
-        
-    except product_invoice.NFeIOAPIError as e:
-        frappe.log_error(
-            f"NFe.io API Error: {str(e)}\n{frappe.get_traceback()}",
-            "Get NFe XML API Error"
-        )
-        return {
-            "success": False,
-            "error": str(e)
-        }
-    except Exception as e:
-        frappe.log_error(
-            f"Error getting NFe XML: {str(e)}\n{frappe.get_traceback()}",
-            "Get NFe XML Error"
-        )
-        return {
-            "success": False,
-            "error": str(e)
-        }
+            
+        except product_invoice.NFeIOAPIError as e:
+            if attempt < max_retries:
+                frappe.logger().warning(
+                    f"NFe.io API error getting XML on attempt {attempt}/{max_retries}: {str(e)}. Retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                frappe.log_error(
+                    f"NFe.io API Error after {max_retries} attempts: {str(e)}\n{frappe.get_traceback()}",
+                    "Get NFe XML API Error"
+                )
+                return {
+                    "success": False,
+                    "error": str(e)
+                }
+        except Exception as e:
+            if attempt < max_retries:
+                frappe.logger().warning(
+                    f"Unexpected error getting XML on attempt {attempt}/{max_retries}: {str(e)}. Retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+            else:
+                frappe.log_error(
+                    f"Error getting NFe XML after {max_retries} attempts: {str(e)}\n{frappe.get_traceback()}",
+                    "Get NFe XML Error"
+                )
+                return {
+                    "success": False,
+                    "error": str(e)
+                }
 
 
 @frappe.whitelist()

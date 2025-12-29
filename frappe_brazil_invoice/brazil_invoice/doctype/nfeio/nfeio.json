@@ -9,7 +9,8 @@
   "company_name",
   "company_id",
   "api_token",
-  "is_test_config"
+  "is_test_config",
+  "usage_priority"
  ],
  "fields": [
   {
@@ -39,6 +40,12 @@
    "fieldname": "is_test_config",
    "fieldtype": "Check",
    "label": "Is Test Config"
+  },
+  {
+   "fieldname": "usage_priority",
+   "fieldtype": "Int",
+   "label": "Usage Priority",
+   "description": "Higher numbers have higher priority (chosen first). Default: 0"
   }
  ],
  "grid_page_length": 50,
