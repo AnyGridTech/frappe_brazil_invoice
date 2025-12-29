@@ -604,7 +604,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         print(f"  Status before check: {invoice.invoice_status}")
         
         # Wait for SEFAZ processing
-        wait_for_sefaz_processing(30)
+        wait_for_sefaz_processing(10)
         
         # Call the background job function directly
         try:
@@ -619,11 +619,11 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         invoice.reload()
         
         print(f"  Status after check: {invoice.invoice_status}")
+        print(f"  Status Reason: {invoice.status_reason or 'Not set'}")
         print(f"  Access Key: {invoice.invoice_access_key or 'Not set'}")
         print(f"  Number: {invoice.invoice_number or 'Not set'}")
         print(f"  Serie: {invoice.invoice_serie or 'Not set'}")
         print(f"  PDF Link: {invoice.invoice_link or 'Not set'}")
-        print(f"  PDF: {invoice.pdf or 'Not set'}")
         
         # If status is still Processing, that's acceptable (might need more time)
         # If status is Error, set error flag and fail
@@ -795,11 +795,11 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         invoice.reload()
         
         print(f"  Status after check: {invoice.invoice_status}")
+        print(f"  Status Reason: {invoice.status_reason or 'Not set'}")
         print(f"  Access Key: {invoice.invoice_access_key or 'Not set'}")
         print(f"  Number: {invoice.invoice_number or 'Not set'}")
         print(f"  Serie: {invoice.invoice_serie or 'Not set'}")
         print(f"  PDF Link: {invoice.invoice_link or 'Not set'}")
-        print(f"  PDF: {invoice.pdf or 'Not set'}")
         
         # If status is still Processing, that's acceptable (might need more time)
         # If status is Error, set error flag and fail

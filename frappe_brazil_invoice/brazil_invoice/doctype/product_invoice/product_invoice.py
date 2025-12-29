@@ -2130,7 +2130,6 @@ def check_invoice_status_and_update(invoice_id, document_name):
             # Update invoice links
             if pdf_url:
                 invoice_doc.invoice_link = pdf_url
-                invoice_doc.pdf = pdf_url  # Also set the pdf field
             
             # Update NFe details from response
             # Access key is in the authorization object
