@@ -224,7 +224,7 @@
       if (frm.doc.docstatus === 1 && !frm.doc.invoice_id) {
         frm.add_custom_button(__("Create NFe Invoice"), function() {
           frappe.call({
-            method: "frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.process_invoice",
+            method: "frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.product_invoice.move_to_processing",
             args: {
               invoice_name: frm.doc.name
             },
