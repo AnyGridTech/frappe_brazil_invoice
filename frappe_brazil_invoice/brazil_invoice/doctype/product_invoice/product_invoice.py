@@ -2063,11 +2063,12 @@ def check_invoice_status_and_update(invoice_id, document_name):
             )
             return
         
-        # Check NFe.io invoice status (flowStatus field)
-        flow_status = nfeio_invoice.get("flowStatus", "").lower()
+        # Check NFe.io invoice status (status field)
+        # NFe.io returns status values like: "Issued", "Processing", "Error", "Rejected"
+        invoice_status = nfeio_invoice.get("status", "")
         
         # Handle error/rejected status
-        if flow_status in ["error", "erro", "rejected", "rejeitado", "rejection"]:
+        if invoice_status in ["Error", "Rejected"]:
             # Update document to Processing Error status
             invoice_doc.invoice_status = "Processing Error"
             
@@ -2076,7 +2077,7 @@ def check_invoice_status_and_update(invoice_id, document_name):
                 nfeio_invoice.get("statusMessage") or 
                 nfeio_invoice.get("message") or 
                 nfeio_invoice.get("errorMessage") or
-                f"Invoice processing failed with status: {nfeio_invoice.get('flowStatus')}"
+                f"Invoice processing failed with status: {invoice_status}"
             )
             invoice_doc.status_reason = error_message
             
@@ -2088,11 +2089,13 @@ def check_invoice_status_and_update(invoice_id, document_name):
                 error_log = json.dumps(nfeio_invoice.get("errors"), indent=2)
                 invoice_doc.errors_field = error_log
             
+            # Set flag to bypass processing lock
+            invoice_doc.flags.ignore_processing_lock = True
             invoice_doc.save(ignore_permissions=True)
             frappe.db.commit()
             
             frappe.log_error(
-                f"Invoice {document_name} (NFe.io ID: {invoice_id}) has error status: {flow_status}\n"
+                f"Invoice {document_name} (NFe.io ID: {invoice_id}) has error status: {invoice_status}\n"
                 f"Error message: {error_message}",
                 "NFe Error Status"
             )
@@ -2101,7 +2104,7 @@ def check_invoice_status_and_update(invoice_id, document_name):
             )
         
         # Handle issued/authorized status
-        elif flow_status in ["issued", "emitido", "authorized", "autorizado", "authorised"]:
+        elif invoice_status == "Issued":
             # Get PDF URL
             pdf_url = None
             try:
@@ -2110,11 +2113,12 @@ def check_invoice_status_and_update(invoice_id, document_name):
             except Exception as e:
                 frappe.logger().warning(f"Could not get PDF for invoice {invoice_id}: {str(e)}")
             
-            # Get XML URL
-            xml_url = None
+            # Get XML URL (optional, for logging purposes)
             try:
                 xml_response = nfeio_product_invoice.get_invoice_xml(invoice_id, nfeio_config)
                 xml_url = xml_response.get("uri") if xml_response else None
+                if xml_url:
+                    frappe.logger().info(f"XML available for invoice {invoice_id}: {xml_url}")
             except Exception as e:
                 frappe.logger().warning(f"Could not get XML for invoice {invoice_id}: {str(e)}")
             
@@ -2126,15 +2130,27 @@ def check_invoice_status_and_update(invoice_id, document_name):
             # Update invoice links
             if pdf_url:
                 invoice_doc.invoice_link = pdf_url
+                invoice_doc.pdf = pdf_url  # Also set the pdf field
             
             # Update NFe details from response
-            if nfeio_invoice.get("accessKey"):
-                invoice_doc.invoice_access_key = nfeio_invoice.get("accessKey")
+            # Access key is in the authorization object
+            if nfeio_invoice.get("authorization", {}).get("accessKey"):
+                invoice_doc.invoice_access_key = nfeio_invoice["authorization"]["accessKey"]
             if nfeio_invoice.get("number"):
                 invoice_doc.invoice_number = str(nfeio_invoice.get("number"))
             if nfeio_invoice.get("serie"):
                 invoice_doc.invoice_serie = str(nfeio_invoice.get("serie"))
             
+            # Also populate the reference fields (for compatibility)
+            if nfeio_invoice.get("serie"):
+                invoice_doc.invoice_ref_series = str(nfeio_invoice.get("serie"))
+            if nfeio_invoice.get("number"):
+                invoice_doc.invoice_ref_number = str(nfeio_invoice.get("number"))
+            if nfeio_invoice.get("authorization", {}).get("accessKey"):
+                invoice_doc.invoice_ref_access_key = nfeio_invoice["authorization"]["accessKey"]
+            
+            # Set flag to bypass processing lock
+            invoice_doc.flags.ignore_processing_lock = True
             invoice_doc.save(ignore_permissions=True)
             frappe.db.commit()
             
@@ -2146,7 +2162,7 @@ def check_invoice_status_and_update(invoice_id, document_name):
         else:
             # Still processing or other intermediate status
             frappe.logger().info(
-                f"Invoice {document_name} status: {flow_status}. Keeping in Processing state."
+                f"Invoice {document_name} status: {invoice_status}. Keeping in Processing state."
             )
     
     except nfeio_product_invoice.NFeIOAPIError as e:

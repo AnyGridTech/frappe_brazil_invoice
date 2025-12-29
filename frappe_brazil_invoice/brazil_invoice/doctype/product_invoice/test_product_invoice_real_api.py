@@ -604,7 +604,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         print(f"  Status before check: {invoice.invoice_status}")
         
         # Wait for SEFAZ processing
-        wait_for_sefaz_processing(5)
+        wait_for_sefaz_processing(30)
         
         # Call the background job function directly
         try:
@@ -780,7 +780,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         print(f"  Status before check: {invoice.invoice_status}")
         
         # Wait for SEFAZ processing
-        wait_for_sefaz_processing(5)
+        wait_for_sefaz_processing(30)
         
         # Call the background job function directly
         try:
