@@ -241,7 +241,7 @@ class ProductInvoice(Document):
         self.validate_invoice_access_key()
 
         # Validate required fields when transitioning to Issued
-        self.validate_submitted_fields()
+        self.validate_issued_status_fields()
 
         # Must have at least one item row
         if not self.invoice_items_table or len(self.invoice_items_table) == 0:
@@ -573,7 +573,7 @@ class ProductInvoice(Document):
                 # since access key might be generated asynchronously
                 pass
 
-    def validate_submitted_fields(self):
+    def validate_issued_status_fields(self):
         """Validate that required fields are filled when transitioning to Issued status
 
         When an invoice moves from Processing to Issued status, the following fields
@@ -809,13 +809,15 @@ class ProductInvoice(Document):
 
 
 @frappe.whitelist()
-def process_invoice(invoice_name):
+def move_to_processing(invoice_name):
     """
-    API endpoint to process and issue NFe invoice via NFe.io
+    API endpoint to transition invoice to Processing status and issue NFe invoice via NFe.io
     This is called from the form button
     
     Flow: This endpoint → nfeio.issue_product_invoice() → product_invoice.issue_product_invoice()
     """
+    import random
+    
     try:
         # Import nfeio module to call Layer 2
         from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
@@ -826,39 +828,448 @@ def process_invoice(invoice_name):
         # Build invoice data from Product Invoice document
         invoice_data = _build_invoice_data_from_doc(invoice_doc)
         
-        # Call Layer 2: nfeio whitelisted endpoint
+        # Call Layer 2: nfeio whitelisted endpoint (without document_name to avoid duplicate scheduling)
         result = nfeio.issue_product_invoice(invoice_data)
         
-        if result and isinstance(result, dict):
-            # Update invoice with NFe.io response
-            invoice_doc.invoice_id = result.get("id")
-            invoice_doc.invoice_status = "Processing"
-            
-            # Set flags to allow modifications during Processing status
-            invoice_doc.flags.ignore_processing_lock = True
-            invoice_doc.save()
-            frappe.db.commit()
-            
-            frappe.msgprint(
-                f"Invoice sent to NFe.io successfully!<br>"
-                f"Invoice ID: {result.get('id')}<br>"
-                f"Status: {result.get('status', 'Processing')}<br>"
-                f"The invoice is being processed. Check status for updates.",
-                title="Success",
-                indicator="green",
+        # Handle error cases first (fail fast)
+        if not result or not isinstance(result, dict) or not result.get("success"):
+            error_msg = result.get("error", "Invalid response from NFe.io") if result else "No response from NFe.io"
+            frappe.throw(f"Failed to issue invoice: {error_msg}")
+        
+        # Whitelisted endpoint returns {"success": True, "data": {...}}
+        # Extract the actual NFe.io response from the "data" field
+        nfeio_response = result.get("data", {})
+        
+        # Update invoice with NFe.io response
+        invoice_id = nfeio_response.get("id")
+        invoice_doc.invoice_id = invoice_id
+        invoice_doc.invoice_status = "Processing"
+        
+        # Set flags to allow modifications during Processing status
+        invoice_doc.flags.ignore_processing_lock = True
+        invoice_doc.save()
+        frappe.db.commit()
+        
+        # Schedule background status check jobs
+        if not invoice_id:
+            frappe.throw("Invoice ID not returned from NFe.io. Cannot schedule status checks.")
+        
+        # Helper function to schedule status check jobs
+        def schedule_status_check(min_minutes, max_minutes, job_suffix):
+            """Schedule a status check job with random delay within the specified range"""
+            delay_seconds = random.randint(min_minutes, max_minutes) * 60
+            frappe.enqueue(
+                "frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.product_invoice.check_invoice_status_and_update",
+                queue="default",
+                timeout=300,
+                invoice_id=invoice_id,
+                document_name=invoice_name,
+                enqueue_after_commit=True,
+                at_front=False,
+                now=False,
+                job_name=f"check_invoice_status_{invoice_id}_{job_suffix}",
+                **{"in": delay_seconds}
             )
-            
-            return {
-                "success": True,
-                "message": "Invoice sent to NFe.io successfully",
-                "data": result,
-            }
-        else:
-            frappe.throw("Failed to issue invoice: Invalid response from NFe.io")
+            return delay_seconds
+        
+        # Schedule three status checks at different intervals
+        first_delay = schedule_status_check(3, 6, "first")
+        second_delay = schedule_status_check(10, 20, "second")
+        third_delay = schedule_status_check(30, 40, "third")
+        
+        frappe.logger().info(
+            f"Scheduled 3 status checks for invoice {invoice_id} (doc: {invoice_name}) "
+            f"at {first_delay//60}, {second_delay//60}, and {third_delay//60} minutes"
+        )
+        
+        frappe.msgprint(
+            f"Invoice sent to NFe.io successfully!<br>"
+            f"Invoice ID: {nfeio_response.get('id')}<br>"
+            f"Status: {nfeio_response.get('status', 'Processing')}<br>"
+            f"The invoice is being processed. Check status for updates.",
+            title="Success",
+            indicator="green",
+        )
+        
+        return {
+            "success": True,
+            "message": "Invoice sent to NFe.io successfully",
+            "data": nfeio_response,
+        }
             
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "NFe Invoice Creation Error")
         frappe.throw(f"An error occurred: {str(e)}")
+
+
+@frappe.whitelist()
+def move_to_issued(invoice_name, invoice_ref_series=None, invoice_ref_number=None, 
+                   invoice_ref_access_key=None, invoice_serie=None, invoice_number=None, 
+                   invoice_link=None):
+    """
+    Transition invoice to Issued status
+    
+    Required fields for Issued status:
+    - invoice_ref_series: Invoice Ref. Series
+    - invoice_ref_number: Invoice Ref. Number
+    - invoice_ref_access_key: Invoice Ref. Access Key
+    - invoice_serie: Invoice Serie
+    - invoice_number: Invoice Number
+    - invoice_link: Invoice Link
+    
+    Args:
+        invoice_name: Name of the Product Invoice document
+        invoice_ref_series: Invoice reference series
+        invoice_ref_number: Invoice reference number
+        invoice_ref_access_key: Invoice reference access key
+        invoice_serie: Invoice series
+        invoice_number: Invoice number
+        invoice_link: Link to the invoice PDF
+        
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
+        
+        # Update required fields if provided
+        if invoice_ref_series:
+            invoice_doc.invoice_ref_series = invoice_ref_series
+        if invoice_ref_number:
+            invoice_doc.invoice_ref_number = invoice_ref_number
+        if invoice_ref_access_key:
+            invoice_doc.invoice_ref_access_key = invoice_ref_access_key
+        if invoice_serie:
+            invoice_doc.invoice_serie = invoice_serie
+        if invoice_number:
+            invoice_doc.invoice_number = invoice_number
+        if invoice_link:
+            invoice_doc.invoice_link = invoice_link
+        
+        # Set status to Issued
+        invoice_doc.invoice_status = "Issued"
+        
+        # Save will trigger validation of required fields
+        invoice_doc.save()
+        frappe.db.commit()
+        
+        frappe.msgprint(
+            f"Invoice {invoice_name} successfully moved to Issued status",
+            title="Success",
+            indicator="green",
+        )
+        
+        return {
+            "success": True,
+            "message": f"Invoice {invoice_name} moved to Issued status",
+            "invoice_name": invoice_name,
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), "Move to Issued Error")
+        frappe.throw(f"Failed to move invoice to Issued status: {str(e)}")
+
+
+@frappe.whitelist()
+def move_to_tax_calculation_error(invoice_name, error_message=None):
+    """
+    Transition invoice to Tax Calculation Error status
+    
+    This status is used when automatic tax calculation fails.
+    No specific fields are required, but an error message should be logged.
+    
+    Args:
+        invoice_name: Name of the Product Invoice document
+        error_message: Optional error message to log
+        
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
+        
+        # Set status to Tax Calculation Error
+        invoice_doc.invoice_status = "Tax Calculation Error"
+        
+        # Log error if provided
+        if error_message:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_entry = f"[{timestamp}] [ERROR] Tax Calculation Error\\n  {error_message}"
+            
+            if invoice_doc.errors_field:
+                invoice_doc.errors_field = invoice_doc.errors_field + "\\n\\n" + log_entry
+            else:
+                invoice_doc.errors_field = log_entry
+        
+        invoice_doc.save()
+        frappe.db.commit()
+        
+        frappe.msgprint(
+            f"Invoice {invoice_name} moved to Tax Calculation Error status",
+            title="Status Updated",
+            indicator="orange",
+        )
+        
+        return {
+            "success": True,
+            "message": f"Invoice {invoice_name} moved to Tax Calculation Error status",
+            "invoice_name": invoice_name,
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), "Move to Tax Calculation Error")
+        frappe.throw(f"Failed to move invoice to Tax Calculation Error status: {str(e)}")
+
+
+@frappe.whitelist()
+def move_to_processing_error(invoice_name, error_message=None):
+    """
+    Transition invoice to Processing Error status
+    
+    This status is used when NFe.io processing fails.
+    No specific fields are required, but an error message should be logged.
+    
+    Note: Per business rules, this status can only be reached from Processing status.
+    
+    Args:
+        invoice_name: Name of the Product Invoice document
+        error_message: Optional error message to log
+        
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
+        
+        # Validate transition rule: Processing Error can only come from Processing
+        if invoice_doc.invoice_status != "Processing":
+            frappe.throw(
+                f"Processing Error status can only be reached from Processing status. "
+                f"Current status is '{invoice_doc.invoice_status}'."
+            )
+        
+        # Set status to Processing Error
+        invoice_doc.invoice_status = "Processing Error"
+        
+        # Log error if provided
+        if error_message:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_entry = f"[{timestamp}] [ERROR] Processing Error\\n  {error_message}"
+            
+            if invoice_doc.errors_field:
+                invoice_doc.errors_field = invoice_doc.errors_field + "\\n\\n" + log_entry
+            else:
+                invoice_doc.errors_field = log_entry
+        
+        # Set flag to allow modifications during Processing status
+        invoice_doc.flags.ignore_processing_lock = True
+        invoice_doc.save()
+        frappe.db.commit()
+        
+        frappe.msgprint(
+            f"Invoice {invoice_name} moved to Processing Error status",
+            title="Status Updated",
+            indicator="red",
+        )
+        
+        return {
+            "success": True,
+            "message": f"Invoice {invoice_name} moved to Processing Error status",
+            "invoice_name": invoice_name,
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), "Move to Processing Error")
+        frappe.throw(f"Failed to move invoice to Processing Error status: {str(e)}")
+
+
+@frappe.whitelist()
+def move_to_contingency(invoice_name):
+    """
+    Transition invoice to Contingency status
+    
+    This status is used for contingency invoices (offline issuance).
+    No specific mandatory fields beyond the standard invoice fields.
+    
+    Args:
+        invoice_name: Name of the Product Invoice document
+        
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
+        
+        # Set status to Contingency
+        invoice_doc.invoice_status = "Contingency"
+        
+        invoice_doc.save()
+        frappe.db.commit()
+        
+        frappe.msgprint(
+            f"Invoice {invoice_name} moved to Contingency status",
+            title="Success",
+            indicator="orange",
+        )
+        
+        return {
+            "success": True,
+            "message": f"Invoice {invoice_name} moved to Contingency status",
+            "invoice_name": invoice_name,
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), "Move to Contingency Error")
+        frappe.throw(f"Failed to move invoice to Contingency status: {str(e)}")
+
+
+@frappe.whitelist()
+def move_to_rejected(invoice_name, rejection_reason=None):
+    """
+    Transition invoice to Rejected status
+    
+    This status is used when the fiscal authority rejects the invoice.
+    No specific mandatory fields, but a rejection reason should be logged.
+    
+    Args:
+        invoice_name: Name of the Product Invoice document
+        rejection_reason: Optional rejection reason to log
+        
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
+        
+        # Set status to Rejected
+        invoice_doc.invoice_status = "Rejected"
+        
+        # Log rejection reason if provided
+        if rejection_reason:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_entry = f"[{timestamp}] [INFO] Invoice Rejected\\n  {rejection_reason}"
+            
+            if invoice_doc.errors_field:
+                invoice_doc.errors_field = invoice_doc.errors_field + "\\n\\n" + log_entry
+            else:
+                invoice_doc.errors_field = log_entry
+        
+        invoice_doc.save()
+        frappe.db.commit()
+        
+        frappe.msgprint(
+            f"Invoice {invoice_name} moved to Rejected status",
+            title="Status Updated",
+            indicator="red",
+        )
+        
+        return {
+            "success": True,
+            "message": f"Invoice {invoice_name} moved to Rejected status",
+            "invoice_name": invoice_name,
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), "Move to Rejected Error")
+        frappe.throw(f"Failed to move invoice to Rejected status: {str(e)}")
+
+
+@frappe.whitelist()
+def move_to_cancelled(invoice_name, cancellation_reason=None):
+    """
+    Transition invoice to Cancelled status
+    
+    This status is used when an issued invoice is cancelled.
+    No specific mandatory fields, but a cancellation reason should be logged.
+    
+    Args:
+        invoice_name: Name of the Product Invoice document
+        cancellation_reason: Optional cancellation reason to log
+        
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
+        
+        # Set status to Cancelled
+        invoice_doc.invoice_status = "Cancelled"
+        
+        # Log cancellation reason if provided
+        if cancellation_reason:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_entry = f"[{timestamp}] [INFO] Invoice Cancelled\\n  {cancellation_reason}"
+            
+            if invoice_doc.errors_field:
+                invoice_doc.errors_field = invoice_doc.errors_field + "\\n\\n" + log_entry
+            else:
+                invoice_doc.errors_field = log_entry
+        
+        invoice_doc.save()
+        frappe.db.commit()
+        
+        frappe.msgprint(
+            f"Invoice {invoice_name} moved to Cancelled status",
+            title="Status Updated",
+            indicator="red",
+        )
+        
+        return {
+            "success": True,
+            "message": f"Invoice {invoice_name} moved to Cancelled status",
+            "invoice_name": invoice_name,
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), "Move to Cancelled Error")
+        frappe.throw(f"Failed to move invoice to Cancelled status: {str(e)}")
+
+
+@frappe.whitelist()
+def move_to_unused(invoice_name):
+    """
+    Transition invoice to Unused status
+    
+    This status is used to mark an invoice as unused/discarded.
+    No specific mandatory fields required.
+    
+    Args:
+        invoice_name: Name of the Product Invoice document
+        
+    Returns:
+        dict: Response with success status and message
+    """
+    try:
+        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
+        
+        # Set status to Unused
+        invoice_doc.invoice_status = "Unused"
+        
+        invoice_doc.save()
+        frappe.db.commit()
+        
+        frappe.msgprint(
+            f"Invoice {invoice_name} moved to Unused status",
+            title="Status Updated",
+            indicator="grey",
+        )
+        
+        return {
+            "success": True,
+            "message": f"Invoice {invoice_name} moved to Unused status",
+            "invoice_name": invoice_name,
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), "Move to Unused Error")
+        frappe.throw(f"Failed to move invoice to Unused status: {str(e)}")
 
 
 @frappe.whitelist()
@@ -913,6 +1324,14 @@ def _build_invoice_data_from_doc(invoice_doc):
         "Company": 1,      # Pessoa Jurídica
     }
     
+    # Map ICMS contributor to stateTaxNumberIndicator
+    # "Taxpayer" -> "TaxPayer", "Non-Taxpayer" -> "NonTaxPayer"
+    state_tax_indicator_map = {
+        "Taxpayer": "TaxPayer",
+        "Non-Taxpayer": "NonTaxPayer",
+        "Exempt": "Exempt",
+    }
+    
     # Build buyer information
     buyer = {
         "name": invoice_doc.client_name,
@@ -931,6 +1350,12 @@ def _build_invoice_data_from_doc(invoice_doc):
             "country": "Brasil",
         },
     }
+    
+    # Add stateTaxNumberIndicator based on ICMS taxpayer status
+    if invoice_doc.icms_taxpayer:
+        state_tax_indicator = state_tax_indicator_map.get(invoice_doc.icms_taxpayer)
+        if state_tax_indicator:
+            buyer["stateTaxNumberIndicator"] = state_tax_indicator
     
     # Add optional buyer fields
     if invoice_doc.client_email:
@@ -1376,69 +1801,6 @@ def get_invoice_details(docname):
 
 
 @frappe.whitelist(allow_guest=False)
-def update_invoice_status(
-    docname, invoice_id=None, invoice_link=None, invoice_number=None, invoice_serie=None
-):
-    """
-    Update invoice status after processing (e.g., after NFe.io processing).
-
-    Note: This function is similar to what process_invoice does,
-    but it's kept separate for API use cases where you need to update
-    invoice fields without going through NFe.io.
-
-    Args:
-            docname (str): The name/ID of the invoice document
-            invoice_id (str): External invoice ID from NFe.io or similar service
-            invoice_link (str): Link to the invoice PDF or external resource
-            invoice_number (str): Invoice number assigned by the fiscal authority
-            invoice_serie (str): Invoice series
-
-    Returns:
-            dict: Response containing:
-                    - success (bool): Whether the operation was successful
-                    - message (str): Success or error message
-                    - docname (str): The invoice docname
-    """
-    try:
-        if not docname:
-            return {"success": False, "message": "Invoice docname is required"}
-
-        # Check if invoice exists
-        if not frappe.db.exists("Product Invoice", docname):
-            return {"success": False, "message": f"Invoice {docname} does not exist"}
-
-        # Get the invoice document
-        invoice_doc = frappe.get_doc("Product Invoice", docname)
-
-        # Update fields
-        if invoice_id:
-            invoice_doc.invoice_id = invoice_id
-        if invoice_link:
-            invoice_doc.invoice_link = invoice_link
-        if invoice_number:
-            invoice_doc.invoice_number = invoice_number
-        if invoice_serie:
-            invoice_doc.invoice_serie = invoice_serie
-
-        # Save the document
-        invoice_doc.save(ignore_permissions=False)
-        frappe.db.commit()
-
-        return {
-            "success": True,
-            "message": f"Invoice {docname} updated successfully",
-            "docname": docname,
-        }
-
-    except Exception as e:
-        frappe.db.rollback()
-        frappe.log_error(
-            title="Update Invoice Status Error", message=frappe.get_traceback()
-        )
-        return {"success": False, "message": f"An error occurred: {str(e)}"}
-
-
-@frappe.whitelist(allow_guest=False)
 def bulk_create_invoices(invoices_data):
     """
     Create multiple invoices in a single API call.
@@ -1573,7 +1935,7 @@ def bulk_process_invoices(invoice_names):
         for idx, invoice_name in enumerate(invoice_names):
             try:
                 # Call the single invoice processing function
-                result = process_invoice(invoice_name)
+                result = move_to_processing(invoice_name)
 
                 if result.get("success"):
                     processed_invoices.append(
@@ -1641,3 +2003,153 @@ def get_tax_template_query(doctype, txt, searchfield, start, page_len, filters):
 	""",
         {"txt": "%" + txt + "%", "start": start, "page_len": page_len},
     )
+
+
+def check_invoice_status_and_update(invoice_id, document_name):
+    """
+    Background job to check NFe.io invoice status and update Product Invoice document
+    
+    This function is called by scheduled jobs after invoice issuance to check the status
+    and update the document accordingly.
+    
+    Args:
+        invoice_id: NFe.io invoice ID
+        document_name: Name of the Product Invoice document
+    """
+    from ..nfeio import product_invoice as nfeio_product_invoice
+    
+    try:
+        # Get the Product Invoice document
+        try:
+            invoice_doc = frappe.get_doc("Product Invoice", document_name)
+        except frappe.DoesNotExistError:
+            frappe.log_error(
+                f"Product Invoice '{document_name}' not found for status check",
+                "Invoice Status Check Error"
+            )
+            return
+        
+        # Check if document is still in "Processing" status
+        if invoice_doc.invoice_status != "Processing":
+            frappe.logger().info(
+                f"Invoice {document_name} is no longer in Processing status. "
+                f"Current status: {invoice_doc.invoice_status}. Skipping status check."
+            )
+            return
+        
+        # Get valid NFe.io configuration
+        from ..nfeio.nfeio import _get_valid_nfeio_config
+        nfeio_config = _get_valid_nfeio_config()
+        if not nfeio_config:
+            frappe.log_error(
+                f"No valid NFe.io configuration found for invoice {document_name}",
+                "Invoice Status Check Error"
+            )
+            return
+        
+        # Get invoice status from NFe.io
+        nfeio_invoice = nfeio_product_invoice.get_product_invoice_by_id(invoice_id, nfeio_config)
+        
+        if not nfeio_invoice:
+            frappe.log_error(
+                f"Could not retrieve invoice {invoice_id} from NFe.io for document {document_name}",
+                "Invoice Status Check Error"
+            )
+            return
+        
+        # Check NFe.io invoice status (flowStatus field)
+        flow_status = nfeio_invoice.get("flowStatus", "").lower()
+        
+        # Handle error/rejected status
+        if flow_status in ["error", "erro", "rejected", "rejeitado", "rejection"]:
+            # Update document to Processing Error status
+            invoice_doc.invoice_status = "Processing Error"
+            
+            # Get error message from various possible fields
+            error_message = (
+                nfeio_invoice.get("statusMessage") or 
+                nfeio_invoice.get("message") or 
+                nfeio_invoice.get("errorMessage") or
+                f"Invoice processing failed with status: {nfeio_invoice.get('flowStatus')}"
+            )
+            invoice_doc.status_reason = error_message
+            
+            # Store the NFe.io invoice ID
+            invoice_doc.invoice_id = invoice_id
+            
+            # Log errors if available
+            if nfeio_invoice.get("errors"):
+                error_log = json.dumps(nfeio_invoice.get("errors"), indent=2)
+                invoice_doc.errors_field = error_log
+            
+            invoice_doc.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+            frappe.log_error(
+                f"Invoice {document_name} (NFe.io ID: {invoice_id}) has error status: {flow_status}\n"
+                f"Error message: {error_message}",
+                "NFe Error Status"
+            )
+            frappe.logger().warning(
+                f"Invoice {document_name} moved to Processing Error status due to: {error_message}"
+            )
+        
+        # Handle issued/authorized status
+        elif flow_status in ["issued", "emitido", "authorized", "autorizado", "authorised"]:
+            # Get PDF URL
+            pdf_url = None
+            try:
+                pdf_response = nfeio_product_invoice.get_invoice_pdf(invoice_id, nfeio_config, force=True)
+                pdf_url = pdf_response.get("uri") if pdf_response else None
+            except Exception as e:
+                frappe.logger().warning(f"Could not get PDF for invoice {invoice_id}: {str(e)}")
+            
+            # Get XML URL
+            xml_url = None
+            try:
+                xml_response = nfeio_product_invoice.get_invoice_xml(invoice_id, nfeio_config)
+                xml_url = xml_response.get("uri") if xml_response else None
+            except Exception as e:
+                frappe.logger().warning(f"Could not get XML for invoice {invoice_id}: {str(e)}")
+            
+            # Update document with invoice details
+            invoice_doc.invoice_status = "Issued"
+            invoice_doc.status_reason = "Invoice successfully issued and authorized by SEFAZ"
+            invoice_doc.invoice_id = invoice_id
+            
+            # Update invoice links
+            if pdf_url:
+                invoice_doc.invoice_link = pdf_url
+            
+            # Update NFe details from response
+            if nfeio_invoice.get("accessKey"):
+                invoice_doc.invoice_access_key = nfeio_invoice.get("accessKey")
+            if nfeio_invoice.get("number"):
+                invoice_doc.invoice_number = str(nfeio_invoice.get("number"))
+            if nfeio_invoice.get("serie"):
+                invoice_doc.invoice_serie = str(nfeio_invoice.get("serie"))
+            
+            invoice_doc.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+            frappe.logger().info(
+                f"Invoice {document_name} successfully issued. NFe.io ID: {invoice_id}, "
+                f"Access Key: {invoice_doc.invoice_access_key}, Number: {invoice_doc.invoice_number}"
+            )
+        
+        else:
+            # Still processing or other intermediate status
+            frappe.logger().info(
+                f"Invoice {document_name} status: {flow_status}. Keeping in Processing state."
+            )
+    
+    except nfeio_product_invoice.NFeIOAPIError as e:
+        frappe.log_error(
+            f"NFe.io API Error checking status for invoice {document_name}: {str(e)}\n{frappe.get_traceback()}",
+            "Invoice Status Check API Error"
+        )
+    except Exception as e:
+        frappe.log_error(
+            f"Error checking invoice status for {document_name}: {str(e)}\n{frappe.get_traceback()}",
+            "Invoice Status Check Error"
+        )
