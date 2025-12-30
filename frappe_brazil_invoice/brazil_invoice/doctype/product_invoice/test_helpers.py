@@ -646,8 +646,10 @@ def print_invoice_details(invoice, tax_doc=None, show_items=True, client_data=No
             print(f"  Invoice Ref. Series: {invoice.invoice_ref_series}")
         if invoice.is_return_invoice:
             print("  Return Invoice: Enabled ✓")
-        if invoice.invoice_link:
-            print(f"  Invoice Link: {invoice.invoice_link[:50]}...")
+        if invoice.invoice_pdf_url:
+            print(f"  Invoice PDF Link: {invoice.invoice_pdf_url[:50]}...")
+        if invoice.invoice_xml_url:
+            print(f"  Invoice XML Link: {invoice.invoice_xml_url[:50]}...")
 
     # Product and items information
     if show_items and invoice.invoice_items_table:

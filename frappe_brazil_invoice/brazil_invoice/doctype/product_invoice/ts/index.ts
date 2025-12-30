@@ -79,9 +79,16 @@ frappe.ui.form.on<InvoicesDoc>("Product Invoice", {
       }, __('Actions'));
       
       // Add "View PDF" button
-      if (frm.doc.invoice_link) {
+      if (frm.doc.invoice_pdf_url) {
         frm.add_custom_button(__('View NFe PDF'), function() {
-          window.open(frm.doc.invoice_link, '_blank');
+          window.open(frm.doc.invoice_pdf_url, '_blank');
+        }, __('Actions'));
+      }
+      
+      // Add "View XML" button
+      if (frm.doc.invoice_xml_url) {
+        frm.add_custom_button(__('View NFe XML'), function() {
+          window.open(frm.doc.invoice_xml_url, '_blank');
         }, __('Actions'));
       }
     }

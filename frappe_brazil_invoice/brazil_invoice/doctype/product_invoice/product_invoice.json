@@ -74,7 +74,8 @@
   "invoice_serie",
   "invoice_access_key",
   "column_break_pbac",
-  "invoice_link",
+  "invoice_pdf_url",
+  "invoice_xml_url",
   "invoice_number",
   "section_break_fpdy",
   "errors_field",
@@ -421,9 +422,14 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "invoice_link",
+   "fieldname": "invoice_pdf_url",
    "fieldtype": "Data",
-   "label": "Invoice Link"
+   "label": "Invoice PDF URL"
+  },
+  {
+   "fieldname": "invoice_xml_url",
+   "fieldtype": "Data",
+   "label": "Invoice XML URL"
   },
   {
    "fieldname": "invoice_number",

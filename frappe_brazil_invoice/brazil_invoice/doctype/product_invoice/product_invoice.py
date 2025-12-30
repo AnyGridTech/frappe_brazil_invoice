@@ -382,8 +382,8 @@ class ProductInvoice(Document):
                                     'invoice_status',  # Allow status transitions
                                     # Allow Sefaz event fields (set during workflow transitions)
                                     'invoice_ref_series', 'invoice_ref_number', 'invoice_ref_access_key',
-                                    'invoice_serie', 'invoice_number', 'invoice_link', 'invoice_access_key',
-                                    'errors_field']  # Allow error logging
+                                    'invoice_serie', 'invoice_number', 'invoice_pdf_url', 'invoice_xml_url', 
+                                    'invoice_access_key', 'errors_field']  # Allow error logging
                     
                     for field in self.meta.get_valid_columns():
                         if field in exclude_fields:
@@ -587,7 +587,7 @@ class ProductInvoice(Document):
                 ("invoice_ref_access_key", "Invoice Ref. Access Key"),
                 ("invoice_serie", "Invoice Serie"),
                 ("invoice_number", "Invoice Number"),
-                ("invoice_link", "Invoice Link"),
+                ("invoice_pdf_url", "Invoice PDF URL"),
             ]
 
             missing_fields = []
@@ -796,10 +796,10 @@ class ProductInvoice(Document):
 
     def before_submit(self):
         """Validate invoice has PDF URL before submission"""
-        if not self.invoice_link:
+        if not self.invoice_pdf_url:
             frappe.throw(
                 _(
-                    "Cannot submit invoice without PDF URL. Please ensure the invoice has been processed and invoice_link field is set."
+                    "Cannot submit invoice without PDF URL. Please ensure the invoice has been processed and invoice_pdf_url field is set."
                 )
             )
 
@@ -905,7 +905,7 @@ def move_to_processing(invoice_name):
 @frappe.whitelist()
 def move_to_issued(invoice_name, invoice_ref_series=None, invoice_ref_number=None, 
                    invoice_ref_access_key=None, invoice_serie=None, invoice_number=None, 
-                   invoice_link=None):
+                   invoice_pdf_url=None):
     """
     Transition invoice to Issued status
     
@@ -915,7 +915,7 @@ def move_to_issued(invoice_name, invoice_ref_series=None, invoice_ref_number=Non
     - invoice_ref_access_key: Invoice Ref. Access Key
     - invoice_serie: Invoice Serie
     - invoice_number: Invoice Number
-    - invoice_link: Invoice Link
+    - invoice_pdf_url: Invoice PDF URL
     
     Args:
         invoice_name: Name of the Product Invoice document
@@ -924,7 +924,7 @@ def move_to_issued(invoice_name, invoice_ref_series=None, invoice_ref_number=Non
         invoice_ref_access_key: Invoice reference access key
         invoice_serie: Invoice series
         invoice_number: Invoice number
-        invoice_link: Link to the invoice PDF
+        invoice_pdf_url: Link to the invoice PDF
         
     Returns:
         dict: Response with success status and message
@@ -943,8 +943,8 @@ def move_to_issued(invoice_name, invoice_ref_series=None, invoice_ref_number=Non
             invoice_doc.invoice_serie = invoice_serie
         if invoice_number:
             invoice_doc.invoice_number = invoice_number
-        if invoice_link:
-            invoice_doc.invoice_link = invoice_link
+        if invoice_pdf_url:
+            invoice_doc.invoice_pdf_url = invoice_pdf_url
         
         # Set status to Issued
         invoice_doc.invoice_status = "Issued"
@@ -1949,7 +1949,7 @@ def bulk_process_invoices(invoice_names):
                             "index": idx,
                             "docname": invoice_name,
                             "invoice_id": result.get("data", {}).get("id"),
-                            "invoice_link": result.get("data", {}).get("pdf"),
+                            "invoice_pdf_url": result.get("data", {}).get("pdf"),
                         }
                     )
                 else:
@@ -2073,7 +2073,7 @@ def check_invoice_status_and_update(invoice_id, document_name):
         print(f"{'='*80}")
         print(f"Invoice ID: {invoice_id}")
         print(f"Status from NFe.io: {invoice_status}")
-        print(f"\nFull NFe.io Response:")
+        print("\nFull NFe.io Response:")
         print(json.dumps(nfeio_invoice, indent=2, ensure_ascii=False))
         print(f"{'='*80}\n")
         
@@ -2104,7 +2104,7 @@ def check_invoice_status_and_update(invoice_id, document_name):
                 print(f"INVOICE ERROR DETAILS - {document_name}")
                 print(f"{'='*80}")
                 print(f"Error Message: {error_message}")
-                print(f"\nDetailed Errors from NFe.io:")
+                print("\nDetailed Errors from NFe.io:")
                 print(error_log)
                 print(f"{'='*80}\n")
             
@@ -2132,12 +2132,11 @@ def check_invoice_status_and_update(invoice_id, document_name):
             except Exception as e:
                 frappe.logger().warning(f"Could not get PDF for invoice {invoice_id}: {str(e)}")
             
-            # Get XML URL (optional, for logging purposes)
+            # Get XML URL
+            xml_url = None
             try:
                 xml_response = nfeio_product_invoice.get_invoice_xml(invoice_id, nfeio_config)
                 xml_url = xml_response.get("uri") if xml_response else None
-                if xml_url:
-                    frappe.logger().info(f"XML available for invoice {invoice_id}: {xml_url}")
             except Exception as e:
                 frappe.logger().warning(f"Could not get XML for invoice {invoice_id}: {str(e)}")
             
@@ -2148,7 +2147,9 @@ def check_invoice_status_and_update(invoice_id, document_name):
             
             # Update invoice links
             if pdf_url:
-                invoice_doc.invoice_link = pdf_url
+                invoice_doc.invoice_pdf_url = pdf_url
+            if xml_url:
+                invoice_doc.invoice_xml_url = xml_url
             
             # Update NFe details from response
             # Access key is in the authorization object
@@ -2159,22 +2160,19 @@ def check_invoice_status_and_update(invoice_id, document_name):
             if nfeio_invoice.get("serie"):
                 invoice_doc.invoice_serie = str(nfeio_invoice.get("serie"))
             
-            # Also populate the reference fields (for compatibility)
-            if nfeio_invoice.get("serie"):
-                invoice_doc.invoice_ref_series = str(nfeio_invoice.get("serie"))
-            if nfeio_invoice.get("number"):
-                invoice_doc.invoice_ref_number = str(nfeio_invoice.get("number"))
-            if nfeio_invoice.get("authorization", {}).get("accessKey"):
-                invoice_doc.invoice_ref_access_key = nfeio_invoice["authorization"]["accessKey"]
-            
             # Set flag to bypass processing lock
             invoice_doc.flags.ignore_processing_lock = True
             invoice_doc.save(ignore_permissions=True)
             frappe.db.commit()
             
             frappe.logger().info(
-                f"Invoice {document_name} successfully issued. NFe.io ID: {invoice_id}, "
-                f"Access Key: {invoice_doc.invoice_access_key}, Number: {invoice_doc.invoice_number}"
+                f"Invoice {document_name} successfully issued! "
+                f"NFe.io ID: {invoice_id}, "
+                f"Access Key: {invoice_doc.invoice_access_key}, "
+                f"Number: {invoice_doc.invoice_number}, "
+                f"Serie: {invoice_doc.invoice_serie}, "
+                f"PDF Link: {pdf_url}, "
+                f"XML Link: {xml_url}"
             )
         
         else:

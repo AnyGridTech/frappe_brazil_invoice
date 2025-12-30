@@ -623,7 +623,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         print(f"  Access Key: {invoice.invoice_access_key or 'Not set'}")
         print(f"  Number: {invoice.invoice_number or 'Not set'}")
         print(f"  Serie: {invoice.invoice_serie or 'Not set'}")
-        print(f"  PDF Link: {invoice.invoice_link or 'Not set'}")
+        print(f"  PDF Link: {invoice.invoice_pdf_url or 'Not set'}")
         
         # If status is still Processing, that's acceptable (might need more time)
         # If status is Error, set error flag and fail
@@ -639,7 +639,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             self.assertIsNotNone(invoice.invoice_access_key, "Invoice access key should be set")
             self.assertIsNotNone(invoice.invoice_number, "Invoice number should be set")
             self.assertIsNotNone(invoice.invoice_serie, "Invoice serie should be set")
-            self.assertIsNotNone(invoice.invoice_link, "Invoice PDF link should be set")
+            self.assertIsNotNone(invoice.invoice_pdf_url, "Invoice PDF link should be set")
             
             print("  ✅ All invoice fields populated successfully")
         else:
@@ -799,7 +799,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         print(f"  Access Key: {invoice.invoice_access_key or 'Not set'}")
         print(f"  Number: {invoice.invoice_number or 'Not set'}")
         print(f"  Serie: {invoice.invoice_serie or 'Not set'}")
-        print(f"  PDF Link: {invoice.invoice_link or 'Not set'}")
+        print(f"  PDF Link: {invoice.invoice_pdf_url or 'Not set'}")
         
         # If status is still Processing, that's acceptable (might need more time)
         # If status is Error, set error flag and fail
@@ -815,7 +815,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             self.assertIsNotNone(invoice.invoice_access_key, "Invoice access key should be set")
             self.assertIsNotNone(invoice.invoice_number, "Invoice number should be set")
             self.assertIsNotNone(invoice.invoice_serie, "Invoice serie should be set")
-            self.assertIsNotNone(invoice.invoice_link, "Invoice PDF link should be set")
+            self.assertIsNotNone(invoice.invoice_pdf_url, "Invoice PDF link should be set")
             
             print("  ✅ All invoice fields populated successfully")
         else:
