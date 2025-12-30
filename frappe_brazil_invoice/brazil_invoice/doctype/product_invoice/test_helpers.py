@@ -8,8 +8,10 @@ This module contains shared utilities, helper functions, and test data
 used by both test_product_invoice_mocked.py and test_product_invoice_real_api.py
 """
 
+import json
 import uuid
 import frappe
+from frappe_brazil_invoice.brazil_invoice.doctype.product_invoice import product_invoice
 from frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.product_invoice import (
     create_invoice,
 )
@@ -19,9 +21,10 @@ from frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.product_invoic
 # Token and Tracking
 # =============================================================================
 
+
 def get_test_run_token():
     """Get or create a test run token for tracking invoices"""
-    if not hasattr(frappe.flags, 'TEST_RUN_TOKEN') or not frappe.flags.TEST_RUN_TOKEN:
+    if not hasattr(frappe.flags, "TEST_RUN_TOKEN") or not frappe.flags.TEST_RUN_TOKEN:
         frappe.flags.TEST_RUN_TOKEN = f"RUN-{uuid.uuid4().hex[:12]}"
     return frappe.flags.TEST_RUN_TOKEN
 
@@ -30,13 +33,14 @@ def get_test_run_token():
 # Invoice Creation
 # =============================================================================
 
+
 def create_test_invoice_with_token(*args, **kwargs):
     """
     Wrapper around create_invoice that automatically adds TEST_RUN_TOKEN
     to additional_information for tracking test run invoices.
     """
     test_token = get_test_run_token()
-    
+
     if test_token:
         # Get existing additional_information or create empty string
         additional_info = kwargs.get("additional_information", "")
@@ -49,38 +53,50 @@ def create_test_invoice_with_token(*args, **kwargs):
             kwargs["additional_information"] = token_marker
 
     # Call the original create_invoice function
-    return create_invoice(*args, **kwargs)
+    result = create_invoice(*args, **kwargs)
+    print("\n✅ Invoice creation result:")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return result
+
+
+def move_invoice_to_processing(invoice_name):
+    result = product_invoice.move_to_processing(invoice_name)
+    print(f"\n➡️ Moved invoice {invoice_name} to Processing state.")
+    print("NFe.io invoice processing response:")
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return result
 
 
 # =============================================================================
 # Cleanup Functions
 # =============================================================================
 
+
 def cleanup_test_invoices():
     """
     Delete all existing test invoices with test token markers.
-    
+
     Only deletes invoices that have a test token marker in additional_information.
     This ensures real invoices are never accidentally deleted.
-    
+
     Returns:
         int: Number of invoices deleted
     """
     frappe.set_user("Administrator")
-    
+
     # Get count before deletion for reporting
     count_before = frappe.db.sql(
         """SELECT COUNT(*) FROM `tabProduct Invoice` 
            WHERE additional_information LIKE '%[TEST_RUN:%'"""
     )[0][0]
-    
+
     # Delete invoices with test run token in additional_information
     frappe.db.sql(
         """DELETE FROM `tabProduct Invoice` 
            WHERE additional_information LIKE '%[TEST_RUN:%'"""
     )
     frappe.db.commit()
-    
+
     print(f"✓ Cleared {count_before} test invoice(s) with [TEST_RUN:*] markers")
     return count_before
 
@@ -88,6 +104,7 @@ def cleanup_test_invoices():
 # =============================================================================
 # Item and Serial Number Creation
 # =============================================================================
+
 
 def create_test_item(
     item_code, item_name, rate, ncm_code, description=None, item_group="Products"
@@ -161,6 +178,7 @@ def create_test_serial_no(item_code, serial_no=None):
 # =============================================================================
 # Random Data Generators
 # =============================================================================
+
 
 def generate_random_serial_number():
     """Generate a serial number with format AAA123123A (3 letters + 7 letters/numbers)"""
@@ -273,6 +291,218 @@ def generate_random_client(client_type=None):
         cnpj_str = "".join(map(str, cnpj))
         return f"{cnpj_str[:2]}.{cnpj_str[2:5]}.{cnpj_str[5:8]}/{cnpj_str[8:12]}-{cnpj_str[12:]}"
 
+    def generate_valid_ie(state):
+        """Generate a valid Inscrição Estadual (IE) for any Brazilian state
+
+        For test/homologation environments, uses predefined valid IEs that are registered
+        in SEFAZ systems to avoid rejection.
+
+        Args:
+            state (str): Two-letter state code (e.g., 'SP', 'RJ', 'MG')
+
+        Returns:
+            str: Valid IE number for the state without formatting
+        """
+
+        if state == "SP":  # São Paulo - 12 digits
+            # Use the SEFAZ-SP homologation test IE
+            return "634447607349"
+
+        elif state == "RJ":  # Rio de Janeiro - 8 digits (7 + 1 check)
+            ie = [random.randint(0, 9) for _ in range(7)]
+            weights = [2, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(7))
+            r = sum_val % 11
+            ie.append(0 if r <= 1 else 11 - r)
+            return "".join(map(str, ie))
+
+        elif state == "MG":  # Minas Gerais - 13 digits (11 + 2 checks)
+            ie = [random.randint(0, 9) for _ in range(11)]
+            ie_with_zero = [0] + ie
+            weights1 = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2]
+            sum1 = sum(
+                (ie_with_zero[i] * weights1[i]) // 10
+                + (ie_with_zero[i] * weights1[i]) % 10
+                for i in range(12)
+            )
+            ie.append((10 - (sum1 % 10)) % 10)
+            weights2 = [3, 2, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]
+            sum2 = sum(ie[i] * weights2[i] for i in range(12))
+            r2 = sum2 % 11
+            ie.append(0 if r2 <= 1 else 11 - r2)
+            return "".join(map(str, ie))
+
+        elif state == "PR":  # Paraná - 10 digits (8 + 2 checks)
+            ie = [random.randint(0, 9) for _ in range(8)]
+            weights1 = [3, 2, 7, 6, 5, 4, 3, 2]
+            sum1 = sum(ie[i] * weights1[i] for i in range(8))
+            r1 = sum1 % 11
+            ie.append(0 if r1 <= 1 else 11 - r1)
+            weights2 = [4, 3, 2, 7, 6, 5, 4, 3, 2]
+            sum2 = sum(ie[i] * weights2[i] for i in range(9))
+            r2 = sum2 % 11
+            ie.append(0 if r2 <= 1 else 11 - r2)
+            return "".join(map(str, ie))
+
+        elif state == "RS":  # Rio Grande do Sul - 10 digits
+            ie = [random.randint(0, 9) for _ in range(9)]
+            weights = [2, 9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(9))
+            r = sum_val % 11
+            ie.append(0 if r <= 1 else 11 - r)
+            return "".join(map(str, ie))
+
+        elif state == "BA":  # Bahia - 8 or 9 digits
+            # Using 8 digits format
+            ie = [random.randint(0, 9) for _ in range(6)]
+            # Calculate check digits based on 6th and 7th position
+            weights = [7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(6))
+            r = sum_val % 10
+            ie.append(0 if r == 0 else 10 - r)
+            ie.append(random.randint(0, 9))  # 8th digit
+            return "".join(map(str, ie))
+
+        elif state in ["CE", "ES", "MA", "PA", "PB", "PI", "SE", "TO"]:
+            # 9 digits (8 + 1 check) - Simple modulo 11
+            ie = [random.randint(0, 9) for _ in range(8)]
+            weights = list(range(9, 1, -1))
+            sum_val = sum(ie[i] * weights[i] for i in range(8))
+            r = sum_val % 11
+            ie.append(0 if r <= 1 else 11 - r)
+            return "".join(map(str, ie))
+
+        elif state == "GO":  # Goiás - 9 digits (8 + 1 check)
+            ie = [1, 0] + [random.randint(0, 9) for _ in range(6)]  # Starts with 10
+            weights = [9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(8))
+            r = sum_val % 11
+            if r == 0:
+                ie.append(0)
+            elif r == 1:
+                n = int("".join(map(str, ie)))
+                ie.append(0 if n >= 10103105 and n <= 10119997 else 1)
+            else:
+                ie.append(11 - r)
+            return "".join(map(str, ie))
+
+        elif state == "MT":  # Mato Grosso - 11 digits (10 + 1 check)
+            ie = [random.randint(0, 9) for _ in range(10)]
+            weights = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(10))
+            r = sum_val % 11
+            ie.append(0 if r <= 1 else 11 - r)
+            return "".join(map(str, ie))
+
+        elif (
+            state == "MS"
+        ):  # Mato Grosso do Sul - 9 digits (2+6+1 check), starts with 28
+            ie = [2, 8] + [random.randint(0, 9) for _ in range(6)]
+            weights = [9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(8))
+            r = sum_val % 11
+            ie.append(0 if r == 0 or (r == 1 and sum_val % 11 == 1) else 11 - r)
+            return "".join(map(str, ie))
+
+        elif state == "PE":  # Pernambuco - 9 digits (7 + 2 checks)
+            ie = [random.randint(0, 9) for _ in range(7)]
+            weights1 = [8, 7, 6, 5, 4, 3, 2]
+            sum1 = sum(ie[i] * weights1[i] for i in range(7))
+            r1 = sum1 % 11
+            ie.append(0 if r1 <= 1 else 11 - r1)
+            weights2 = [9, 8, 7, 6, 5, 4, 3, 2]
+            sum2 = sum(ie[i] * weights2[i] for i in range(8))
+            r2 = sum2 % 11
+            ie.append(0 if r2 <= 1 else 11 - r2)
+            return "".join(map(str, ie))
+
+        elif (
+            state == "RN"
+        ):  # Rio Grande do Norte - 10 digits (9 + 1 check), starts with 20
+            ie = [2, 0] + [random.randint(0, 9) for _ in range(7)]
+            weights = [10, 9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(9))
+            r = (sum_val * 10) % 11
+            ie.append(0 if r == 10 else r)
+            return "".join(map(str, ie))
+
+        elif state == "SC":  # Santa Catarina - 9 digits (8 + 1 check)
+            ie = [random.randint(0, 9) for _ in range(8)]
+            weights = [9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(8))
+            r = sum_val % 11
+            ie.append(0 if r <= 1 else 11 - r)
+            return "".join(map(str, ie))
+
+        elif state == "AC":  # Acre - 13 digits (11 + 2 checks), starts with 01
+            ie = [0, 1] + [random.randint(0, 9) for _ in range(9)]
+            weights1 = [4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+            sum1 = sum(ie[i] * weights1[i] for i in range(11))
+            r1 = sum1 % 11
+            ie.append(0 if r1 <= 1 else 11 - r1)
+            weights2 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+            sum2 = sum(ie[i] * weights2[i] for i in range(12))
+            r2 = sum2 % 11
+            ie.append(0 if r2 <= 1 else 11 - r2)
+            return "".join(map(str, ie))
+
+        elif state == "AL":  # Alagoas - 9 digits (2+6+1 check), starts with 24
+            ie = [2, 4] + [random.randint(0, 9) for _ in range(6)]
+            weights = [9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(8))
+            r = sum_val % 11
+            ie.append(0 if r <= 1 else 11 - r)
+            return "".join(map(str, ie))
+
+        elif state == "AP":  # Amapá - 9 digits (2+6+1 check), starts with 03
+            ie = [0, 3] + [random.randint(0, 9) for _ in range(6)]
+            weights = [9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(8))
+            r = sum_val % 11
+            ie.append(0 if r <= 1 else 11 - r)
+            return "".join(map(str, ie))
+
+        elif state == "AM":  # Amazonas - 9 digits (2+6+1 check), starts with 04
+            ie = [0, 4] + [random.randint(0, 9) for _ in range(6)]
+            weights = [9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(8))
+            r = sum_val % 11
+            ie.append(0 if r <= 1 else 11 - r)
+            return "".join(map(str, ie))
+
+        elif (
+            state == "DF"
+        ):  # Distrito Federal - 13 digits (11 + 2 checks), starts with 07
+            ie = [0, 7] + [random.randint(0, 9) for _ in range(9)]
+            weights1 = [4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+            sum1 = sum(ie[i] * weights1[i] for i in range(11))
+            r1 = sum1 % 11
+            ie.append(0 if r1 <= 1 else 11 - r1)
+            weights2 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+            sum2 = sum(ie[i] * weights2[i] for i in range(12))
+            r2 = sum2 % 11
+            ie.append(0 if r2 <= 1 else 11 - r2)
+            return "".join(map(str, ie))
+
+        elif state == "RO":  # Rondônia - 14 digits (13 + 1 check)
+            ie = [random.randint(0, 9) for _ in range(13)]
+            weights = list(range(6, 1, -1)) + list(range(9, 1, -1))
+            sum_val = sum(ie[i] * weights[i] for i in range(13))
+            r = sum_val % 11
+            ie.append(11 - r if r >= 2 else r)
+            return "".join(map(str, ie))
+
+        elif state == "RR":  # Roraima - 9 digits (2+6+1 check), starts with 24
+            ie = [2, 4] + [random.randint(0, 9) for _ in range(6)]
+            weights = [9, 8, 7, 6, 5, 4, 3, 2]
+            sum_val = sum(ie[i] * weights[i] for i in range(8))
+            ie.append(sum_val % 9)
+            return "".join(map(str, ie))
+
+        else:
+            # For any unimplemented states, return ISENTO
+            return "ISENTO"
+
     if client_type == "Company":
         # Generate company (PJ) data
         company_suffixes = ["Ltda", "S.A.", "ME", "EPP", "EIRELI"]
@@ -286,9 +516,10 @@ def generate_random_client(client_type=None):
 
         client_name = f"{random.choice(business_types)} {random.choice(last_names)} {random.choice(company_suffixes)}"
         client_id_number = generate_cnpj()
-        icms_contributor = "Taxpayer"  # Companies are typically taxpayers
-        # Generate state registration (9 digits)
-        state_registration = "".join([str(random.randint(0, 9)) for _ in range(9)])
+        # For homologation testing, use Non-Taxpayer to avoid IE validation issues with SEFAZ
+        # This allows using ISENTO without contradicting the taxpayer status
+        icms_contributor = "Non-Taxpayer"  # Not registered for state tax
+        state_registration = "ISENTO"
     else:
         # Generate individual (PF) data
         client_name = f"{random.choice(first_names)} {random.choice(last_names)}"
@@ -339,17 +570,32 @@ def generate_random_totals():
     }
 
 
-def generate_random_address(exclude_state=None):
+def generate_random_address(exclude_state=None, only_sort_from_states=None):
     """Generate random address and contact information for testing
 
     Args:
         exclude_state (str, optional): State code to exclude from random selection (e.g., "SP").
                                        Use this for interstate invoice testing.
+                                       Cannot be used with only_sort_from_states.
+        only_sort_from_states (list, optional): List of state codes to limit random selection to.
+                                                For example: ["SP"] or ["MG", "PR"].
+                                                Cannot be used with exclude_state.
 
     Returns:
         dict: Dictionary with random address, phone, and location data
+
+    Raises:
+        ValueError: If both exclude_state and only_sort_from_states are provided,
+                    or if no cities are available after filtering.
     """
     import random
+
+    # Validate that both parameters are not passed together
+    if exclude_state and only_sort_from_states:
+        raise ValueError(
+            "exclude_state and only_sort_from_states cannot be used together. "
+            "Please use only one parameter."
+        )
 
     # Brazilian cities with their data
     cities_data = [
@@ -408,13 +654,25 @@ def generate_random_address(exclude_state=None):
         },
     ]
 
-    # Filter out excluded state if provided
-    if exclude_state:
-        cities_data = [city for city in cities_data if city["state"] != exclude_state]
-        
-        # Ensure we have at least one city after filtering
+    # Filter cities based on provided parameters
+    if only_sort_from_states:
+        # Only include cities from specified states
+        cities_data = [
+            city for city in cities_data if city["state"] in only_sort_from_states
+        ]
+
         if not cities_data:
-            raise ValueError(f"No cities available after excluding state: {exclude_state}")
+            raise ValueError(
+                f"No cities available for states: {', '.join(only_sort_from_states)}"
+            )
+    elif exclude_state:
+        # Filter out excluded state
+        cities_data = [city for city in cities_data if city["state"] != exclude_state]
+
+        if not cities_data:
+            raise ValueError(
+                f"No cities available after excluding state: {exclude_state}"
+            )
 
     street_types = ["Rua", "Avenida", "Travessa", "Alameda", "Praça"]
     street_names = [
@@ -515,7 +773,7 @@ items_array = [
 
 def get_serial_no_array():
     """Generate serial number array with random serial numbers
-    
+
     Note: Returns a function to generate fresh serial numbers on each call
     to avoid reusing serial numbers across test runs.
     """
@@ -595,6 +853,7 @@ serial_no_array = [
 # =============================================================================
 # Display Helpers
 # =============================================================================
+
 
 def print_invoice_details(invoice, tax_doc=None, show_items=True, client_data=None):
     """Print formatted invoice details with enhanced information

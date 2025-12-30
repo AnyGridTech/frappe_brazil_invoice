@@ -423,12 +423,12 @@
   },
   {
    "fieldname": "invoice_pdf_url",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Invoice PDF URL"
   },
   {
    "fieldname": "invoice_xml_url",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Invoice XML URL"
   },
   {
