@@ -130,22 +130,22 @@
       console.error("Failed to retrieve invoice tax document");
       return;
     }
-    let ipi = calcSimpleTaxes(invoiceItem.rate, doc?.ipi_rate ?? 0);
-    let icms = calcSimpleTaxes(invoiceItem.rate, doc?.icms_rate ?? 0);
-    if (doc.add_ipi_icms == 1) {
-      icms += calcSimpleTaxes(invoiceItem.rate, doc?.ipi_rate ?? 0);
+    let ipi = calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_ipi ?? 0);
+    let icms = calcSimpleTaxes(invoiceItem.rate, doc?.aliq_icms ?? 0);
+    if (doc.adiciona_ipi_icms == 1) {
+      icms += calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_ipi ?? 0);
     }
-    let pis = calcSimpleTaxes(invoiceItem.rate, doc?.pis_rate ?? 0);
-    let cofins = calcSimpleTaxes(invoiceItem.rate, doc?.cofins_rate ?? 0);
+    let pis = calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_pis ?? 0);
+    let cofins = calcSimpleTaxes(invoiceItem.rate, doc?.aliquota_cofins ?? 0);
     console.log("Aliquotas: Ipi: %d, Icms: %d, Pis: %d, Cofins: %d", ipi, icms, pis, cofins);
     console.log({ ipi, icms, pis, cofins });
     return { ipi, icms, pis, cofins };
   }
   function sumTotalItems(frm) {
-    const totalRate = frm.doc.invoice_items_table.reduce(function(sum, item) {
+    const totalRate = frm.doc.invoices_table.reduce(function(sum, item) {
       return sum + (item.rate || 0) * (item.quantity || 0);
     }, 0);
-    const totalWithTax = frm.doc.invoice_items_table.reduce(function(sum, item) {
+    const totalWithTax = frm.doc.invoices_table.reduce(function(sum, item) {
       const itemTotalWithTax = (item.rate_taxes || 0) * (item.quantity || 0);
       return sum + itemTotalWithTax;
     }, 0);
@@ -157,11 +157,11 @@
       console.log("No tax template selected");
       return;
     }
-    if (!frm.doc.invoice_items_table || frm.doc.invoice_items_table.length < 1) {
-      console.log("No invoice_items_table to apply tax template");
+    if (!frm.doc.invoices_table || frm.doc.invoices_table.length < 1) {
+      console.log("No invoices_table to apply tax template");
       return;
     }
-    for (const item of frm.doc.invoice_items_table) {
+    for (const item of frm.doc.invoices_table) {
       item.invoice_taxes = frm.doc.tax_template;
       const taxes = await calculateItemTaxes(item.invoice_taxes, item);
       if (!taxes) {
@@ -174,7 +174,7 @@
       item.cofins_rate = taxes.cofins;
       item.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + item.rate;
     }
-    frm.refresh_field("invoice_items_table");
+    frm.refresh_field("invoices_table");
     sumTotalItems(frm);
   }
   async function handleInvoiceTaxesChange(frm, cdt, cdn) {
@@ -196,7 +196,7 @@
     row.pis_rate = taxes.pis;
     row.cofins_rate = taxes.cofins;
     row.rate_taxes = taxes.ipi + taxes.icms + taxes.pis + taxes.cofins + row.rate;
-    frm.refresh_field("invoice_items_table");
+    frm.refresh_field("invoices_table");
     sumTotalItems(frm);
   }
 
@@ -224,7 +224,7 @@
       if (frm.doc.docstatus === 1 && !frm.doc.invoice_id) {
         frm.add_custom_button(__("Create NFe Invoice"), function() {
           frappe.call({
-            method: "frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.product_invoice.move_to_processing",
+            method: "frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.process_invoice",
             args: {
               invoice_name: frm.doc.name
             },
@@ -267,9 +267,14 @@
             }
           });
         }, __("Actions"));
-        if (frm.doc.invoice_link) {
+        if (frm.doc.invoice_pdf_url) {
           frm.add_custom_button(__("View NFe PDF"), function() {
-            window.open(frm.doc.invoice_link, "_blank");
+            window.open(frm.doc.invoice_pdf_url, "_blank");
+          }, __("Actions"));
+        }
+        if (frm.doc.invoice_xml_url) {
+          frm.add_custom_button(__("View NFe XML"), function() {
+            window.open(frm.doc.invoice_xml_url, "_blank");
           }, __("Actions"));
         }
       }
@@ -325,7 +330,7 @@
               row.rate_taxes = item.valuation_rate ?? 0;
               row.ncm = item.ncm;
               row.description = item.description || "";
-              frm.refresh_field("invoice_items_table");
+              frm.refresh_field("invoices_table");
               sumTotalItems(frm);
             }
           });
@@ -342,7 +347,7 @@
       if (!row) {
         return;
       }
-      frm.refresh_field("invoice_items_table");
+      frm.refresh_field("invoices_table");
       sumTotalItems(frm);
     }
   });

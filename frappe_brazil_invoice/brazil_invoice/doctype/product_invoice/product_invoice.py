@@ -2311,12 +2311,12 @@ def check_invoice_status_and_update(invoice_id, document_name):
         try:
             invoice_doc.save(ignore_permissions=True)
             frappe.db.commit()
-            
-            # Check database directly
-            db_value = frappe.db.get_value("Product Invoice", document_name, "invoice_pdf_url")
+
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            frappe.log_error(
+                f"Error saving updated invoice {document_name}: {str(e)}\n{frappe.get_traceback()}",
+                "Invoice Save Error",
+            )
             raise
         frappe.logger().info(
             f"Access Key: {invoice_doc.invoice_access_key}, "
