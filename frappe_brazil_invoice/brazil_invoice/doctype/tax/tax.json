@@ -70,6 +70,7 @@
   "internal_tab",
   "is_template",
   "template_name",
+  "operation_nature",
   "operation_type",
   "amended_from"
  ],
@@ -92,11 +93,18 @@
    "depends_on": "eval:doc.is_template == 1"
   },
   {
-   "fieldname": "operation_type",
+   "fieldname": "operation_nature",
    "fieldtype": "Data",
-   "label": "Operation Type",
+   "label": "Operation Nature",
    "depends_on": "eval:doc.is_template == 1",
    "mandatory_depends_on": "eval:doc.is_template == 1"
+  },
+  {
+   "fieldname": "operation_type",
+   "fieldtype": "Select",
+   "label": "Operation Type (Direction)",
+   "options": "\nIncoming\nOutgoing",
+   "depends_on": "eval:doc.is_template == 1"
   },
   {
    "fieldname": "amended_from",
