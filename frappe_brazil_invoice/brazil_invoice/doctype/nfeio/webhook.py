@@ -38,14 +38,29 @@ def handle_invoice_status_update(data):
     """
     try:
         invoice_id = data.get("id")
-        invoice_status = data.get("status")
 
-        if not invoice_id or not invoice_status:
-            frappe.logger().error("Invalid data received in webhook: {}".format(data))
+        from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
+        resp = nfeio.get_product_invoice_by_id(invoice_id)
+
+        if not resp.get("success"):
+            frappe.logger().error("Failed to retrieve invoice data for NFe.io ID {}: {}".format(invoice_id, resp.get("error")))
+            return
+        
+        nfeio_invoice = resp.get("data", {})
+
+        invoice_status = nfeio_invoice.get("status")
+
+        if not invoice_status:
+            frappe.logger().error("No status found in NFe.io invoice data for ID: {}".format(invoice_id))
+            frappe.logger().error(f"Invoice data: {nfeio_invoice}")
             return
 
         if invoice_status in ["Issued", "IssuedContingency"]:
             handle_invoice_issued_status(data)
+        elif invoice_status == "Error":
+            handle_invoice_error_status(data)
+        else:
+            frappe.logger().info("No action taken for invoice ID {} with status {}".format(invoice_id, invoice_status))
         
     except Exception as e:
         frappe.log_error(
