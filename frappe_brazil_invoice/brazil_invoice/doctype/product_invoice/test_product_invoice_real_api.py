@@ -415,7 +415,7 @@ def check_invoice_processing(invoice_doc):
     # Call the background job function directly
     try:
         from frappe_brazil_invoice.brazil_invoice.doctype.nfeio.webhook import (
-            handle_invoice_status_update
+            handle_invoice_status_update,
         )
 
         data = {"id": invoice_doc.invoice_id}
@@ -432,7 +432,9 @@ def check_invoice_processing(invoice_doc):
     invoice_doc.reload()
     print(f"  Status after check: {invoice_doc.invoice_status}")
     print(f"  Status Reason: {invoice_doc.status_reason or 'Not set'}")
-    print(f"  Access Key: {getattr(invoice_doc, 'invoice_access_key', None) or 'Not set'}")
+    print(
+        f"  Access Key: {getattr(invoice_doc, 'invoice_access_key', None) or 'Not set'}"
+    )
     print(f"  Number: {getattr(invoice_doc, 'invoice_number', None) or 'Not set'}")
     print(f"  Serie: {getattr(invoice_doc, 'invoice_serie', None) or 'Not set'}")
     print(f"  PDF Link: {getattr(invoice_doc, 'invoice_pdf_url', None) or 'Not set'}")
@@ -459,6 +461,7 @@ def check_invoice_processing(invoice_doc):
 
     try:
         from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
+
         invoice_data = nfeio.get_product_invoice_by_id(invoice_doc.invoice_id)
         print("\nFull invoice data from NFe.io API for debugging:")
         print(json.dumps(invoice_data, indent=2, ensure_ascii=False))

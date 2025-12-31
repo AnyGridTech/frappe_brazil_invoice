@@ -266,7 +266,7 @@ def generate_random_client_cpf():
     # Generate individual (PF) data
     client_name = f"{random.choice(first_names)} {random.choice(last_names)}"
     client_id_number = generate_cpf()
-    icms_contributor = "Non-Taxpayer"  # Individuals are typically Non-Taxpayers
+    icms_contributor = "NonTaxpayer"  # Individuals are typically NonTaxpayers
     state_registration = "ISENTO"  # Exempt for individuals
 
     # Generate contact info
@@ -287,15 +287,15 @@ def generate_random_client_cpf():
     }
 
 
-def generate_random_client_cnpj(icms_taxpayer_type="Non-Taxpayer"):
+def generate_random_client_cnpj(icms_taxpayer_type="NonTaxpayer"):
     """Generate random Company (PJ) client information with CNPJ
 
     Args:
         icms_taxpayer_type (str): ICMS taxpayer status. Options:
                                   - "Taxpayer": Company is ICMS taxpayer (requires valid IE)
-                                  - "Exempt Taxpayer": Company is exempt from ICMS (uses ISENTO)
-                                  - "Non-Taxpayer": Company is not ICMS taxpayer (uses ISENTO)
-                                  Default: "Non-Taxpayer"
+                                  - "Exempt": Company is exempt from ICMS (uses ISENTO)
+                                  - "NonTaxpayer": Company is not ICMS taxpayer (uses ISENTO)
+                                  Default: "NonTaxpayer"
 
     Returns:
         dict: Dictionary with client_name, email, phone, client_id_number,
@@ -356,11 +356,11 @@ def generate_random_client_cnpj(icms_taxpayer_type="Non-Taxpayer"):
         # For now, using ISENTO to avoid validation issues - this should be improved
         # when we implement proper IE generation per state
         state_registration = "ISENTO"
-    elif icms_taxpayer_type == "Exempt Taxpayer":
-        icms_contributor = "Exempt Taxpayer"
+    elif icms_taxpayer_type == "Exempt":
+        icms_contributor = "Exempt"
         state_registration = "ISENTO"
-    else:  # Non-Taxpayer (default)
-        icms_contributor = "Non-Taxpayer"
+    else:  # NonTaxpayer (default)
+        icms_contributor = "NonTaxpayer"
         state_registration = "ISENTO"
 
     # Generate contact info
@@ -392,7 +392,7 @@ def generate_random_client_cnpj(icms_taxpayer_type="Non-Taxpayer"):
 
 def generate_random_client(client_type=None):
     """Generate random client information for PF (individual) or PJ (company)
-    
+
     DEPRECATED: Use generate_random_client_cpf() or generate_random_client_cnpj() instead.
     This function is kept for backward compatibility.
 
