@@ -23,9 +23,9 @@ def _get_events_from_invoice(invoice_doc):
         return resp.get("error")
     return resp.get("data")
 
-
-def _get_error_from_events(invoice_doc):
-    data = _get_events_from_invoice(invoice_doc)
+def _get_error_from_events(invoice_doc, data=None):
+    if not data:
+        data = _get_events_from_invoice(invoice_doc)
     if not data:
         return f"Could not retrieve events for invoice {invoice_doc.invoice_id}. Error: {data}"
     if not data.get("events"):
@@ -42,6 +42,15 @@ def _get_error_from_events(invoice_doc):
         if event.get("data", {}).get("message"):
             return event.get("data").get("message")
     return "No error message found in events."
+
+def _make_json_prettier(json_data):
+    if json_data and isinstance(json_data, dict):
+        import json
+
+        return json.dumps(
+            json_data, indent=2, ensure_ascii=False
+        )
+    return str(json_data)
 
 
 @frappe.whitelist()
@@ -122,7 +131,7 @@ def handle_invoice_issued_status(data):
             return None
 
         def get_xml_url(invoice_id):
-            xml_result = nfeio.get_product_invoice_xml(invoice_id, force=True)
+            xml_result = nfeio.get_product_invoice_xml(invoice_id)
             if xml_result.get("success"):
                 return xml_result.get("xml_url")
             return None
@@ -161,6 +170,10 @@ def handle_invoice_issued_status(data):
         invoice_doc.invoice_xml_url = xml_url
         invoice_doc.invoice_status = "Issued"
         invoice_doc.flags.ignore_processing_lock = True
+
+        process_events = _get_events_from_invoice(invoice_doc)
+        invoice_doc.process_events = _make_json_prettier(process_events)
+
         invoice_doc.save(ignore_permissions=True)
         frappe.db.commit()
 
@@ -196,7 +209,14 @@ def handle_invoice_error_status(data):
         error_message = data.get("error_message", "Unknown error")
 
         invoice_doc.invoice_status = "Error"
-        invoice_doc.status_reason = _get_error_from_events(invoice_doc) or error_message
+        process_events = _get_events_from_invoice(invoice_doc)
+        invoice_doc.process_events = _make_json_prettier(process_events)
+
+        invoice_doc.status_reason = (
+            _get_error_from_events(invoice_doc, process_events)
+            or f"Could not retrieve error message. Defaulting to: {error_message}"
+        )
+
         invoice_doc.flags.ignore_processing_lock = True
         invoice_doc.save(ignore_permissions=True)
         frappe.db.commit()
