@@ -392,7 +392,7 @@ def wait_for_sefaz_processing(seconds=20):
     time.sleep(seconds)
 
 
-def check_invoice_processing_error(invoice_doc):
+def check_invoice_processing(invoice_doc):
     """
     Check if invoice has Processing Error status and print detailed debug info.
 
@@ -403,7 +403,7 @@ def check_invoice_processing_error(invoice_doc):
     Returns:
         dict: {'error': bool, 'reason': str}
     """
-    print(f"\n🔄 Running check_invoice_status_and_update for {invoice_doc.name}...")
+    print(f"\n🔄 Running handle_invoice_status_update for {invoice_doc.name}...")
     print(f"  Invoice ID: {invoice_doc.invoice_id}")
     print(f"  Status before check: {invoice_doc.invoice_status}")
 
@@ -412,10 +412,13 @@ def check_invoice_processing_error(invoice_doc):
 
     # Call the background job function directly
     try:
-        product_invoice.check_invoice_status_and_update(
-            invoice_id=invoice_doc.invoice_id, 
-            document_name=invoice_doc.name
+        from frappe_brazil_invoice.brazil_invoice.doctype.nfeio.webhook import (
+            handle_invoice_status_update
         )
+
+        data = {"id": invoice_doc.invoice_id}
+
+        handle_invoice_status_update(data)
     except Exception as e:
         return {
             "error": True,
@@ -707,11 +710,10 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         invoice = frappe.get_doc("Product Invoice", invoice_name)
         self.assertIsNotNone(invoice.invoice_id, "Invoice ID should be set")
 
-        # Check for processing errors using helper function
-        error_result = check_invoice_processing_error(invoice)
-        if error_result["error"]:
+        result = check_invoice_processing(invoice)
+        if result["error"]:
             TestProductInvoiceRealAPI.invoice_1_error = True
-            self.fail(f"Invoice has Error status: {error_result['reason']}")
+            self.fail(f"Invoice has Error status: {result['reason']}")
 
         # Verify invoice fields are populated
         self.assertIsNotNone(

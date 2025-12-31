@@ -1,0 +1,149 @@
+import frappe
+
+def _not_in_processing_status(invoice_doc):
+    frappe.logger().info("Product Invoice {} is not in Processing status. Current status: {}".format(invoice_doc.name, invoice_doc.status))
+    return invoice_doc.status != "Processing"
+
+def _get_events_from_invoice(invoice_doc):
+    from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
+    resp = nfeio.query_product_invoice_events(invoice_doc.invoice_id, limit=15)
+    if not resp.get("success"):
+        frappe.logger().error("Failed to query events for NFe.io invoice ID ({}) with error: {}".format(invoice_doc.invoice_id, resp.get("error")))
+        return resp.get("error")
+    return resp.get("data")
+
+def _get_error_from_events(invoice_doc):
+    data = _get_events_from_invoice(invoice_doc)
+    if not data:
+        return f"Could not retrieve events for invoice {invoice_doc.invoice_id}. Error: {data}"
+    if not data.get("events"):
+        return "No events found to extract error message."
+    events = data.get("events", [])
+    events_length = len(events)
+    if events_length == 0:
+        return "Events returned as empty."
+    # Start from the latest event
+    for i in range(events_length -1, -1, -1):
+        event = events[i]
+        if event.get("type") != "Error":
+            continue
+        if event.get("data", {}).get("message"):
+            return event.get("data").get("message")
+    return "No error message found in events."
+
+@frappe.whitelist()
+def handle_invoice_status_update(data):
+    """
+    Handle webhook calls from NFe.io for invoice status updates.
+    """
+    try:
+        invoice_id = data.get("id")
+        invoice_status = data.get("status")
+
+        if not invoice_id or not invoice_status:
+            frappe.logger().error("Invalid data received in webhook: {}".format(data))
+            return
+
+        if invoice_status in ["Issued", "IssuedContingency"]:
+            handle_invoice_issued_status(data)
+        
+    except Exception as e:
+        frappe.log_error(
+            f"Error processing invoice status webhook for NFe.io ID {invoice_id}: {str(e)}\n{frappe.get_traceback()}",
+            "Invoice Status Webhook Error",
+        )
+
+
+@frappe.whitelist()
+def handle_invoice_issued_status(data):
+    """
+    Handle webhook calls from NFe.io for invoice issued status.
+    """
+    try:
+        invoice_id = data.get("id")
+        invoice_doc = frappe.get_doc("Product Invoice", {"invoice_id": invoice_id})
+        
+        if not invoice_doc:
+            frappe.logger().error("No Product Invoice found for NFe.io ID: {}".format(invoice_id))
+            return
+        
+        if _not_in_processing_status(invoice_doc):
+            return
+
+        from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
+        invoice_id = data.get("id")
+
+        def get_pdf_url(invoice_id):
+            pdf_result = nfeio.get_product_invoice_pdf(invoice_id, force=True)
+            if pdf_result.get("success"):
+                return pdf_result.get("pdf_url")
+            return None
+        
+        def get_xml_url(invoice_id):
+            xml_result = nfeio.get_product_invoice_xml(invoice_id, force=True)
+            if xml_result.get("success"):
+                return xml_result.get("xml_url")
+            return None
+
+        # Loop over max 5 times with 3 seconds wait
+        pdf_url = None
+        retries = 5
+        wait = 3
+        for _ in range(retries):
+            pdf_url = get_pdf_url(invoice_id)
+            xml_url = get_xml_url(invoice_id)
+            if pdf_url and xml_url:
+                break
+            frappe.sleep(wait)
+        
+        if not pdf_url:
+            frappe.logger().error("Failed to retrieve PDF URL for NFe.io ID: {}".format(invoice_id))
+        if not xml_url:
+            frappe.logger().error("Failed to retrieve XML URL for NFe.io ID: {}".format(invoice_id))
+
+        invoice_doc.invoice_pdf_url = pdf_url
+        invoice_doc.invoice_xml_url = xml_url
+        invoice_doc.status = "Issued"
+        invoice_doc.flags.ignore_processing_lock = True
+        invoice_doc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        frappe.logger().info("Updated Product Invoice {} with PDF and XML URLs.".format(invoice_doc.name))
+
+    except Exception as e:
+        frappe.log_error(
+            f"Error processing invoice issued webhook for NFe.io ID {invoice_id}: {str(e)}\n{frappe.get_traceback()}",
+            "Invoice Issued Webhook Error",
+        )
+
+@frappe.whitelist()
+def handle_invoice_error_status(data):
+    """
+    Handle webhook calls from NFe.io for invoice error status.
+    """
+    try:
+        invoice_id = data.get("id")
+        invoice_doc = frappe.get_doc("Product Invoice", {"invoice_id": invoice_id})
+
+        if not invoice_doc:
+            frappe.logger().error("No Product Invoice found for NFe.io ID: {}".format(invoice_id))
+            return
+        
+        if _not_in_processing_status(invoice_doc):
+            return
+
+        error_message = data.get("error_message", "Unknown error")
+
+        invoice_doc.status = "Error"
+        invoice_doc.error_message = _get_error_from_events(invoice_doc) or error_message
+        invoice_doc.flags.ignore_processing_lock = True
+        invoice_doc.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        frappe.logger().info("Updated Product Invoice {} with Error status.".format(invoice_doc.name))
+
+    except Exception as e:
+        frappe.log_error(
+            f"Error processing invoice error webhook for NFe.io ID {invoice_id}: {str(e)}\n{frappe.get_traceback()}",
+            "Invoice Error Webhook Error",
+        )
