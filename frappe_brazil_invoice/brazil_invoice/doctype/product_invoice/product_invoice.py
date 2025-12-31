@@ -911,10 +911,16 @@ def move_to_processing(invoice_name):
             )
             return delay_seconds
 
-        # Schedule three status checks at different intervals
-        first_delay = schedule_status_check(3, 6, "first")
-        second_delay = schedule_status_check(10, 20, "second")
-        third_delay = schedule_status_check(30, 40, "third")
+        ten_minutes = 10
+        thirty_minutes = 30
+        one_hour = 60
+        two_hours = 120
+        ten_hours = 600
+        twenty_hours = 1200
+
+        first_delay = schedule_status_check(ten_minutes, thirty_minutes, "first")
+        second_delay = schedule_status_check(one_hour, two_hours, "second")
+        third_delay = schedule_status_check(ten_hours, twenty_hours, "third")
 
         frappe.logger().info(
             f"Scheduled 3 status checks for invoice {invoice_id} (doc: {invoice_name}) "
