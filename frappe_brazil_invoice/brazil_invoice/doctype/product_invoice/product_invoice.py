@@ -604,7 +604,7 @@ class ProductInvoice(Document):
 
         When an invoice moves from Processing to Issued status, the following fields
         must be filled: Invoice Serie, Invoice Number, Invoice Access Key, and Invoice PDF URL.
-        
+
         For return invoices, additional reference fields must also be filled.
         """
         if self.invoice_status == "Issued":
@@ -614,14 +614,16 @@ class ProductInvoice(Document):
                 ("invoice_access_key", "Invoice Access Key"),
                 ("invoice_pdf_url", "Invoice PDF URL"),
             ]
-            
+
             # If it's a return invoice, also require reference fields
             if self.is_return_invoice:
-                required_fields.extend([
-                    ("invoice_ref_series", "Invoice Ref. Series"),
-                    ("invoice_ref_number", "Invoice Ref. Number"),
-                    ("invoice_ref_access_key", "Invoice Ref. Access Key"),
-                ])
+                required_fields.extend(
+                    [
+                        ("invoice_ref_series", "Invoice Ref. Series"),
+                        ("invoice_ref_number", "Invoice Ref. Number"),
+                        ("invoice_ref_access_key", "Invoice Ref. Access Key"),
+                    ]
+                )
 
             missing_fields = []
             for field_name, field_label in required_fields:
@@ -2139,7 +2141,6 @@ def check_invoice_status_and_update(invoice_id, document_name):
             )
             return
 
-
         # Get invoice status from NFe.io
         nfeio_invoice = nfeio_product_invoice.get_product_invoice_by_id(
             invoice_id, nfeio_config
@@ -2153,18 +2154,22 @@ def check_invoice_status_and_update(invoice_id, document_name):
             return
 
         # Log the raw response for debugging
-        frappe.logger().info(f"NFe.io raw response: {json.dumps(nfeio_invoice, indent=2)}")
+        frappe.logger().info(
+            f"NFe.io raw response: {json.dumps(nfeio_invoice, indent=2)}"
+        )
 
         # The response is the invoice data directly (not wrapped)
         invoice_data = nfeio_invoice
-        
+
         invoice_doc.invoice_id = invoice_id
 
         # Check NFe.io invoice status (status field)
         # NFe.io returns status values like: "Issued", "Processing", "Error", "Rejected"
         invoice_status = invoice_data.get("status", "")
-        
-        frappe.logger().info(f"Extracted invoice_status from NFe.io: '{invoice_status}'")
+
+        frappe.logger().info(
+            f"Extracted invoice_status from NFe.io: '{invoice_status}'"
+        )
 
         # invoice_status Possible values:
         # [None, Created, Processing, Issued,
@@ -2310,7 +2315,6 @@ def check_invoice_status_and_update(invoice_id, document_name):
             invoice_doc.invoice_number = str(invoice_data.get("number"))
         if invoice_data.get("serie"):
             invoice_doc.invoice_serie = str(invoice_data.get("serie"))
-        
 
         # Set flag to bypass processing lock
         invoice_doc.flags.ignore_processing_lock = True

@@ -1,8 +1,8 @@
 import frappe
 
 def _not_in_processing_status(invoice_doc):
-    frappe.logger().info("Product Invoice {} is not in Processing status. Current status: {}".format(invoice_doc.name, invoice_doc.status))
-    return invoice_doc.status != "Processing"
+    frappe.logger().info("Product Invoice {} is not in Processing status. Current status: {}".format(invoice_doc.name, invoice_doc.invoice_status))
+    return invoice_doc.invoice_status != "Processing"
 
 def _get_events_from_invoice(invoice_doc):
     from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
@@ -116,9 +116,17 @@ def handle_invoice_issued_status(data):
         if not xml_url:
             frappe.logger().error("Failed to retrieve XML URL for NFe.io ID: {}".format(invoice_id))
 
+        # Get full invoice data to extract access key, number, serie
+        invoice_data_result = nfeio.get_product_invoice_by_id(invoice_id)
+        if invoice_data_result.get("success"):
+            invoice_data = invoice_data_result.get("data", {})
+            invoice_doc.invoice_access_key = invoice_data.get("authorization", {}).get("accessKey")
+            invoice_doc.invoice_number = invoice_data.get("number")
+            invoice_doc.invoice_serie = invoice_data.get("serie")
+
         invoice_doc.invoice_pdf_url = pdf_url
         invoice_doc.invoice_xml_url = xml_url
-        invoice_doc.status = "Issued"
+        invoice_doc.invoice_status = "Issued"
         invoice_doc.flags.ignore_processing_lock = True
         invoice_doc.save(ignore_permissions=True)
         frappe.db.commit()
@@ -149,8 +157,8 @@ def handle_invoice_error_status(data):
 
         error_message = data.get("error_message", "Unknown error")
 
-        invoice_doc.status = "Error"
-        invoice_doc.error_message = _get_error_from_events(invoice_doc) or error_message
+        invoice_doc.invoice_status = "Error"
+        invoice_doc.status_reason = _get_error_from_events(invoice_doc) or error_message
         invoice_doc.flags.ignore_processing_lock = True
         invoice_doc.save(ignore_permissions=True)
         frappe.db.commit()
