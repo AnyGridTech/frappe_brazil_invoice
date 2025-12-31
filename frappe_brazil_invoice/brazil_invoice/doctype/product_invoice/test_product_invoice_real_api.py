@@ -111,9 +111,11 @@ def print_test_dashboard():
     print("\n" + "=" * width)
     print()
 
+
 # ============================================================================
 # HELPER FUNCTIONS - DRY Principles
 # ============================================================================
+
 
 def cancel_invoice_with_retries(invoice, reason, max_retries=3, retry_delay=5):
     """
@@ -406,9 +408,9 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                 test_results["passed"] += 1
 
     def test_001_create_and_issue_invoice_cnpj_nontaxpayer(self):
-        """Create and Issue 
+        """Create and Issue
         Invoice Type: Product Invoice
-        Client Type: CNPJ 
+        Client Type: CNPJ
         ICMS Type: Non-Taxpayer
         Operation Type: Internal (SP to SP)
         Expected Result: Invoice created and issued successfully
@@ -423,16 +425,20 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         address_data = generate_random_address(only_sort_from_states=["SP"])
 
         # Generate random client data (Company/PJ) - Use NonTaxpayer to avoid IE validation issues
-        client_data = generate_random_client_cnpj(icms_taxpayer_type="NonTaxpayer", state=address_data["state"])
+        client_data = generate_random_client_cnpj(
+            icms_taxpayer_type="NonTaxpayer", state=address_data["state"]
+        )
 
         # Get serial number for invoice items from stored class variable
         serial = self.test_serial_numbers[0]
         invoice_items = [{"serial_number": serial["serial_no"]}]
-        try: 
+        try:
             # Create invoice
             result = create_test_invoice_with_token(
                 client_type=client_data["client_type"],
                 freight_modality="0 - Freight Contracted by Sender (CIF)",
+                operation_type="Outgoing",
+                operation_nature="VENDA DE MERCADORIA",
                 client_name=client_data["client_name"],
                 client_email=client_data["email"],
                 client_phone=client_data["phone"],
@@ -462,7 +468,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             )
 
             self.assertTrue(
-                result.get("success"), f"Invoice creation failed: {result.get('message')}"
+                result.get("success"),
+                f"Invoice creation failed: {result.get('message')}",
             )
             invoice_name = result.get("docname")
             self.assertIsNotNone(invoice_name, "Invoice name should not be None")
@@ -485,7 +492,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         try:
             # Call the move_to_processing function that submits to NFe.io API
             result = move_invoice_to_processing(invoice_name)
-            
+
             invoice_doc.reload()
 
             # Verify result was successful
@@ -501,11 +508,11 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
 
             print(f"  Invoice ID: {invoice_doc.invoice_id}")
             print(f"  Status after submission: {invoice_doc.invoice_status}")
-        
+
         except Exception as e:
             self.fail(f"Failed to submit the invoice to processing API: {str(e)}")
 
-        try: 
+        try:
             result = check_invoice_processing(invoice_doc)
             if result["error"]:
                 TestProductInvoiceRealAPI.invoice_1_error = True
@@ -517,10 +524,12 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                 "Invoice access key should be set",
             )
             self.assertIsNotNone(
-                getattr(invoice_doc, "invoice_number", None), "Invoice number should be set"
+                getattr(invoice_doc, "invoice_number", None),
+                "Invoice number should be set",
             )
             self.assertIsNotNone(
-                getattr(invoice_doc, "invoice_serie", None), "Invoice serie should be set"
+                getattr(invoice_doc, "invoice_serie", None),
+                "Invoice serie should be set",
             )
             self.assertIsNotNone(
                 getattr(invoice_doc, "invoice_pdf_url", None),
@@ -532,6 +541,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             )
         except Exception as e:
             self.fail(f"Failed to check invoice processing: {str(e)}")
+
 
 if __name__ == "__main__":
     import unittest
