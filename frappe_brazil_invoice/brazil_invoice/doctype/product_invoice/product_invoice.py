@@ -881,6 +881,12 @@ def move_to_processing(invoice_name):
 
         # Update invoice with NFe.io response
         invoice_id = nfeio_response.get("id")
+
+        if not invoice_id:
+            frappe.throw(
+                "Invoice ID not returned from NFe.io. Cannot schedule status checks."
+            )
+
         invoice_doc.invoice_id = invoice_id
         invoice_doc.invoice_status = "Processing"
 
@@ -889,11 +895,9 @@ def move_to_processing(invoice_name):
         invoice_doc.save()
         frappe.db.commit()
 
+        
+
         # Schedule background status check jobs
-        if not invoice_id:
-            frappe.throw(
-                "Invoice ID not returned from NFe.io. Cannot schedule status checks."
-            )
 
         # Helper function to schedule status check jobs
         def schedule_status_check(min_minutes, max_minutes, job_suffix):
