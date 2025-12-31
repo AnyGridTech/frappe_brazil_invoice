@@ -1395,10 +1395,10 @@ def _build_invoice_data_from_doc(invoice_doc):
     }
 
     # Map ICMS contributor to stateTaxNumberIndicator
-    # "Taxpayer" -> "TaxPayer", "Non-Taxpayer" -> "NonTaxPayer"
+    # "Taxpayer" -> "TaxPayer", "NonTaxpayer" -> "NonTaxPayer"
     state_tax_indicator_map = {
         "Taxpayer": "TaxPayer",
-        "Non-Taxpayer": "NonTaxPayer",
+        "NonTaxpayer": "NonTaxPayer",
         "Exempt": "Exempt",
     }
 
@@ -1429,20 +1429,17 @@ def _build_invoice_data_from_doc(invoice_doc):
         if state_tax_indicator:
             buyer["stateTaxNumberIndicator"] = state_tax_indicator
 
-            # Add stateTaxNumber (state registration) for TaxPayer
-            # According to NFe.io API docs, the field is "stateTaxNumber" for buyer
-            if state_tax_indicator == "TaxPayer" and invoice_doc.state_registration:
-                # State registration can be numeric or alphanumeric depending on state
-                # Remove only common formatting characters but keep letters
-                state_tax = (
-                    str(invoice_doc.state_registration)
-                    .replace(".", "")
-                    .replace("-", "")
-                    .replace("/", "")
-                    .strip()
-                )
-                if state_tax:
-                    buyer["stateTaxNumber"] = state_tax
+        # Add stateTaxNumber (state registration) for TaxPayer
+        # According to NFe.io API docs, the field is "stateTaxNumber" for buyer
+        state_tax = (
+            str(invoice_doc.state_registration)
+            .replace(".", "")
+            .replace("-", "")
+            .replace("/", "")
+            .strip()
+        )
+        if state_tax:
+            buyer["stateTaxNumber"] = state_tax
 
         buyer["address"]["additionalInformation"] = invoice_doc.delivery_complement
 

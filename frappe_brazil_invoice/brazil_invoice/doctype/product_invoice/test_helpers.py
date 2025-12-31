@@ -211,22 +211,14 @@ def generate_random_phone_number():
     return f"+55-{area_code}{phone_number}"
 
 
-def generate_random_client(client_type=None):
-    """Generate random client information for PF (individual) or PJ (company)
-
-    Args:
-        client_type (str, optional): 'Company' for PJ or 'Individual' for PF.
-                                     If None, randomly chosen.
+def generate_random_client_cpf():
+    """Generate random Individual (PF) client information with CPF
 
     Returns:
         dict: Dictionary with client_name, email, phone, client_id_number,
               icms_contributor, client_type, and state_registration
     """
     import random
-
-    # Randomly choose if not specified
-    if client_type is None:
-        client_type = random.choice(["Company", "Individual"])
 
     # Generate base data
     first_names = [
@@ -271,6 +263,59 @@ def generate_random_client(client_type=None):
         cpf_str = "".join(map(str, cpf))
         return f"{cpf_str[:3]}.{cpf_str[3:6]}.{cpf_str[6:9]}-{cpf_str[9:]}"
 
+    # Generate individual (PF) data
+    client_name = f"{random.choice(first_names)} {random.choice(last_names)}"
+    client_id_number = generate_cpf()
+    icms_contributor = "Non-Taxpayer"  # Individuals are typically Non-Taxpayers
+    state_registration = "ISENTO"  # Exempt for individuals
+
+    # Generate contact info
+    email_name = client_name.lower().replace(" ", ".")
+    email = f"{email_name}@test.com"
+
+    # Generate Brazilian phone number using helper function
+    phone = generate_random_phone_number()
+
+    return {
+        "client_name": client_name,
+        "email": email,
+        "phone": phone,
+        "client_id_number": client_id_number,
+        "icms_contributor": icms_contributor,
+        "client_type": "Individual",
+        "state_registration": state_registration,
+    }
+
+
+def generate_random_client_cnpj(icms_taxpayer_type="Non-Taxpayer"):
+    """Generate random Company (PJ) client information with CNPJ
+
+    Args:
+        icms_taxpayer_type (str): ICMS taxpayer status. Options:
+                                  - "Taxpayer": Company is ICMS taxpayer (requires valid IE)
+                                  - "Exempt Taxpayer": Company is exempt from ICMS (uses ISENTO)
+                                  - "Non-Taxpayer": Company is not ICMS taxpayer (uses ISENTO)
+                                  Default: "Non-Taxpayer"
+
+    Returns:
+        dict: Dictionary with client_name, email, phone, client_id_number,
+              icms_contributor, client_type, and state_registration
+    """
+    import random
+
+    last_names = [
+        "Silva",
+        "Santos",
+        "Oliveira",
+        "Souza",
+        "Lima",
+        "Pereira",
+        "Costa",
+        "Ferreira",
+        "Alves",
+        "Rodrigues",
+    ]
+
     def generate_cnpj():
         """Generate a valid CNPJ number"""
 
@@ -291,29 +336,32 @@ def generate_random_client(client_type=None):
         cnpj_str = "".join(map(str, cnpj))
         return f"{cnpj_str[:2]}.{cnpj_str[2:5]}.{cnpj_str[5:8]}/{cnpj_str[8:12]}-{cnpj_str[12:]}"
 
-    if client_type == "Company":
-        # Generate company (PJ) data
-        company_suffixes = ["Ltda", "S.A.", "ME", "EPP", "EIRELI"]
-        business_types = [
-            "Comércio",
-            "Indústria",
-            "Serviços",
-            "Tecnologia",
-            "Distribuidora",
-        ]
+    # Generate company (PJ) data
+    company_suffixes = ["Ltda", "S.A.", "ME", "EPP", "EIRELI"]
+    business_types = [
+        "Comércio",
+        "Indústria",
+        "Serviços",
+        "Tecnologia",
+        "Distribuidora",
+    ]
 
-        client_name = f"{random.choice(business_types)} {random.choice(last_names)} {random.choice(company_suffixes)}"
-        client_id_number = generate_cnpj()
-        # For homologation testing, use Non-Taxpayer to avoid IE validation issues with SEFAZ
-        # This allows using ISENTO without contradicting the taxpayer status
-        icms_contributor = "Non-Taxpayer"  # Not registered for state tax
+    client_name = f"{random.choice(business_types)} {random.choice(last_names)} {random.choice(company_suffixes)}"
+    client_id_number = generate_cnpj()
+
+    # Set ICMS contributor status and state registration based on taxpayer type
+    if icms_taxpayer_type == "Taxpayer":
+        icms_contributor = "Taxpayer"
+        # For Taxpayer, we would need a valid IE number for the specific state
+        # For now, using ISENTO to avoid validation issues - this should be improved
+        # when we implement proper IE generation per state
         state_registration = "ISENTO"
-    else:
-        # Generate individual (PF) data
-        client_name = f"{random.choice(first_names)} {random.choice(last_names)}"
-        client_id_number = generate_cpf()
-        icms_contributor = "Non-Taxpayer"  # Individuals are typically non-taxpayers
-        state_registration = "ISENTO"  # Exempt for individuals
+    elif icms_taxpayer_type == "Exempt Taxpayer":
+        icms_contributor = "Exempt Taxpayer"
+        state_registration = "ISENTO"
+    else:  # Non-Taxpayer (default)
+        icms_contributor = "Non-Taxpayer"
+        state_registration = "ISENTO"
 
     # Generate contact info
     email_name = (
@@ -337,9 +385,35 @@ def generate_random_client(client_type=None):
         "phone": phone,
         "client_id_number": client_id_number,
         "icms_contributor": icms_contributor,
-        "client_type": client_type,
+        "client_type": "Company",
         "state_registration": state_registration,
     }
+
+
+def generate_random_client(client_type=None):
+    """Generate random client information for PF (individual) or PJ (company)
+    
+    DEPRECATED: Use generate_random_client_cpf() or generate_random_client_cnpj() instead.
+    This function is kept for backward compatibility.
+
+    Args:
+        client_type (str, optional): 'Company' for PJ or 'Individual' for PF.
+                                     If None, randomly chosen.
+
+    Returns:
+        dict: Dictionary with client_name, email, phone, client_id_number,
+              icms_contributor, client_type, and state_registration
+    """
+    import random
+
+    # Randomly choose if not specified
+    if client_type is None:
+        client_type = random.choice(["Company", "Individual"])
+
+    if client_type == "Company":
+        return generate_random_client_cnpj()
+    else:
+        return generate_random_client_cpf()
 
 
 def generate_random_totals():

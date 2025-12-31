@@ -32,6 +32,8 @@ from .test_helpers import (
     create_test_item,
     create_test_serial_no,
     generate_random_client,
+    generate_random_client_cpf,
+    generate_random_client_cnpj,
     generate_random_totals,
     generate_random_address,
     items_array,
@@ -610,8 +612,8 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Create first invoice and issue it via real API"""
         frappe.set_user("Administrator")
 
-        # Generate random client data (Company/PJ)
-        client_data = generate_random_client(client_type="Company")
+        # Generate random client data (Company/PJ) - Use Non-Taxpayer to avoid IE validation issues
+        client_data = generate_random_client_cnpj(icms_taxpayer_type="Non-Taxpayer")
 
         # Generate random totals
         totals_data = generate_random_totals()

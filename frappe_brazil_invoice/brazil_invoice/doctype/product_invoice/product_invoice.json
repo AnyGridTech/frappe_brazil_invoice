@@ -454,7 +454,7 @@
    "fieldname": "icms_taxpayer",
    "fieldtype": "Select",
    "label": "ICMS Taxpayer",
-   "options": "Non-Taxpayer\nTaxpayer\nExempt Taxpayer"
+   "options": "NonTaxpayer\nTaxpayer\nExempt"
   },
   {
    "fieldname": "state_registration",
