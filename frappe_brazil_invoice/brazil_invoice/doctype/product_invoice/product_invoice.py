@@ -225,7 +225,7 @@ class ProductInvoice(Document):
         # Process invoice items to auto-fill from serial numbers
         self.process_invoice_items()
 
-        # Block user modifications when invoice is in Processing status
+        # Block user modifications after Non Processed status (lock all fields)
         self.validate_processing_lock()
 
         # Validate workflow transitions follow business rules
@@ -236,6 +236,12 @@ class ProductInvoice(Document):
 
         # Validate responsible field is mandatory for Created status and beyond
         self.validate_responsible()
+
+        # Validate operation_type is mandatory
+        self.validate_operation_type()
+
+        # Validate operation_nature is mandatory
+        self.validate_operation_nature()
 
         # Validate CPF/CNPJ format
         self.validate_client_id_number()
@@ -317,6 +323,8 @@ class ProductInvoice(Document):
                     item.ncm = item_doc.get("ncm")
                 if not item.description:
                     item.description = item_doc.description or item_doc.item_name
+                if not item.unit:
+                    item.unit = item_doc.stock_uom
 
             # Calculate amount if rate and quantity are available
             if item.rate and item.quantity:
@@ -373,18 +381,40 @@ class ProductInvoice(Document):
                                 )
 
     def validate_processing_lock(self):
-        """Validate that users cannot modify invoices in Processing status
+        """Validate that users cannot modify invoices after Non Processed status
 
-        When an invoice is in Processing status, it has been sent to external API
-        for processing. To prevent false positives and data inconsistencies, users
-        are blocked from making any modifications to the invoice.
+        Once an invoice moves beyond Non Processed status, all fields become locked
+        to prevent data inconsistencies. Fields are editable ONLY in:
+        - Draft status
+        - Non Processed status
+
+        All other statuses have complete field lock:
+        - Processing
+        - Issued
+        - Rejected
+        - Contingency
+        - Unused
+        - Processing Error
+        - Tax Calculation Error
 
         Backend/API can bypass this restriction by setting:
         invoice.flags.ignore_processing_lock = True
         """
         if not self.is_new():
             old_doc = self.get_doc_before_save()
-            if old_doc and old_doc.invoice_status == "Processing":
+            
+            # Define statuses where fields are locked (everything except Draft and Non Processed)
+            locked_statuses = [
+                "Processing",
+                "Issued",
+                "Rejected",
+                "Contingency",
+                "Unused",
+                "Processing Error",
+                "Tax Calculation Error",
+            ]
+            
+            if old_doc and old_doc.invoice_status in locked_statuses:
                 # Check if backend/API is making the change
                 if not getattr(self.flags, "ignore_processing_lock", False):
                     # This is a user modification - check if anything changed
@@ -408,8 +438,10 @@ class ProductInvoice(Document):
                         "invoice_pdf_url",
                         "invoice_xml_url",
                         "invoice_access_key",
+                        "invoice_id",
                         "process_events",
-                    ]  # Allow error logging
+                        "status_reason",
+                    ]  # Allow error logging and status updates
 
                     for field in self.meta.get_valid_columns():
                         if field in exclude_fields:
@@ -421,11 +453,10 @@ class ProductInvoice(Document):
                         if old_value != new_value:
                             frappe.throw(
                                 _(
-                                    "Cannot modify invoice in Processing status. "
-                                    "The invoice has been sent to the external API and "
-                                    "is currently being processed. Please wait for the "
-                                    "processing to complete."
-                                ),
+                                    "Cannot modify invoice after Non Processed status. "
+                                    "Current status is '{0}'. All fields are locked to prevent "
+                                    "data inconsistencies. Only Draft and Non Processed invoices can be edited."
+                                ).format(old_doc.invoice_status),
                                 frappe.PermissionError,
                             )
 
@@ -472,6 +503,53 @@ class ProductInvoice(Document):
                 frappe.throw(
                     _(
                         "Responsible field is mandatory for invoice status '{0}'. Please specify who is responsible for this invoice."
+                    ).format(self.invoice_status)
+                )
+
+    def validate_operation_type(self):
+        """Validate that Operation Type field is mandatory
+
+        The Operation Type field must be filled with either 'Incoming' or 'Outgoing'.
+        This field indicates the direction of the operation.
+        """
+        statuses_requiring_operation_type = [
+            "Non Processed",
+            "Processing",
+            "Issued",
+            "Rejected",
+            "Contingency",
+            "Unused",
+        ]
+
+        if self.invoice_status in statuses_requiring_operation_type:
+            if not self.operation_type or not self.operation_type.strip():
+                frappe.throw(
+                    _(
+                        "Operation Type is mandatory for invoice status '{0}'. Please select either 'Incoming' or 'Outgoing'."
+                    ).format(self.invoice_status)
+                )
+
+    def validate_operation_nature(self):
+        """Validate that Operation Nature field is mandatory
+
+        The Operation Nature field must be filled with the nature of the operation
+        (e.g., 'VENDA DE MERCADORIA', 'REMESSA PARA CONSERTO', etc.).
+        This field is typically auto-filled from the tax template.
+        """
+        statuses_requiring_operation_nature = [
+            "Non Processed",
+            "Processing",
+            "Issued",
+            "Rejected",
+            "Contingency",
+            "Unused",
+        ]
+
+        if self.invoice_status in statuses_requiring_operation_nature:
+            if not self.operation_nature or not self.operation_nature.strip():
+                frappe.throw(
+                    _(
+                        "Operation Nature is mandatory for invoice status '{0}'. Please fill this field or select a tax template that provides it."
                     ).format(self.invoice_status)
                 )
 
@@ -641,18 +719,18 @@ class ProductInvoice(Document):
                 )
 
     def set_operation_type_from_template(self):
-        """Set operation_type automatically from tax template
+        """Set operation_nature automatically from tax template
 
-        When a tax_template is selected, fetch its operation_type and set it
-        on the invoice. This makes operation_type read-only when template is selected.
+        When a tax_template is selected, fetch its operation_nature and set it
+        on the invoice. This makes operation_nature read-only when template is selected.
         """
         if self.tax_template:
             try:
                 tax_doc = frappe.get_doc("Tax", self.tax_template)
-                if tax_doc.get("operation_type"):
-                    self.operation_type = tax_doc.operation_type
+                if tax_doc.get("operation_nature"):
+                    self.operation_nature = tax_doc.operation_nature
             except Exception:
-                # If tax template doesn't exist or has no operation_type, continue
+                # If tax template doesn't exist or has no operation_nature, continue
                 pass
 
     def calculate_total(self):
@@ -894,8 +972,6 @@ def move_to_processing(invoice_name):
         invoice_doc.flags.ignore_processing_lock = True
         invoice_doc.save()
         frappe.db.commit()
-
-        
 
         # Schedule background status check jobs
 
@@ -1421,7 +1497,11 @@ def _build_invoice_data_from_doc(invoice_doc):
             },
             "district": invoice_doc.delivery_neighborhood,
             "street": invoice_doc.delivery_address,
-            "number": invoice_doc.delivery_number_address or "S/N",
+            "number": (
+                invoice_doc.delivery_number_address
+                if invoice_doc.delivery_number_address
+                else "S/N"
+            ),
             "postalCode": "".join(filter(str.isdigit, str(invoice_doc.delivery_cep))),
             "country": "Brasil",
         },
@@ -1453,16 +1533,16 @@ def _build_invoice_data_from_doc(invoice_doc):
     for item in invoice_doc.invoice_items_table:
         # Format NCM: remove dots/periods and any other formatting characters
         # NFe.io expects NCM without formatting (8 digits max)
-        ncm = item.ncm or ""
+        ncm = item.ncm
         if ncm:
             ncm = ncm.replace(".", "").replace("-", "").strip()
 
         item_data = {
             "code": item.item_code,
-            "description": item.description or item.item_name,
+            "description": item.description,
             "ncm": ncm,  # NCM without dots/formatting
-            "cfop": 5102,  # Default CFOP - should be configurable
-            "unit": "UN",
+            "cfop": item.cfop,  # From item or fallback
+            "unit": item.unit,  # From item field
             "quantity": float(item.quantity),
             "unitAmount": float(item.rate),
             "totalAmount": float(item.amount),
@@ -1497,11 +1577,19 @@ def _build_invoice_data_from_doc(invoice_doc):
     # Calculate totals
     total_items = sum(float(item.amount) for item in invoice_doc.invoice_items_table)
 
+    # Map operation_type to NFe.io format
+    operation_type_value = "Outgoing"  # Default
+    if invoice_doc.operation_type:
+        if invoice_doc.operation_type == "Incoming":
+            operation_type_value = "Incoming"
+        elif invoice_doc.operation_type == "Outgoing":
+            operation_type_value = "Outgoing"
+
     invoice_data = {
-        "operationNature": invoice_doc.operation_type or "VENDA DE MERCADORIA",
-        "operationType": "Outgoing",
+        "operationNature": invoice_doc.operation_nature,
+        "operationType": operation_type_value,
         "consumerType": "FinalConsumer",
-        "body": invoice_doc.additional_information or "Nota fiscal de produto",
+        "body": invoice_doc.additional_information,
         "buyer": buyer,
         "items": items,
         "totals": {
@@ -1575,6 +1663,7 @@ def _update_invoice_from_nfeio_response(invoice_doc, nfeio_response):
 @frappe.whitelist(allow_guest=False)
 def create_invoice(
     operation_type=None,
+    operation_nature=None,
     client_type=None,
     freight_modality=None,
     client_name=None,
@@ -1617,7 +1706,8 @@ def create_invoice(
     and saved in draft status.
 
     Args:
-            operation_type (str): Type of operation (e.g., "Remessa para Conserto")
+            operation_type (str): Direction of operation (Incoming or Outgoing)
+            operation_nature (str): Nature of operation (e.g., "VENDA DE MERCADORIA")
             client_type (str): Type of client
             freight_modality (str): Freight modality
             client_name (str): Client name or company name (required)
@@ -1718,6 +1808,8 @@ def create_invoice(
         # Set basic fields
         if operation_type:
             invoice_doc.operation_type = operation_type
+        if operation_nature:
+            invoice_doc.operation_nature = operation_nature
         if client_type:
             invoice_doc.client_type = client_type
         if freight_modality:

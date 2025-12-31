@@ -13,6 +13,7 @@
   "column_break_fatv",
   "rate",
   "quantity",
+  "unit",
   "amount",
   "ncm",
   "description",
@@ -37,7 +38,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Serial No",
-   "options": "Serial No"
+   "options": "Serial No",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fetch_from": "serial_number.item_code",
@@ -45,7 +47,8 @@
    "fieldname": "item_code",
    "fieldtype": "Link",
    "label": "Item",
-   "options": "Item"
+   "options": "Item",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "columns": 2,
@@ -56,7 +59,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Item Name",
-   "options": "Item"
+   "options": "Item",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "column_break_fatv",
@@ -69,14 +73,24 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Rate"
+   "label": "Rate",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "quantity",
    "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Quantity"
+   "label": "Quantity",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
+  },
+  {
+   "fetch_from": "item_code.stock_uom",
+   "fetch_if_empty": 1,
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "Unit",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "amount",
@@ -92,14 +106,16 @@
    "in_list_view": 1,
    "in_preview": 1,
    "in_standard_filter": 1,
-   "label": "NCM"
+   "label": "NCM",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fetch_from": "item_code.description",
    "fetch_if_empty": 1,
    "fieldname": "description",
    "fieldtype": "Text",
-   "label": "Description"
+   "label": "Description",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "tax_section",
@@ -110,7 +126,8 @@
    "fieldname": "invoice_taxes",
    "fieldtype": "Link",
    "label": "Invoice Taxes",
-   "options": "Tax"
+   "options": "Tax",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "column_break_ptnc",
@@ -119,7 +136,8 @@
   {
    "fieldname": "rate_taxes",
    "fieldtype": "Currency",
-   "label": "Rate with Taxes"
+   "label": "Rate with Taxes",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "ncm",
@@ -127,27 +145,32 @@
    "in_list_view": 1,
    "in_preview": 1,
    "in_standard_filter": 1,
-   "label": "ncm"
+   "label": "ncm",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "icms_rate",
    "fieldtype": "Data",
-   "label": "ICMS"
+   "label": "ICMS",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "ipi_rate",
    "fieldtype": "Data",
-   "label": "IPI"
+   "label": "IPI",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "pis_rate",
    "fieldtype": "Data",
-   "label": "PIS"
+   "label": "PIS",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "cofins_rate",
    "fieldtype": "Data",
-   "label": "COFINS"
+   "label": "COFINS",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   }
  ],
  "grid_page_length": 50,
