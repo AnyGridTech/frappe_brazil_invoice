@@ -287,7 +287,7 @@ def generate_random_client_cpf():
     }
 
 
-def generate_random_client_cnpj(icms_taxpayer_type="NonTaxpayer"):
+def generate_random_client_cnpj(icms_taxpayer_type="NonTaxpayer", state="SP"):
     """Generate random Company (PJ) client information with CNPJ
 
     Args:
@@ -336,6 +336,12 @@ def generate_random_client_cnpj(icms_taxpayer_type="NonTaxpayer"):
         cnpj_str = "".join(map(str, cnpj))
         return f"{cnpj_str[:2]}.{cnpj_str[2:5]}.{cnpj_str[5:8]}/{cnpj_str[8:12]}-{cnpj_str[12:]}"
 
+    def generate_ie(state="SP"):
+        if state == "SP":
+            return "377126952856"
+        if state == "RJ":
+            return "76504563"
+
     # Generate company (PJ) data
     company_suffixes = ["Ltda", "S.A.", "ME", "EPP", "EIRELI"]
     business_types = [
@@ -355,13 +361,13 @@ def generate_random_client_cnpj(icms_taxpayer_type="NonTaxpayer"):
         # For Taxpayer, we would need a valid IE number for the specific state
         # For now, using ISENTO to avoid validation issues - this should be improved
         # when we implement proper IE generation per state
-        state_registration = "ISENTO"
+        state_registration = generate_ie(state)
     elif icms_taxpayer_type == "Exempt":
         icms_contributor = "Exempt"
-        state_registration = "ISENTO"
-    else:  # NonTaxpayer (default)
+        state_registration = generate_ie(state)
+    else: 
         icms_contributor = "NonTaxpayer"
-        state_registration = "ISENTO"
+        state_registration = ""
 
     # Generate contact info
     email_name = (

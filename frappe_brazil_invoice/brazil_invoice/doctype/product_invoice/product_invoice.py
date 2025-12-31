@@ -1431,15 +1431,16 @@ def _build_invoice_data_from_doc(invoice_doc):
 
         # Add stateTaxNumber (state registration) for TaxPayer
         # According to NFe.io API docs, the field is "stateTaxNumber" for buyer
-        state_tax = (
-            str(invoice_doc.state_registration)
-            .replace(".", "")
-            .replace("-", "")
-            .replace("/", "")
-            .strip()
-        )
-        if state_tax:
-            buyer["stateTaxNumber"] = state_tax
+        if invoice_doc.state_registration:
+            state_tax = (
+                str(invoice_doc.state_registration)
+                .replace(".", "")
+                .replace("-", "")
+                .replace("/", "")
+                .strip()
+            )
+            if state_tax and state_tax.upper() != "NONE":
+                buyer["stateTaxNumber"] = state_tax
 
         buyer["address"]["additionalInformation"] = invoice_doc.delivery_complement
 

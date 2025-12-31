@@ -445,19 +445,20 @@ def check_invoice_processing(invoice_doc):
     print("\n" + "=" * 70)
     print("❌ INVOICE PROCESSING FAILURE DETECTED")
 
-    # try:
-    #     import pprint
-    #     print("\nFull invoice data from Doctype for debugging:")
-    #     invoice_doc_dict = invoice_doc.as_dict()
-    #     pprint.pprint(invoice_doc_dict, width=60, indent=2)
-    # except Exception as e:
-    #     print(f"Error printing invoice data: {str(e)}")
     try:
-        invoice_doc_dict = invoice_doc.as_dict()
+        import pprint
+
         print("\nFull invoice data from Doctype for debugging:")
-        print(json.dumps(invoice_doc_dict, indent=2, ensure_ascii=False))
+        invoice_doc_dict = invoice_doc.as_dict()
+        pprint.pprint(invoice_doc_dict, width=60, indent=2)
     except Exception as e:
-        print(f"Error printing invoice doctype data: {str(e)}")
+        print(f"Error printing invoice data: {str(e)}")
+    # try:
+    #     invoice_doc_dict = invoice_doc.as_dict()
+    #     print("\nFull invoice data from Doctype for debugging:")
+    #     print(json.dumps(invoice_doc_dict, indent=2, ensure_ascii=False))
+    # except Exception as e:
+    #     print(f"Error printing invoice doctype data: {str(e)}")
 
     try:
         from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
@@ -615,15 +616,15 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Create first invoice and issue it via real API"""
         frappe.set_user("Administrator")
 
-        # Generate random client data (Company/PJ) - Use Non-Taxpayer to avoid IE validation issues
-        client_data = generate_random_client_cnpj(icms_taxpayer_type="Non-Taxpayer")
-
         # Generate random totals
         totals_data = generate_random_totals()
 
         # Generate random address in SP (internal operation)
         # Note: Exclude no states, use SP for internal operation
         address_data = generate_random_address(only_sort_from_states=["SP"])
+
+        # Generate random client data (Company/PJ) - Use NonTaxpayer to avoid IE validation issues
+        client_data = generate_random_client_cnpj(icms_taxpayer_type="NonTaxpayer", state=address_data["state"])
 
         # Get serial number for invoice items from stored class variable
         serial = self.test_serial_numbers[0]
