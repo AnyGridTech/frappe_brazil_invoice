@@ -78,7 +78,7 @@
   "invoice_xml_url",
   "invoice_number",
   "section_break_fpdy",
-  "errors_field",
+  "process_events",
   "internal_tab",
   "amended_from"
  ],
@@ -441,9 +441,9 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "errors_field",
-   "fieldtype": "Long Text",
-   "label": "Logs:"
+   "fieldname": "process_events",
+   "fieldtype": "JSON",
+   "label": "Process Events"
   },
   {
    "fieldname": "internal_tab",

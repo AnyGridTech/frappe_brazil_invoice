@@ -18,7 +18,7 @@ from datetime import datetime
 
 def _append_invoice_log(invoice_doc, log_type, message, details=None):
     """
-    Append a formatted log entry to the invoice's errors_field (logs)
+    Append a formatted log entry to the invoice's process_events (logs)
 
     Args:
         invoice_doc: Invoice document instance
@@ -26,7 +26,7 @@ def _append_invoice_log(invoice_doc, log_type, message, details=None):
         message: Main log message
         details: Optional additional details (dict or string)
     """
-    if not hasattr(invoice_doc, "errors_field"):
+    if not hasattr(invoice_doc, "process_events"):
         return
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -44,11 +44,11 @@ def _append_invoice_log(invoice_doc, log_type, message, details=None):
             log_entry += f"\n  {details}"
 
     # Append to existing logs
-    current_logs = invoice_doc.errors_field or ""
+    current_logs = invoice_doc.process_events or ""
     if current_logs:
-        invoice_doc.errors_field = current_logs + "\n\n" + log_entry
+        invoice_doc.process_events = current_logs + "\n\n" + log_entry
     else:
-        invoice_doc.errors_field = log_entry
+        invoice_doc.process_events = log_entry
 
 
 def calculate_taxes(invoice_doc, tax_template, nfeio_config=None, use_fallback=False):

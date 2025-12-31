@@ -104,11 +104,11 @@ class ProductInvoice(Document):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{timestamp}] [ERROR] {error_type}\n  {error_message}"
 
-        # Append to errors_field
-        if self.errors_field:
-            self.errors_field = self.errors_field + "\n\n" + log_entry
+        # Append to process_events
+        if self.process_events:
+            self.process_events = self.process_events + "\n\n" + log_entry
         else:
-            self.errors_field = log_entry
+            self.process_events = log_entry
 
     def _handle_tax_calculation_error(self, error_type, error_message):
         """
@@ -126,11 +126,11 @@ class ProductInvoice(Document):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{timestamp}] [ERROR] {error_type}\n  {error_message}"
 
-        # Append to errors_field
-        if self.errors_field:
-            self.errors_field = self.errors_field + "\n\n" + log_entry
+        # Append to process_events
+        if self.process_events:
+            self.process_events = self.process_events + "\n\n" + log_entry
         else:
-            self.errors_field = log_entry
+            self.process_events = log_entry
 
     def validate_client_id_number(self):
         """Validate CPF or CNPJ format based on client_type
@@ -408,7 +408,7 @@ class ProductInvoice(Document):
                         "invoice_pdf_url",
                         "invoice_xml_url",
                         "invoice_access_key",
-                        "errors_field",
+                        "process_events",
                     ]  # Allow error logging
 
                     for field in self.meta.get_valid_columns():
@@ -1050,12 +1050,12 @@ def move_to_tax_calculation_error(invoice_name, error_message=None):
                 f"[{timestamp}] [ERROR] Tax Calculation Error\\n  {error_message}"
             )
 
-            if invoice_doc.errors_field:
-                invoice_doc.errors_field = (
-                    invoice_doc.errors_field + "\\n\\n" + log_entry
+            if invoice_doc.process_events:
+                invoice_doc.process_events = (
+                    invoice_doc.process_events + "\\n\\n" + log_entry
                 )
             else:
-                invoice_doc.errors_field = log_entry
+                invoice_doc.process_events = log_entry
 
         invoice_doc.save()
         frappe.db.commit()
@@ -1115,12 +1115,12 @@ def move_to_processing_error(invoice_name, error_message=None):
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log_entry = f"[{timestamp}] [ERROR] Processing Error\\n  {error_message}"
 
-            if invoice_doc.errors_field:
-                invoice_doc.errors_field = (
-                    invoice_doc.errors_field + "\\n\\n" + log_entry
+            if invoice_doc.process_events:
+                invoice_doc.process_events = (
+                    invoice_doc.process_events + "\\n\\n" + log_entry
                 )
             else:
-                invoice_doc.errors_field = log_entry
+                invoice_doc.process_events = log_entry
 
         # Set flag to allow modifications during Processing status
         invoice_doc.flags.ignore_processing_lock = True
@@ -1212,12 +1212,12 @@ def move_to_rejected(invoice_name, rejection_reason=None):
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log_entry = f"[{timestamp}] [INFO] Invoice Rejected\\n  {rejection_reason}"
 
-            if invoice_doc.errors_field:
-                invoice_doc.errors_field = (
-                    invoice_doc.errors_field + "\\n\\n" + log_entry
+            if invoice_doc.process_events:
+                invoice_doc.process_events = (
+                    invoice_doc.process_events + "\\n\\n" + log_entry
                 )
             else:
-                invoice_doc.errors_field = log_entry
+                invoice_doc.process_events = log_entry
 
         invoice_doc.save()
         frappe.db.commit()
@@ -1268,12 +1268,12 @@ def move_to_cancelled(invoice_name, cancellation_reason=None):
                 f"[{timestamp}] [INFO] Invoice Cancelled\\n  {cancellation_reason}"
             )
 
-            if invoice_doc.errors_field:
-                invoice_doc.errors_field = (
-                    invoice_doc.errors_field + "\\n\\n" + log_entry
+            if invoice_doc.process_events:
+                invoice_doc.process_events = (
+                    invoice_doc.process_events + "\\n\\n" + log_entry
                 )
             else:
-                invoice_doc.errors_field = log_entry
+                invoice_doc.process_events = log_entry
 
         invoice_doc.save()
         frappe.db.commit()
@@ -2192,7 +2192,7 @@ def check_invoice_status_and_update(invoice_id, document_name):
             if invoice_data.get("lastEvents"):
                 last_events = get_last_events(invoice_data)
                 last_events_json = json.dumps(last_events, indent=2)
-                invoice_doc.errors_field = last_events_json
+                invoice_doc.process_events = last_events_json
 
                 error_message = ""
                 for event in last_events:
@@ -2224,7 +2224,7 @@ def check_invoice_status_and_update(invoice_id, document_name):
             if invoice_data.get("lastEvents"):
                 last_events = get_last_events(invoice_data)
                 last_events_json = json.dumps(last_events, indent=2)
-                invoice_doc.errors_field = last_events_json
+                invoice_doc.process_events = last_events_json
 
             # Store the NFe.io invoice ID
 

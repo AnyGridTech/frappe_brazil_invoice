@@ -61,7 +61,7 @@ export interface InvoicesDoc extends FrappeDoc {
   invoice_number?: string; // Invoice Number
 
   // Section Break FPDY
-  errors_field?: string; // Logs
+  process_events?: string; // Logs
 
   // Internal Tab
   amended_from?: string;
