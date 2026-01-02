@@ -124,18 +124,24 @@ def _get_nfeio_config():
     """Helper function to get NFe.io configuration
     
     Returns the production configuration (is_test_config=0) with the highest usage_priority.
+    Also includes configs where is_test_config is None/empty for backward compatibility.
     """
     try:
         # Get production NFeIO documents ordered by usage_priority
+        # Include None/empty is_test_config for backward compatibility
         nfeio_list = frappe.get_all(
             "NFeIO",
-            fields=["name", "usage_priority"],
-            filters={"is_test_config": 0},
+            fields=["name", "usage_priority", "is_test_config"],
             order_by="usage_priority DESC",
             limit=1
         )
+        
         if nfeio_list:
-            return frappe.get_doc("NFeIO", nfeio_list[0].name)
+            # Filter for production configs (is_test_config = 0 or None/empty)
+            for config in nfeio_list:
+                if not config.get("is_test_config"):  # 0, None, or empty
+                    return frappe.get_doc("NFeIO", config["name"])
+        
         return None
     except Exception:
         return None
@@ -146,6 +152,7 @@ def _get_valid_nfeio_config():
     
     This function now accepts both production and test configurations to support
     testing scenarios. It returns the configuration with the highest usage_priority.
+    Also includes configs where is_test_config is None/empty for backward compatibility.
     
     Priority system:
     - Higher usage_priority numbers are chosen first
@@ -158,22 +165,31 @@ def _get_valid_nfeio_config():
     """
     try:
         # Get all production NFeIO documents with priority ordering
+        # Include None/empty is_test_config for backward compatibility
         nfeio_list = frappe.get_all(
             "NFeIO",
-            fields=["name", "usage_priority"],
-            filters={"is_test_config": 0},
+            fields=["name", "usage_priority", "is_test_config"],
             order_by="usage_priority DESC"
         )
         
         if not nfeio_list:
             return None
         
+        # Filter for production configs (is_test_config = 0 or None/empty)
+        production_configs = [
+            cfg for cfg in nfeio_list 
+            if not cfg.get("is_test_config")  # 0, None, or empty
+        ]
+        
+        if not production_configs:
+            return None
+        
         # Get highest priority value (considering 0 as default for None)
-        highest_priority = nfeio_list[0].get("usage_priority") or 0
+        highest_priority = production_configs[0].get("usage_priority") or 0
         
         # Get all configs with the highest priority
         top_priority_configs = [
-            cfg for cfg in nfeio_list 
+            cfg for cfg in production_configs
             if (cfg.get("usage_priority") or 0) == highest_priority
         ]
         

@@ -276,18 +276,24 @@ def _get_nfeio_config():
     """Get NFe.io configuration from NFeIO doctype
     
     Returns the production configuration (is_test_config=0) with the highest usage_priority.
+    Also includes configs where is_test_config is None/empty for backward compatibility.
     """
     try:
         # Get production NFeIO documents ordered by usage_priority
+        # Include None/empty is_test_config for backward compatibility
         nfeio_list = frappe.get_all(
             "NFeIO",
-            fields=["name", "usage_priority"],
-            filters={"is_test_config": 0},
+            fields=["name", "usage_priority", "is_test_config"],
             order_by="usage_priority DESC",
             limit=1
         )
+        
         if nfeio_list:
-            return frappe.get_doc("NFeIO", nfeio_list[0].name)
+            # Filter for production configs (is_test_config = 0 or None/empty)
+            for config in nfeio_list:
+                if not config.get("is_test_config"):  # 0, None, or empty
+                    return frappe.get_doc("NFeIO", config["name"])
+        
         return None
     except Exception as e:
         frappe.log_error(

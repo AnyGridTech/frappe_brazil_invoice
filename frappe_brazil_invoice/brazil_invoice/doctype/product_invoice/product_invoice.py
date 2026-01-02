@@ -1548,6 +1548,26 @@ def _build_invoice_data_from_doc(invoice_doc):
                 f"Failed to fetch NFe.io configuration for invoice {invoice_doc.name}"
             )
         
+        # Validate NFe.io config has company_state
+        if not nfeio_config.get("company_state"):
+            frappe.throw(
+                f"NFe.io configuration '{nfeio_config.get('name')}' is missing company_state field. "
+                f"Please update the NFeIO configuration to include the company state for CFOP calculation."
+            )
+        
+        # Validate tax template has CFOP fields
+        if not hasattr(tax_doc, 'cfop_intrastate') or tax_doc.cfop_intrastate is None:
+            frappe.throw(
+                f"Tax template '{invoice_doc.tax_template}' is missing cfop_intrastate field. "
+                f"Please update the tax template to include CFOP values for intrastate operations."
+            )
+        
+        if not hasattr(tax_doc, 'cfop_interstate') or tax_doc.cfop_interstate is None:
+            frappe.throw(
+                f"Tax template '{invoice_doc.tax_template}' is missing cfop_interstate field. "
+                f"Please update the tax template to include CFOP values for interstate operations."
+            )
+        
         # Compare company state with delivery state to determine intrastate vs interstate
         if nfeio_config.get("company_state") == invoice_doc.delivery_state:
             cfop = tax_doc.cfop_intrastate
