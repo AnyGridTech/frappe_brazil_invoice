@@ -81,6 +81,7 @@
   "section_break_fpdy",
   "process_events",
   "internal_tab",
+  "is_test_invoice",
   "amended_from"
  ],
  "fields": [
@@ -483,6 +484,12 @@
    "fieldname": "internal_tab",
    "fieldtype": "Tab Break",
    "label": "Internal"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_test_invoice",
+   "fieldtype": "Check",
+   "label": "Is Test Invoice"
   },
   {
    "fieldname": "amended_from",
