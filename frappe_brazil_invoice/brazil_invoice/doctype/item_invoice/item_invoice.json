@@ -20,11 +20,17 @@
   "tax_section",
   "invoice_taxes",
   "icms_rate",
+  "icms_value",
   "ipi_rate",
+  "ipi_value",
+  "ii_rate",
+  "ii_value",
   "column_break_ptnc",
   "rate_taxes",
   "pis_rate",
-  "cofins_rate"
+  "pis_value",
+  "cofins_rate",
+  "cofins_value"
  ],
  "fields": [
   {
@@ -150,27 +156,63 @@
   },
   {
    "fieldname": "icms_rate",
-   "fieldtype": "Data",
-   "label": "ICMS",
-   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
+   "fieldtype": "Percent",
+   "label": "ICMS Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "icms_value",
+   "fieldtype": "Currency",
+   "label": "ICMS Value",
+   "read_only": 1
   },
   {
    "fieldname": "ipi_rate",
-   "fieldtype": "Data",
-   "label": "IPI",
-   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
+   "fieldtype": "Percent",
+   "label": "IPI Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "ipi_value",
+   "fieldtype": "Currency",
+   "label": "IPI Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ii_rate",
+   "fieldtype": "Percent",
+   "label": "II Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "ii_value",
+   "fieldtype": "Currency",
+   "label": "II Value",
+   "read_only": 1
   },
   {
    "fieldname": "pis_rate",
-   "fieldtype": "Data",
-   "label": "PIS",
-   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
+   "fieldtype": "Percent",
+   "label": "PIS Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "pis_value",
+   "fieldtype": "Currency",
+   "label": "PIS Value",
+   "read_only": 1
   },
   {
    "fieldname": "cofins_rate",
-   "fieldtype": "Data",
-   "label": "COFINS",
-   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
+   "fieldtype": "Percent",
+   "label": "COFINS Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "cofins_value",
+   "fieldtype": "Currency",
+   "label": "COFINS Value",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

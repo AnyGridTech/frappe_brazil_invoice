@@ -52,24 +52,112 @@ def _append_invoice_log(invoice_doc, log_type, message, details=None):
         invoice_doc.process_events = log_entry
 
 
-def calculate_taxes(invoice_doc, use_fallback=False):
+def calculate(
+        collection_id=None,
+        issuer=None,
+        recipient=None,
+        operation_type=None,
+        items=None,
+        is_product_registration=None,
+    ):
     """
-    Calculate ICMS and IPI using NFe.io Tax Calculation API
+    Calculate taxes using NFe.io Tax Calculation API
 
     Args:
-        invoice_doc: Invoice document instance
-        tax_template: Tax template document with calculation settings
-        nfeio_config: NFeIO document with API credentials (optional, will fetch if not provided)
-        use_fallback: Boolean to enable fallback to hardcoded rates if API fails (default: False)
+        collection_id: Identificador da Coleção de Produtos (optional)
+        issuer: Issuer information dict with taxRegime, taxProfile (optional), and state
+        recipient: Recipient information dict with taxRegime, taxProfile (optional), and state
+        operation_type: "Outgoing" (Saída) or "Incoming" (Entrada)
+        items: List of item dicts with required fields (sku, ncm, quantity, unitAmount, origin, etc.)
+        is_product_registration: Boolean indicating if this is for product registration (optional)
 
     API Reference:
         https://nfe.io/docs/desenvolvedores/rest-api/calculo-de-impostos-v1/calcula-os-impostos-de-uma-operacao/
 
-    The API calculates all taxes (ICMS, IPI, PIS, COFINS) based on:
-    - NCM code
-    - Origin and destination states
-    - Item values
-    - Operation type (CFOP)
+    Returns:
+        dict: API response with calculated tax values for each item
+    """
+    # Validate required parameters
+    if not issuer:
+        frappe.throw("Issuer information is required for tax calculation")
+    if not recipient:
+        frappe.throw("Recipient information is required for tax calculation")
+    if not operation_type:
+        frappe.throw("Operation type is required for tax calculation")
+    if operation_type not in ["Outgoing", "Incoming"]:
+        frappe.throw("Operation type must be either 'Outgoing' or 'Incoming'")
+    if not items or not isinstance(items, list) or len(items) == 0: 
+        frappe.throw("At least one item is required for tax calculation")
+
+    try:
+        # Fetch NFe.io configuration
+        nfeio_config = utils.get_nfeio_config()
+
+        # Build API payload
+        payload = {
+            "issuer": issuer,
+            "recipient": recipient,
+            "operationType": operation_type,
+            "items": items,
+        }
+
+        # Add optional fields
+        if collection_id is not None:
+            payload["collectionId"] = collection_id
+        if is_product_registration is not None:
+            payload["isProductRegistration"] = is_product_registration
+
+        # Call NFe.io Tax Calculation API
+        api_url = f"https://nfe.io/tax-rules/{nfeio_config.company_id}/engine/calculate"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": nfeio_config.api_token,
+        }
+
+        response = requests.post(
+            api_url,
+            json=payload,
+            headers=headers,
+            params={"apikey": nfeio_config.api_token},
+            timeout=30,
+        )
+
+        if response.status_code != 200:
+            error_msg = f"NFe.io API returned status {response.status_code}: {response.text[:500]}"
+            frappe.log_error(error_msg, "Tax Calculation API Error")
+            frappe.throw(f"Tax calculation failed: {error_msg}")
+
+        return response.json()
+
+    except requests.exceptions.Timeout:
+        error_msg = "NFe.io API request timed out after 30 seconds"
+        frappe.log_error(error_msg, "Tax Calculation Timeout")
+        frappe.throw(error_msg)
+    except requests.exceptions.ConnectionError:
+        error_msg = "Could not connect to NFe.io API"
+        frappe.log_error(error_msg, "Tax Calculation Connection Error")
+        frappe.throw(error_msg)
+    except Exception as e:
+        error_msg = f"Error calculating taxes with NFe.io: {str(e)}"
+        frappe.log_error(
+            f"{error_msg}\n{frappe.get_traceback()}",
+            "Tax Calculation Error",
+        )
+        frappe.throw(f"Error calculating taxes: {str(e)}")
+
+
+def calculate_taxes(invoice_doc):
+    """
+    Calculate taxes for an invoice document using NFe.io Tax Calculation API
+    
+    This is a wrapper function that prepares data from the invoice document
+    and calls the calculate() API function.
+    
+    Args:
+        invoice_doc: Invoice document instance
+        use_fallback: Boolean to enable fallback (deprecated, will be removed)
     """
     if not invoice_doc.invoice_items_table:
         frappe.throw("Invoice has no items to calculate taxes.")
@@ -136,126 +224,24 @@ def calculate_taxes(invoice_doc, use_fallback=False):
                     "Status": "Failed",
                 },
             )
-            if use_fallback:
-                _append_invoice_log(
-                    invoice_doc,
-                    "WARNING",
-                    "Using fallback tax calculation",
-                    "API call failed - using hardcoded rates",
-                )
-                calculate_taxes_fallback(invoice_doc, tax_template)
-            else:
-                frappe.throw(error_msg)
+            frappe.throw(error_msg)
 
-    except requests.exceptions.Timeout:
-        error_msg = "NFe.io API request timed out"
-        _append_invoice_log(
-            invoice_doc,
-            "ERROR",
-            error_msg,
-            {"Error Type": "Timeout", "Timeout Limit": "10 seconds"},
-        )
-        frappe.log_error(error_msg, "Tax Calculation Timeout")
-        if use_fallback:
-            _append_invoice_log(
-                invoice_doc,
-                "WARNING",
-                "Using fallback tax calculation",
-                "API timeout - using hardcoded rates",
-            )
-            calculate_taxes_fallback(invoice_doc, tax_template)
-        else:
-            frappe.throw("NFe.io API request timed out.")
-    except requests.exceptions.ConnectionError:
-        error_msg = "Could not connect to NFe.io API"
-        _append_invoice_log(
-            invoice_doc,
-            "ERROR",
-            error_msg,
-            {
-                "Error Type": "Connection Error",
-                "Network Status": "Unable to reach nfe.io",
-            },
-        )
-        frappe.log_error(error_msg, "Tax Calculation Connection Error")
-        if use_fallback:
-            _append_invoice_log(
-                invoice_doc,
-                "WARNING",
-                "Using fallback tax calculation",
-                "Connection failed - using hardcoded rates",
-            )
-            calculate_taxes_fallback(invoice_doc, tax_template)
-        else:
-            frappe.throw("Could not connect to NFe.io API.")
     except Exception as e:
         error_msg = f"Error calculating taxes with NFe.io: {str(e)}"
         _append_invoice_log(
             invoice_doc,
             "ERROR",
-            "Unexpected tax calculation error",
+            "Tax calculation error",
             {
                 "Error Type": type(e).__name__,
                 "Error Message": str(e),
-                "Traceback Available": "Check Error Log doctype for full details",
             },
         )
         frappe.log_error(
             f"{error_msg}\n{frappe.get_traceback()}",
             "Tax Calculation Error",
         )
-        if use_fallback:
-            _append_invoice_log(
-                invoice_doc,
-                "WARNING",
-                "Using fallback tax calculation",
-                "Exception occurred - using hardcoded rates",
-            )
-            calculate_taxes_fallback(invoice_doc, tax_template)
-        else:
-            frappe.throw(f"Error calculating taxes: {str(e)}")
-
-
-def calculate_taxes_fallback(invoice_doc, tax_template):
-    """
-    Fallback tax calculation using hardcoded rates when NFe.io API is unavailable
-
-    Args:
-        invoice_doc: Invoice document instance
-        tax_template: Tax template document with calculation settings
-
-    IPI Rates by NCM:
-    - 85044090 (INVERSOR): 9.75%
-    - 85049090 (INSUMOS): 6.50%
-    - 85437099 (SMART ENERGY): 6.50%
-    """
-    if not invoice_doc.invoice_items_table:
-        return
-
-    _append_invoice_log(
-        invoice_doc,
-        "INFO",
-        "Using fallback tax calculation",
-        {
-            "Method": "Hardcoded NCM-based rates",
-            "ICMS Rate": "12% (interstate) or 18% (intrastate)",
-            "IPI Rates": "NCM-specific (6.50% - 9.75%)",
-        },
-    )
-
-    # Determine if interstate operation
-    company_state = _get_company_state()
-    destination_state = invoice_doc.delivery_state or "SP"
-    is_interstate = company_state != destination_state
-
-    # Calculate ICMS
-    if tax_template.calculate_automatically_icms:
-        _calculate_icms_fallback(invoice_doc, tax_template, is_interstate)
-
-    # Calculate IPI
-    if tax_template.calculate_automatically_ipi:
-        _calculate_ipi_fallback(invoice_doc, tax_template)
-
+        frappe.throw(f"Error calculating taxes: {str(e)}")
 
 # Private helper functions
 
@@ -350,17 +336,17 @@ def _call_nfeio_api(api_key, company_id, payload, invoice_doc=None):
     api_url = f"https://nfe.io/tax-rules/{company_id}/engine/calculate"
 
     headers = {
-        "Authorization": api_key,  # NFe.io uses direct API key, not Bearer
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "Authorization": api_key,
     }
 
     response = requests.post(
         api_url,
         json=payload,
         headers=headers,
-        params={"apikey": api_key},  # API key can also be in query parameter
-        timeout=10,
+        params={"apikey": api_key},
+        timeout=30,
     )
 
     if response.status_code == 200:

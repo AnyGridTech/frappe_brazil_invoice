@@ -43,6 +43,7 @@
   "taxes_section",
   "icms_value",
   "ipi_value",
+  "ii_value",
   "column_break_taxes",
   "pis_value",
   "cofins_value",
@@ -262,6 +263,12 @@
    "fieldname": "ipi_value",
    "fieldtype": "Currency",
    "label": "IPI Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ii_value",
+   "fieldtype": "Currency",
+   "label": "II Value",
    "read_only": 1
   },
   {

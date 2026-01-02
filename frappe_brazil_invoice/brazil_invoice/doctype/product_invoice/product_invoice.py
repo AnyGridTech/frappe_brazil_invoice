@@ -8,85 +8,6 @@ import json
 from datetime import datetime
 from ..nfeio import tax as nfeio_tax
 
-
-def validate_cpf(cpf):
-    """
-    Validate Brazilian CPF (Cadastro de Pessoas Físicas)
-
-    Args:
-        cpf: CPF string (can contain dots and hyphens)
-
-    Returns:
-        bool: True if valid, False otherwise
-    """
-    # Remove non-digit characters
-    cpf = "".join(filter(str.isdigit, str(cpf)))
-
-    # CPF must have exactly 11 digits
-    if len(cpf) != 11:
-        return False
-
-    # Check if all digits are the same (invalid CPFs like 111.111.111-11)
-    if cpf == cpf[0] * 11:
-        return False
-
-    # Calculate first check digit
-    sum_digits = sum(int(cpf[i]) * (10 - i) for i in range(9))
-    first_digit = (sum_digits * 10 % 11) % 10
-
-    if int(cpf[9]) != first_digit:
-        return False
-
-    # Calculate second check digit
-    sum_digits = sum(int(cpf[i]) * (11 - i) for i in range(10))
-    second_digit = (sum_digits * 10 % 11) % 10
-
-    if int(cpf[10]) != second_digit:
-        return False
-
-    return True
-
-
-def validate_cnpj(cnpj):
-    """
-    Validate Brazilian CNPJ (Cadastro Nacional da Pessoa Jurídica)
-
-    Args:
-        cnpj: CNPJ string (can contain dots, slashes, and hyphens)
-
-    Returns:
-        bool: True if valid, False otherwise
-    """
-    # Remove non-digit characters
-    cnpj = "".join(filter(str.isdigit, str(cnpj)))
-
-    # CNPJ must have exactly 14 digits
-    if len(cnpj) != 14:
-        return False
-
-    # Check if all digits are the same (invalid CNPJs)
-    if cnpj == cnpj[0] * 14:
-        return False
-
-    # Calculate first check digit
-    weights_first = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-    sum_digits = sum(int(cnpj[i]) * weights_first[i] for i in range(12))
-    first_digit = 0 if sum_digits % 11 < 2 else 11 - (sum_digits % 11)
-
-    if int(cnpj[12]) != first_digit:
-        return False
-
-    # Calculate second check digit
-    weights_second = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-    sum_digits = sum(int(cnpj[i]) * weights_second[i] for i in range(13))
-    second_digit = 0 if sum_digits % 11 < 2 else 11 - (sum_digits % 11)
-
-    if int(cnpj[13]) != second_digit:
-        return False
-
-    return True
-
-
 class ProductInvoice(Document):
     def _handle_processing_error(self, error_type, error_message):
         """
@@ -573,60 +494,44 @@ class ProductInvoice(Document):
                 )
 
     def validate_tax_calculation(self):
-        """Validate that tax fields are calculated before transitioning to Processing status
+        """Validate that all items have tax values calculated before transitioning to Processing status
 
-        When an invoice moves to Processing status, it must have tax values calculated.
-        This validates that if the tax template requires automatic calculation for any tax,
-        the corresponding tax value field must be filled (non-zero or explicitly zero after calculation).
+        When an invoice moves to Processing status, all items must have their tax values filled.
+        This ensures complete tax information is available before issuing the NFe.
         """
-        if self.invoice_status == "Processing" and self.tax_template:
-            try:
-                tax_template = frappe.get_doc("Tax", self.tax_template)
+        if self.invoice_status != "Processing":
+            return
 
-                # Check which taxes require calculation
-                taxes_to_check = []
+        if not self.invoice_items_table or len(self.invoice_items_table) == 0:
+            return
 
-                if tax_template.calculate_automatically_icms:
-                    # ICMS should be calculated - check if value exists
-                    if not hasattr(self, "icms_value"):
-                        taxes_to_check.append("ICMS")
-                    # Value can be zero if calculated as zero, but must be set (not None)
-                    elif self.icms_value is None:
-                        taxes_to_check.append("ICMS")
-
-                if tax_template.calculate_automatically_ipi:
-                    if not hasattr(self, "ipi_value"):
-                        taxes_to_check.append("IPI")
-                    elif self.ipi_value is None:
-                        taxes_to_check.append("IPI")
-
-                if tax_template.calculate_automatically_pis:
-                    if not hasattr(self, "pis_value"):
-                        taxes_to_check.append("PIS")
-                    elif self.pis_value is None:
-                        taxes_to_check.append("PIS")
-
-                if tax_template.calculate_automatically_cofins:
-                    if not hasattr(self, "cofins_value"):
-                        taxes_to_check.append("COFINS")
-                    elif self.cofins_value is None:
-                        taxes_to_check.append("COFINS")
-
-                if taxes_to_check:
-                    frappe.throw(
-                        _(
-                            "Tax calculation is required before moving to Processing status. "
-                            "The following taxes need to be calculated: {0}. "
-                            "Please ensure the tax template calculations are completed."
-                        ).format(", ".join(taxes_to_check))
-                    )
-            except Exception as e:
-                # If tax template doesn't exist or other error, skip validation
-                if "does not exist" not in str(e):
-                    frappe.log_error(
-                        f"Error validating tax calculation: {str(e)}",
-                        "Tax Validation Error",
-                    )
+        # Required tax value fields for all items
+        required_tax_fields = ["icms_value", "ipi_value", "ii_value", "pis_value", "cofins_value"]
+        
+        items_without_taxes = []
+        
+        for idx, item in enumerate(self.invoice_items_table, 1):
+            missing_fields = []
+            
+            for field in required_tax_fields:
+                value = getattr(item, field, None)
+                # Value must be set (can be 0, but not None)
+                if value is None:
+                    missing_fields.append(field.replace("_", " ").upper())
+            
+            if missing_fields:
+                items_without_taxes.append(
+                    f"Row {idx} ({item.item_code or item.item_name}): {', '.join(missing_fields)}"
+                )
+        
+        if items_without_taxes:
+            error_message = _(
+                "All items must have tax values calculated before moving to Processing status.\n\n"
+                "The following items are missing tax calculations:\n{0}\n\n"
+                "Please ensure tax calculations are completed for all items."
+            ).format("\n".join(items_without_taxes))
+            
+            frappe.throw(error_message)
 
     def validate_return_invoice_fields(self):
         """Validate that reference fields are filled when is_return_invoice is checked
@@ -792,6 +697,7 @@ class ProductInvoice(Document):
         self.total_of_taxes = (
             flt(self.icms_value or 0)
             + flt(self.ipi_value or 0)
+            + flt(self.ii_value or 0)
             + flt(self.pis_value or 0)
             + flt(self.cofins_value or 0)
             + flt(self.difal_value or 0)
@@ -802,7 +708,7 @@ class ProductInvoice(Document):
 
     def calculate_taxes_from_template(self):
         """Calculate tax values from template - either from template values or automatically
-        The document must be in Draft or Created status to perform calculations.
+        The document must be in Non Processed status to perform calculations.
         This method:
         1. Gets tax template if selected
         2. For each tax (ICMS, IPI, PIS, COFINS):
@@ -815,7 +721,7 @@ class ProductInvoice(Document):
         if not self.tax_template:
             return
 
-        status_allowed = ["Draft", "Non Processed", "Processing"]
+        status_allowed = ["Non Processed"]
         if self.invoice_status not in status_allowed:
             return
 
@@ -842,15 +748,7 @@ class ProductInvoice(Document):
             try:
                 nfeio_tax.calculate_taxes(self)
             except Exception as e:
-                # If error occurs during Processing, change status to Processing Error
-                if self.invoice_status == "Processing":
-                    self._handle_processing_error(
-                        "Tax Calculation Error", f"NFe.io API call failed: {str(e)}"
-                    )
-                    return
-                else:
-                    # Re-raise the exception for other statuses
-                    raise
+                raise e  # Let the calling method handle the exception
 
         # Calculate base for manual tax calculations (total product value)
         base_value = (
@@ -887,22 +785,292 @@ class ProductInvoice(Document):
             self.difal_value = 0.0
 
     def calculate_automatic_taxes(self):
-        """Calculate ICMS and IPI automatically based on tax template using NFe.io API"""
+        """Calculate taxes automatically for Non Processed status with smart change detection"""
+        # Only calculate for Non Processed status
+        if self.invoice_status != "Non Processed":
+            return
+
+        # Must have tax template selected
         if not self.tax_template:
             return
 
-        # Get the tax template document
-        try:
-            tax_template = frappe.get_doc("Tax", self.tax_template)
-        except Exception:
+        # Must have items
+        if not self.invoice_items_table or len(self.invoice_items_table) == 0:
             return
 
-        # Calculate taxes using NFe.io API if either ICMS or IPI needs calculation
-        if (
-            tax_template.calculate_automatically_icms
-            or tax_template.calculate_automatically_ipi
-        ):
-            nfeio_tax.calculate_taxes(self)
+        # Check if tax calculation is needed using smart change detection
+        if not self._should_recalculate_taxes():
+            return
+
+        try:
+            # Import nfeio module to call the API endpoint
+            from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
+
+            # Build API payload
+            payload = self._build_tax_calculation_payload()
+
+            # Call the tax calculation API
+            result = nfeio.calculate_product_invoice_taxes(
+                issuer=payload["issuer"],
+                recipient=payload["recipient"],
+                operation_type=payload["operationType"],
+                items=payload["items"],
+                collection_id=payload.get("collectionId"),
+                is_product_registration=payload.get("isProductRegistration")
+            )
+
+            if result and result.get("success") and result.get("data"):
+                # Update items with calculated taxes
+                self._apply_calculated_taxes_to_items(result["data"])
+                
+                # Calculate and set invoice-level total taxes from items
+                self._calculate_invoice_total_taxes()
+                
+                # Store hash to prevent recalculation on next save
+                self._store_tax_calculation_hash()
+                
+                # Log success
+                self._append_tax_log("INFO", "Automatic tax calculation completed", {
+                    "Items Calculated": len(result["data"].get("items", [])),
+                    "Trigger": "Auto-calculation on save"
+                })
+            else:
+                error_msg = result.get("error", "Unknown error") if result else "No response"
+                raise Exception(f"Tax calculation failed: {error_msg}")
+
+        except Exception as e:
+            # Log error but don't block save
+            self._append_tax_log("ERROR", "Automatic tax calculation failed", {
+                "Error": str(e),
+                "Note": "Invoice saved without tax calculation"
+            })
+            frappe.log_error(
+                f"Auto tax calculation error for {self.name}: {str(e)}\n{frappe.get_traceback()}",
+                "Auto Tax Calculation Error"
+            )
+
+    def _should_recalculate_taxes(self):
+        """
+        Smart change detection to determine if tax recalculation is needed
+        
+        Returns True if:
+        - Tax template changed
+        - Items were added, removed, or modified (quantity, rate, ncm, etc.)
+        - No previous calculation hash exists
+        """
+        # Calculate current hash of relevant data
+        current_hash = self._calculate_tax_data_hash()
+
+        # Get stored hash from previous calculation
+        stored_hash = self.get("_tax_calculation_hash")
+
+        # If no stored hash, this is first calculation
+        if not stored_hash:
+            return True
+
+        # If hashes differ, data changed
+        return current_hash != stored_hash
+
+    def _calculate_tax_data_hash(self):
+        """Calculate hash of data that affects tax calculation"""
+        import hashlib
+        import json
+
+        # Collect relevant data for hash
+        hash_data = {
+            "tax_template": self.tax_template or "",
+            "operation_type": self.operation_type or "",
+            "delivery_state": self.delivery_state or "",
+            "items": []
+        }
+
+        # Add item data
+        for item in (self.invoice_items_table or []):
+            item_data = {
+                "name": item.name,  # Row ID
+                "item_code": item.item_code or "",
+                "ncm": item.ncm or "",
+                "quantity": float(item.quantity or 0),
+                "rate": float(item.rate or 0),
+                "amount": float(item.amount or 0)
+            }
+            hash_data["items"].append(item_data)
+
+        # Create hash from JSON string
+        json_str = json.dumps(hash_data, sort_keys=True)
+        return hashlib.md5(json_str.encode()).hexdigest()
+
+    def _store_tax_calculation_hash(self):
+        """Store hash of current tax data to detect future changes"""
+        self._tax_calculation_hash = self._calculate_tax_data_hash()
+
+    def _build_tax_calculation_payload(self):
+        """Build payload for NFe.io tax calculation API"""
+        # Determine tax regime (simplified - may need adjustment)
+        tax_regime = "NationalSimple"  # Options: NationalSimple, RealProfit, PresumedProfit
+
+        # Get company state (issuer)
+        company_state = "SP"  # TODO: Get from company settings
+
+        # Get destination state (recipient)
+        destination_state = self.delivery_state or "SP"
+
+        # Build items array
+        items = []
+        for item in self.invoice_items_table:
+            # Clean NCM (remove dots and dashes)
+            ncm = (item.ncm or "").replace(".", "").replace("-", "").strip()
+            
+            if not ncm:
+                continue  # Skip items without NCM
+
+            item_payload = {
+                "id": item.name,  # Use row ID as unique identifier
+                "sku": item.item_code or "",
+                "ncm": ncm,
+                "quantity": float(item.quantity or 1),
+                "unitAmount": float(item.rate or 0),
+                "origin": "National"  # Default origin
+            }
+
+            items.append(item_payload)
+
+        # Build full payload
+        payload = {
+            "issuer": {
+                "taxRegime": tax_regime,
+                "state": company_state
+            },
+            "recipient": {
+                "taxRegime": tax_regime,
+                "state": destination_state
+            },
+            "operationType": "Outgoing",  # Saída (can be adjusted based on operation_type)
+            "items": items,
+            "isProductRegistration": False
+        }
+
+        return payload
+
+    def _apply_calculated_taxes_to_items(self, api_response):
+        """Apply calculated taxes from API response to invoice items"""
+        if not api_response or "items" not in api_response:
+            return
+
+        # Create mapping of item ID to calculated taxes
+        calculated_taxes = {}
+        for api_item in api_response["items"]:
+            item_id = api_item.get("id")
+            if item_id:
+                calculated_taxes[item_id] = api_item
+
+        # Update invoice items with calculated tax rates and values
+        for item in self.invoice_items_table:
+            if item.name in calculated_taxes:
+                api_item = calculated_taxes[item.name]
+                
+                # Extract tax data from API response
+                icms_data = api_item.get("icms", {})
+                ipi_data = api_item.get("ipi", {})
+                ii_data = api_item.get("ii", {})
+                pis_data = api_item.get("pis", {})
+                cofins_data = api_item.get("cofins", {})
+
+                # Get item amount for calculating tax values
+                item_amount = float(item.amount or 0)
+
+                # Update item with tax rates and calculate values
+                # ICMS
+                if icms_data.get("pICMS"):
+                    rate = float(icms_data.get("pICMS"))
+                    item.icms_rate = rate
+                    item.icms_value = (item_amount * rate) / 100
+
+                # IPI  
+                if ipi_data.get("pIPI"):
+                    rate = float(ipi_data.get("pIPI"))
+                    item.ipi_rate = rate
+                    item.ipi_value = (item_amount * rate) / 100
+
+                # II (Imposto de Importação)
+                if ii_data.get("pII"):
+                    rate = float(ii_data.get("pII"))
+                    item.ii_rate = rate
+                    item.ii_value = (item_amount * rate) / 100
+                elif ii_data.get("vII"):
+                    # If API returns value directly, use it and calculate rate
+                    ii_value = float(ii_data.get("vII"))
+                    item.ii_value = ii_value
+                    if item_amount > 0:
+                        item.ii_rate = (ii_value / item_amount) * 100
+
+                # PIS
+                if pis_data.get("pPIS"):
+                    rate = float(pis_data.get("pPIS"))
+                    item.pis_rate = rate
+                    item.pis_value = (item_amount * rate) / 100
+
+                # COFINS
+                if cofins_data.get("pCOFINS"):
+                    rate = float(cofins_data.get("pCOFINS"))
+                    item.cofins_rate = rate
+                    item.cofins_value = (item_amount * rate) / 100
+
+    def _calculate_invoice_total_taxes(self):
+        """Calculate and set invoice-level total tax values from all items
+        
+        Sums up all item-level tax values and sets them on the invoice:
+        - icms_value: Sum of all item ICMS values
+        - ipi_value: Sum of all item IPI values  
+        - ii_value: Sum of all item II values
+        - pis_value: Sum of all item PIS values
+        - cofins_value: Sum of all item COFINS values
+        """
+        from frappe.utils import flt
+        
+        # Initialize totals
+        total_icms = 0
+        total_ipi = 0
+        total_ii = 0
+        total_pis = 0
+        total_cofins = 0
+        
+        # Sum up all item tax values
+        for item in (self.invoice_items_table or []):
+            total_icms += flt(getattr(item, "icms_value", 0))
+            total_ipi += flt(getattr(item, "ipi_value", 0))
+            total_ii += flt(getattr(item, "ii_value", 0))
+            total_pis += flt(getattr(item, "pis_value", 0))
+            total_cofins += flt(getattr(item, "cofins_value", 0))
+        
+        # Set invoice-level tax totals
+        self.icms_value = total_icms
+        self.ipi_value = total_ipi
+        self.ii_value = total_ii
+        self.pis_value = total_pis
+        self.cofins_value = total_cofins
+
+    def _append_tax_log(self, log_type, message, details=None):
+        """Append a formatted log entry to process_events"""
+        from datetime import datetime
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] [{log_type}] {message}"
+
+        if details:
+            if isinstance(details, dict):
+                detail_lines = []
+                for key, value in details.items():
+                    detail_lines.append(f"  • {key}: {value}")
+                log_entry += "\n" + "\n".join(detail_lines)
+            else:
+                log_entry += f"\n  {details}"
+
+        # Append to existing logs
+        if self.process_events:
+            self.process_events = self.process_events + "\n\n" + log_entry
+        else:
+            self.process_events = log_entry
 
     def on_update(self):
         frappe.log_error(f"Invoice document updated: {self.name}")
@@ -920,6 +1088,9 @@ class ProductInvoice(Document):
         # Chama o endpoint ou funcao da logistica (proxima etapa)
         frappe.log_error(f"Invoice document submitted: {self.name}")
 
+# =============================================
+# API Endpoints
+# =============================================
 
 @frappe.whitelist()
 def move_to_processing(invoice_name):
@@ -1028,7 +1199,6 @@ def move_to_processing(invoice_name):
         frappe.log_error(frappe.get_traceback(), "NFe Invoice Creation Error")
         frappe.throw(f"An error occurred: {str(e)}")
 
-
 @frappe.whitelist()
 def move_to_issued(
     invoice_name,
@@ -1103,7 +1273,6 @@ def move_to_issued(
         frappe.log_error(frappe.get_traceback(), "Move to Issued Error")
         frappe.throw(f"Failed to move invoice to Issued status: {str(e)}")
 
-
 @frappe.whitelist()
 def move_to_tax_calculation_error(invoice_name, error_message=None):
     """
@@ -1160,7 +1329,6 @@ def move_to_tax_calculation_error(invoice_name, error_message=None):
         frappe.throw(
             f"Failed to move invoice to Tax Calculation Error status: {str(e)}"
         )
-
 
 @frappe.whitelist()
 def move_to_processing_error(invoice_name, error_message=None):
@@ -1226,7 +1394,6 @@ def move_to_processing_error(invoice_name, error_message=None):
         frappe.log_error(frappe.get_traceback(), "Move to Processing Error")
         frappe.throw(f"Failed to move invoice to Processing Error status: {str(e)}")
 
-
 @frappe.whitelist()
 def move_to_contingency(invoice_name):
     """
@@ -1266,7 +1433,6 @@ def move_to_contingency(invoice_name):
         frappe.db.rollback()
         frappe.log_error(frappe.get_traceback(), "Move to Contingency Error")
         frappe.throw(f"Failed to move invoice to Contingency status: {str(e)}")
-
 
 @frappe.whitelist()
 def move_to_rejected(invoice_name, rejection_reason=None):
@@ -1320,7 +1486,6 @@ def move_to_rejected(invoice_name, rejection_reason=None):
         frappe.db.rollback()
         frappe.log_error(frappe.get_traceback(), "Move to Rejected Error")
         frappe.throw(f"Failed to move invoice to Rejected status: {str(e)}")
-
 
 @frappe.whitelist()
 def move_to_cancelled(invoice_name, cancellation_reason=None):
@@ -1377,7 +1542,6 @@ def move_to_cancelled(invoice_name, cancellation_reason=None):
         frappe.log_error(frappe.get_traceback(), "Move to Cancelled Error")
         frappe.throw(f"Failed to move invoice to Cancelled status: {str(e)}")
 
-
 @frappe.whitelist()
 def move_to_unused(invoice_name):
     """
@@ -1418,7 +1582,6 @@ def move_to_unused(invoice_name):
         frappe.log_error(frappe.get_traceback(), "Move to Unused Error")
         frappe.throw(f"Failed to move invoice to Unused status: {str(e)}")
 
-
 @frappe.whitelist()
 def get_invoice_status(invoice_name):
     """
@@ -1456,257 +1619,6 @@ def get_invoice_status(invoice_name):
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "NFe Status Check Error")
         return {"success": False, "message": str(e)}
-
-
-def _build_invoice_data_from_doc(invoice_doc):
-    """
-    Build invoice data dictionary from Product Invoice document for NFe.io API
-
-    Args:
-        invoice_doc: Product Invoice document
-
-    Returns:
-        dict: Invoice data formatted for NFe.io API
-    """
-    # Map client type to NFe.io format
-    client_type_map = {
-        "Individual": 0,  # Pessoa Física
-        "Company": 1,  # Pessoa Jurídica
-    }
-
-    # Map ICMS contributor to stateTaxNumberIndicator
-    # "Taxpayer" -> "TaxPayer", "NonTaxpayer" -> "NonTaxPayer"
-    state_tax_indicator_map = {
-        "Taxpayer": "TaxPayer",
-        "NonTaxpayer": "NonTaxPayer",
-        "Exempt": "Exempt",
-    }
-
-    if invoice_doc.client_type not in client_type_map:
-        frappe.throw(
-            f"Invalid client type '{invoice_doc.client_type}' for invoice {invoice_doc.name}"
-        )
-    
-    if invoice_doc.icms_taxpayer and invoice_doc.icms_taxpayer not in state_tax_indicator_map:
-        frappe.throw(
-            f"Invalid ICMS taxpayer status '{invoice_doc.icms_taxpayer}' for invoice {invoice_doc.name}"
-        )
-
-    # Build buyer information
-    buyer = {
-        "name": invoice_doc.client_name,
-        "federalTaxNumber": int(
-            "".join(filter(str.isdigit, str(invoice_doc.client_id_number)))
-        ),
-        "type": client_type_map.get(invoice_doc.client_type, 1),
-        "address": {
-            "state": invoice_doc.delivery_state,
-            "city": {
-                "code": invoice_doc.delivery_ibge,
-                "name": invoice_doc.city,
-            },
-            "district": invoice_doc.delivery_neighborhood,
-            "street": invoice_doc.delivery_address,
-            "number": invoice_doc.delivery_number_address,
-            "postalCode": "".join(filter(str.isdigit, str(invoice_doc.delivery_cep))),
-            "country": "Brasil",
-            "additionalInformation": invoice_doc.delivery_complement,
-        },
-    }
-
-    # Add stateTaxNumberIndicator based on ICMS taxpayer status
-    if invoice_doc.icms_taxpayer:
-        buyer["stateTaxNumberIndicator"] = state_tax_indicator_map.get(invoice_doc.icms_taxpayer)
-        buyer["stateTaxNumber"] = "".join(filter(str.isdigit, str(invoice_doc.state_registration or "")))      
-
-    # Build items list
-    cfop = None
-    if invoice_doc.tax_template:
-        tax_doc = None
-        nfeio_config = None
-        try:
-            tax_doc = frappe.get_doc("Tax", invoice_doc.tax_template)
-        except Exception:
-            frappe.throw(
-                f"Failed to fetch tax template '{invoice_doc.tax_template}' for invoice {invoice_doc.name}"
-            )
-        try:
-            nfeio_configs = frappe.get_all(
-                "NFeIO",
-                fields=["name", "company_state"],
-                filters={"is_test_config": invoice_doc.is_test_invoice},
-                order_by="usage_priority DESC",
-                limit=1
-            )
-            if not nfeio_configs or len(nfeio_configs) == 0:
-                frappe.throw(
-                    f"No NFe.io configuration appears to be set at NFeIO doctype (with is_test_config={invoice_doc.is_test_invoice}) to issue invoice {invoice_doc.name}"
-                )
-            nfeio_config = nfeio_configs[0]
-        except Exception:
-            frappe.throw(
-                f"Failed to fetch NFe.io configuration for invoice {invoice_doc.name}"
-            )
-        
-        # Validate NFe.io config has company_state
-        if not nfeio_config.get("company_state"):
-            frappe.throw(
-                f"NFe.io configuration '{nfeio_config.get('name')}' is missing company_state field. "
-                f"Please update the NFeIO configuration to include the company state for CFOP calculation."
-            )
-        
-        # Validate tax template has CFOP fields
-        if not hasattr(tax_doc, 'cfop_intrastate') or tax_doc.cfop_intrastate is None:
-            frappe.throw(
-                f"Tax template '{invoice_doc.tax_template}' is missing cfop_intrastate field. "
-                f"Please update the tax template to include CFOP values for intrastate operations."
-            )
-        
-        if not hasattr(tax_doc, 'cfop_interstate') or tax_doc.cfop_interstate is None:
-            frappe.throw(
-                f"Tax template '{invoice_doc.tax_template}' is missing cfop_interstate field. "
-                f"Please update the tax template to include CFOP values for interstate operations."
-            )
-        
-        # Compare company state with delivery state to determine intrastate vs interstate
-        if nfeio_config.get("company_state") == invoice_doc.delivery_state:
-            cfop = tax_doc.cfop_intrastate
-        else:
-            cfop = tax_doc.cfop_interstate
-
-        
-    items = []
-    for item in invoice_doc.invoice_items_table:
-        # Format NCM: remove dots/periods and any other formatting characters
-        # NFe.io expects NCM without formatting (8 digits max)
-        item.ncm = "".join(filter(str.isdigit, str(item.ncm or "")))
-        calculated_cfop = cfop or item.cfop
-        if not calculated_cfop:
-            frappe.throw(
-                f"CFOP not defined for item '{item.item_code}' in invoice {invoice_doc.name}. Please, either: 1. set CFOP in the item or 2. ensure tax template has CFOP configured."
-            )
-        item_data = {
-            "code": item.item_code,
-            "description": item.description,
-            "ncm": item.ncm,  # NCM without dots/formatting
-            "cfop": calculated_cfop,  # From item or fallback
-            "unit": item.unit,  # From item field
-            "quantity": float(item.quantity),
-            "unitAmount": float(item.rate),
-            "totalAmount": float(item.amount),
-        }
-
-        # Add tax information if available
-        # This would need to be enhanced based on tax template
-        item_data["tax"] = {
-            "icms": {
-                "origin": "0",
-                "cst": "00",
-                "baseTax": float(item.amount),
-                "rate": 18.0,
-                "amount": float(item.amount) * 0.18,
-            },
-            "pis": {
-                "cst": "01",
-                "baseTax": float(item.amount),
-                "rate": 1.65,
-                "amount": float(item.amount) * 0.0165,
-            },
-            "cofins": {
-                "cst": "01",
-                "baseTax": float(item.amount),
-                "rate": 7.6,
-                "amount": float(item.amount) * 0.076,
-            },
-        }
-
-        items.append(item_data)
-
-    # Calculate totals
-    total_items = sum(float(item.amount) for item in invoice_doc.invoice_items_table)
-
-    # Map operation_type to NFe.io format
-    operation_type_value = "Outgoing"  # Default
-    if invoice_doc.operation_type:
-        if invoice_doc.operation_type == "Incoming":
-            operation_type_value = "Incoming"
-        elif invoice_doc.operation_type == "Outgoing":
-            operation_type_value = "Outgoing"
-
-    invoice_data = {
-        "operationNature": invoice_doc.operation_nature,
-        "operationType": operation_type_value,
-        "consumerType": "FinalConsumer",
-        "body": invoice_doc.additional_information,
-        "buyer": buyer,
-        "items": items,
-        "totals": {
-            "icms": {
-                "baseTax": total_items,
-                "icmsAmount": float(invoice_doc.icms_value or 0),
-                "productAmount": total_items,
-                "pisAmount": float(invoice_doc.pis_value or 0),
-                "cofinsAmount": float(invoice_doc.cofins_value or 0),
-                "invoiceAmount": float(invoice_doc.total or total_items),
-            }
-        },
-    }
-
-    return invoice_data
-
-
-def _update_invoice_from_nfeio_response(invoice_doc, nfeio_response):
-    """
-    Update Product Invoice document with data from NFe.io response
-
-    Args:
-        invoice_doc: Product Invoice document
-        nfeio_response: Response from NFe.io API
-    """
-    try:
-        # Update status based on NFe.io status
-        nfeio_status = nfeio_response.get("status")
-        status_map = {
-            "Issued": "Issued",
-            "Processing": "Processing",
-            "Error": "Processing Error",
-            "Rejected": "Rejected",
-        }
-
-        if nfeio_status in status_map:
-            invoice_doc.invoice_status = status_map[nfeio_status]
-
-        # Update invoice fields from NFe.io response
-        if nfeio_response.get("serie"):
-            invoice_doc.invoice_serie = str(nfeio_response.get("serie"))
-        if nfeio_response.get("number"):
-            invoice_doc.invoice_number = str(nfeio_response.get("number"))
-        if nfeio_response.get("authorization", {}).get("accessKey"):
-            invoice_doc.invoice_access_key = nfeio_response["authorization"][
-                "accessKey"
-            ]
-
-        # Reference fields for return invoices
-        if nfeio_response.get("serie"):
-            invoice_doc.invoice_ref_series = str(nfeio_response.get("serie"))
-        if nfeio_response.get("number"):
-            invoice_doc.invoice_ref_number = str(nfeio_response.get("number"))
-        if nfeio_response.get("authorization", {}).get("accessKey"):
-            invoice_doc.invoice_ref_access_key = nfeio_response["authorization"][
-                "accessKey"
-            ]
-
-        # Set flags to allow modifications during Processing status
-        invoice_doc.flags.ignore_processing_lock = True
-        invoice_doc.save()
-        frappe.db.commit()
-
-    except Exception as e:
-        frappe.log_error(
-            f"Error updating invoice from NFe.io response: {str(e)}\n{frappe.get_traceback()}",
-            "Invoice Update Error",
-        )
-
 
 @frappe.whitelist(allow_guest=False)
 def create_invoice(
@@ -1976,7 +1888,6 @@ def create_invoice(
             "docname": None,
         }
 
-
 @frappe.whitelist(allow_guest=False)
 def get_invoice_details(docname):
     """
@@ -2033,7 +1944,6 @@ def get_invoice_details(docname):
             "message": f"An error occurred: {str(e)}",
             "invoice": None,
         }
-
 
 @frappe.whitelist(allow_guest=False)
 def bulk_create_invoices(invoices_data):
@@ -2123,7 +2033,6 @@ def bulk_create_invoices(invoices_data):
             "created_invoices": [],
             "failed_invoices": [],
         }
-
 
 @frappe.whitelist(allow_guest=False)
 def bulk_process_invoices(invoice_names):
@@ -2219,26 +2128,333 @@ def bulk_process_invoices(invoice_names):
         }
 
 
-@frappe.whitelist()
-def get_tax_template_query(doctype, txt, searchfield, start, page_len, filters):
-    """
-    Custom query for tax_template field - only show templates
-    Returns tax records where is_template = 1 and displays template_name
-    """
-    return frappe.db.sql(
-        """
-		SELECT name, template_name
-		FROM `tabTax`
-		WHERE is_template = 1
-			AND (name LIKE %(txt)s OR template_name LIKE %(txt)s)
-		ORDER BY
-			CASE WHEN name LIKE %(txt)s THEN 0 ELSE 1 END,
-			template_name
-		LIMIT %(start)s, %(page_len)s
-	""",
-        {"txt": "%" + txt + "%", "start": start, "page_len": page_len},
-    )
+# =================================================
+# Helper functions
+# =================================================
 
+def validate_cpf(cpf):
+    """
+    Validate Brazilian CPF (Cadastro de Pessoas Físicas)
+
+    Args:
+        cpf: CPF string (can contain dots and hyphens)
+
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    # Remove non-digit characters
+    cpf = "".join(filter(str.isdigit, str(cpf)))
+
+    # CPF must have exactly 11 digits
+    if len(cpf) != 11:
+        return False
+
+    # Check if all digits are the same (invalid CPFs like 111.111.111-11)
+    if cpf == cpf[0] * 11:
+        return False
+
+    # Calculate first check digit
+    sum_digits = sum(int(cpf[i]) * (10 - i) for i in range(9))
+    first_digit = (sum_digits * 10 % 11) % 10
+
+    if int(cpf[9]) != first_digit:
+        return False
+
+    # Calculate second check digit
+    sum_digits = sum(int(cpf[i]) * (11 - i) for i in range(10))
+    second_digit = (sum_digits * 10 % 11) % 10
+
+    if int(cpf[10]) != second_digit:
+        return False
+
+    return True
+
+def validate_cnpj(cnpj):
+    """
+    Validate Brazilian CNPJ (Cadastro Nacional da Pessoa Jurídica)
+
+    Args:
+        cnpj: CNPJ string (can contain dots, slashes, and hyphens)
+
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    # Remove non-digit characters
+    cnpj = "".join(filter(str.isdigit, str(cnpj)))
+
+    # CNPJ must have exactly 14 digits
+    if len(cnpj) != 14:
+        return False
+
+    # Check if all digits are the same (invalid CNPJs)
+    if cnpj == cnpj[0] * 14:
+        return False
+
+    # Calculate first check digit
+    weights_first = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    sum_digits = sum(int(cnpj[i]) * weights_first[i] for i in range(12))
+    first_digit = 0 if sum_digits % 11 < 2 else 11 - (sum_digits % 11)
+
+    if int(cnpj[12]) != first_digit:
+        return False
+
+    # Calculate second check digit
+    weights_second = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    sum_digits = sum(int(cnpj[i]) * weights_second[i] for i in range(13))
+    second_digit = 0 if sum_digits % 11 < 2 else 11 - (sum_digits % 11)
+
+    if int(cnpj[13]) != second_digit:
+        return False
+
+    return True
+
+def _build_invoice_data_from_doc(invoice_doc):
+    """
+    Build invoice data dictionary from Product Invoice document for NFe.io API
+
+    Args:
+        invoice_doc: Product Invoice document
+
+    Returns:
+        dict: Invoice data formatted for NFe.io API
+    """
+    # Map client type to NFe.io format
+    client_type_map = {
+        "Individual": 0,  # Pessoa Física
+        "Company": 1,  # Pessoa Jurídica
+    }
+
+    # Map ICMS contributor to stateTaxNumberIndicator
+    # "Taxpayer" -> "TaxPayer", "NonTaxpayer" -> "NonTaxPayer"
+    state_tax_indicator_map = {
+        "Taxpayer": "TaxPayer",
+        "NonTaxpayer": "NonTaxPayer",
+        "Exempt": "Exempt",
+    }
+
+    if invoice_doc.client_type not in client_type_map:
+        frappe.throw(
+            f"Invalid client type '{invoice_doc.client_type}' for invoice {invoice_doc.name}"
+        )
+    
+    if invoice_doc.icms_taxpayer and invoice_doc.icms_taxpayer not in state_tax_indicator_map:
+        frappe.throw(
+            f"Invalid ICMS taxpayer status '{invoice_doc.icms_taxpayer}' for invoice {invoice_doc.name}"
+        )
+
+    # Build buyer information
+    buyer = {
+        "name": invoice_doc.client_name,
+        "federalTaxNumber": int(
+            "".join(filter(str.isdigit, str(invoice_doc.client_id_number)))
+        ),
+        "type": client_type_map.get(invoice_doc.client_type, 1),
+        "address": {
+            "state": invoice_doc.delivery_state,
+            "city": {
+                "code": invoice_doc.delivery_ibge,
+                "name": invoice_doc.city,
+            },
+            "district": invoice_doc.delivery_neighborhood,
+            "street": invoice_doc.delivery_address,
+            "number": invoice_doc.delivery_number_address,
+            "postalCode": "".join(filter(str.isdigit, str(invoice_doc.delivery_cep))),
+            "country": "Brasil",
+            "additionalInformation": invoice_doc.delivery_complement,
+        },
+    }
+
+    # Add stateTaxNumberIndicator based on ICMS taxpayer status
+    if invoice_doc.icms_taxpayer:
+        buyer["stateTaxNumberIndicator"] = state_tax_indicator_map.get(invoice_doc.icms_taxpayer)
+        buyer["stateTaxNumber"] = "".join(filter(str.isdigit, str(invoice_doc.state_registration or "")))      
+
+    # Build items list
+    cfop = None
+    if invoice_doc.tax_template:
+        tax_doc = None
+        nfeio_config = None
+        try:
+            tax_doc = frappe.get_doc("Tax", invoice_doc.tax_template)
+        except Exception:
+            frappe.throw(
+                f"Failed to fetch tax template '{invoice_doc.tax_template}' for invoice {invoice_doc.name}"
+            )
+        try:
+            nfeio_configs = frappe.get_all(
+                "NFeIO",
+                fields=["name", "company_state"],
+                filters={"is_test_config": invoice_doc.is_test_invoice},
+                order_by="usage_priority DESC",
+                limit=1
+            )
+            if not nfeio_configs or len(nfeio_configs) == 0:
+                frappe.throw(
+                    f"No NFe.io configuration appears to be set at NFeIO doctype (with is_test_config={invoice_doc.is_test_invoice}) to issue invoice {invoice_doc.name}"
+                )
+            nfeio_config = nfeio_configs[0]
+        except Exception:
+            frappe.throw(
+                f"Failed to fetch NFe.io configuration for invoice {invoice_doc.name}"
+            )
+        
+        # Validate NFe.io config has company_state
+        if not nfeio_config.get("company_state"):
+            frappe.throw(
+                f"NFe.io configuration '{nfeio_config.get('name')}' is missing company_state field. "
+                f"Please update the NFeIO configuration to include the company state for CFOP calculation."
+            )
+        
+        # Validate tax template has CFOP fields
+        if not hasattr(tax_doc, 'cfop_intrastate') or tax_doc.cfop_intrastate is None:
+            frappe.throw(
+                f"Tax template '{invoice_doc.tax_template}' is missing cfop_intrastate field. "
+                f"Please update the tax template to include CFOP values for intrastate operations."
+            )
+        
+        if not hasattr(tax_doc, 'cfop_interstate') or tax_doc.cfop_interstate is None:
+            frappe.throw(
+                f"Tax template '{invoice_doc.tax_template}' is missing cfop_interstate field. "
+                f"Please update the tax template to include CFOP values for interstate operations."
+            )
+        
+        # Compare company state with delivery state to determine intrastate vs interstate
+        if nfeio_config.get("company_state") == invoice_doc.delivery_state:
+            cfop = tax_doc.cfop_intrastate
+        else:
+            cfop = tax_doc.cfop_interstate
+
+        
+    items = []
+    for item in invoice_doc.invoice_items_table:
+        # Format NCM: remove dots/periods and any other formatting characters
+        # NFe.io expects NCM without formatting (8 digits max)
+        item.ncm = "".join(filter(str.isdigit, str(item.ncm or "")))
+        calculated_cfop = cfop or item.cfop
+        if not calculated_cfop:
+            frappe.throw(
+                f"CFOP not defined for item '{item.item_code}' in invoice {invoice_doc.name}. Please, either: 1. set CFOP in the item or 2. ensure tax template has CFOP configured."
+            )
+        item_data = {
+            "code": item.item_code,
+            "description": item.description,
+            "ncm": item.ncm,  # NCM without dots/formatting
+            "cfop": calculated_cfop,  # From item or fallback
+            "unit": item.unit,  # From item field
+            "quantity": float(item.quantity),
+            "unitAmount": float(item.rate),
+            "totalAmount": float(item.amount),
+        }
+
+        # Add tax information if available
+        # This would need to be enhanced based on tax template
+        item_data["tax"] = {
+            "icms": {
+                "origin": "0",
+                "cst": "00",
+                "baseTax": float(item.amount),
+                "rate": 18.0,
+                "amount": float(item.amount) * 0.18,
+            },
+            "pis": {
+                "cst": "01",
+                "baseTax": float(item.amount),
+                "rate": 1.65,
+                "amount": float(item.amount) * 0.0165,
+            },
+            "cofins": {
+                "cst": "01",
+                "baseTax": float(item.amount),
+                "rate": 7.6,
+                "amount": float(item.amount) * 0.076,
+            },
+        }
+
+        items.append(item_data)
+
+    # Calculate totals
+    total_items = sum(float(item.amount) for item in invoice_doc.invoice_items_table)
+
+    # Map operation_type to NFe.io format
+    operation_type_value = "Outgoing"  # Default
+    if invoice_doc.operation_type:
+        if invoice_doc.operation_type == "Incoming":
+            operation_type_value = "Incoming"
+        elif invoice_doc.operation_type == "Outgoing":
+            operation_type_value = "Outgoing"
+
+    invoice_data = {
+        "operationNature": invoice_doc.operation_nature,
+        "operationType": operation_type_value,
+        "consumerType": "FinalConsumer",
+        "body": invoice_doc.additional_information,
+        "buyer": buyer,
+        "items": items,
+        "totals": {
+            "icms": {
+                "baseTax": total_items,
+                "icmsAmount": float(invoice_doc.icms_value or 0),
+                "productAmount": total_items,
+                "pisAmount": float(invoice_doc.pis_value or 0),
+                "cofinsAmount": float(invoice_doc.cofins_value or 0),
+                "invoiceAmount": float(invoice_doc.total or total_items),
+            }
+        },
+    }
+
+    return invoice_data
+
+def _update_invoice_from_nfeio_response(invoice_doc, nfeio_response):
+    """
+    Update Product Invoice document with data from NFe.io response
+
+    Args:
+        invoice_doc: Product Invoice document
+        nfeio_response: Response from NFe.io API
+    """
+    try:
+        # Update status based on NFe.io status
+        nfeio_status = nfeio_response.get("status")
+        status_map = {
+            "Issued": "Issued",
+            "Processing": "Processing",
+            "Error": "Processing Error",
+            "Rejected": "Rejected",
+        }
+
+        if nfeio_status in status_map:
+            invoice_doc.invoice_status = status_map[nfeio_status]
+
+        # Update invoice fields from NFe.io response
+        if nfeio_response.get("serie"):
+            invoice_doc.invoice_serie = str(nfeio_response.get("serie"))
+        if nfeio_response.get("number"):
+            invoice_doc.invoice_number = str(nfeio_response.get("number"))
+        if nfeio_response.get("authorization", {}).get("accessKey"):
+            invoice_doc.invoice_access_key = nfeio_response["authorization"][
+                "accessKey"
+            ]
+
+        # Reference fields for return invoices
+        if nfeio_response.get("serie"):
+            invoice_doc.invoice_ref_series = str(nfeio_response.get("serie"))
+        if nfeio_response.get("number"):
+            invoice_doc.invoice_ref_number = str(nfeio_response.get("number"))
+        if nfeio_response.get("authorization", {}).get("accessKey"):
+            invoice_doc.invoice_ref_access_key = nfeio_response["authorization"][
+                "accessKey"
+            ]
+
+        # Set flags to allow modifications during Processing status
+        invoice_doc.flags.ignore_processing_lock = True
+        invoice_doc.save()
+        frappe.db.commit()
+
+    except Exception as e:
+        frappe.log_error(
+            f"Error updating invoice from NFe.io response: {str(e)}\n{frappe.get_traceback()}",
+            "Invoice Update Error",
+        )
 
 def check_invoice_status_and_update(invoice_id, document_name):
     """

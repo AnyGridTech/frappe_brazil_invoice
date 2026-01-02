@@ -34,52 +34,52 @@ class NFeIO(Document):
                 frappe.ValidationError,
             )
 
+# ============================================================================
+# Product Invoice Operations - Whitelisted API Endpoints
+# ============================================================================
 
 @frappe.whitelist()
-def calculate_invoice_taxes(invoice_name, use_fallback=False):
+def calculate_product_invoice_taxes(issuer, recipient, operation_type, items, collection_id=None, is_product_registration=None):
     """
-    API endpoint to calculate taxes for an invoice using NFe.io
+    API endpoint to calculate taxes using NFe.io Tax Calculation API
 
     Args:
-        invoice_name: Name of the Invoice document
-        tax_template_name: Name of the Tax template to use
-        use_fallback: Boolean to enable fallback to hardcoded rates if API fails (default: False)
+        issuer: Issuer information dict with taxRegime, taxProfile (optional), and state
+        recipient: Recipient information dict with taxRegime, taxProfile (optional), and state  
+        operation_type: "Outgoing" (Saída) or "Incoming" (Entrada)
+        items: List of item dicts with required fields (sku, ncm, quantity, unitAmount, origin, etc.)
+        collection_id: Identificador da Coleção de Produtos (optional)
+        is_product_registration: Boolean indicating if this is for product registration (optional)
 
     Returns:
-        dict: Calculated tax values (icms_value, ipi_value, pis_value, cofins_value)
+        dict: Items with calculated tax values
     """
     try:
-        # Get invoice and tax template documents
-        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
-
-        if not invoice_doc:
-            frappe.throw(f"Invoice '{invoice_name}' not found")
-
         # Calculate taxes
-        tax.calculate_taxes(invoice_doc, use_fallback=use_fallback)
+        data = tax.calculate(
+            collection_id=collection_id,
+            issuer=issuer,
+            recipient=recipient,
+            operation_type=operation_type,
+            items=items,
+            is_product_registration=is_product_registration
+        )
 
         # Return calculated values
         return {
             "success": True,
-            "icms_value": invoice_doc.icms_value,
-            "ipi_value": invoice_doc.ipi_value,
-            "pis_value": invoice_doc.pis_value,
-            "cofins_value": invoice_doc.cofins_value,
+            "data": data
         }
 
     except Exception as e:
         frappe.log_error(
-            f"Error calculating taxes for invoice {invoice_name}: {str(e)}\n{frappe.get_traceback()}",
+            f"Error calculating taxes: {str(e)}\n{frappe.get_traceback()}",
             "Tax Calculation API Error",
         )
         return {
             "success": False,
             "error": str(e),
         }
-
-# ============================================================================
-# Product Invoice Operations - Whitelisted API Endpoints
-# ============================================================================
 
 @frappe.whitelist()
 def issue_product_invoice(invoice_data):
@@ -146,7 +146,6 @@ def issue_product_invoice(invoice_data):
             "success": False,
             "error": str(e)
         }
-
 
 @frappe.whitelist()
 def cancel_product_invoice(invoice_id, reason):
@@ -224,7 +223,6 @@ def cancel_product_invoice(invoice_id, reason):
             "error": str(e)
         }
 
-
 @frappe.whitelist()
 def query_product_invoice_events(invoice_id, limit=10, starting_after=0):
     """
@@ -299,7 +297,6 @@ def query_product_invoice_events(invoice_id, limit=10, starting_after=0):
             "success": False,
             "error": str(e)
         }
-
 
 @frappe.whitelist()
 def get_product_invoice_by_id(invoice_id):
@@ -386,7 +383,6 @@ def get_product_invoice_by_id(invoice_id):
                     "success": False,
                     "error": f"Failed to get invoice: {str(e)}"
                 }
-
 
 @frappe.whitelist()
 def get_product_invoice_pdf(invoice_id, force=False):
@@ -480,7 +476,6 @@ def get_product_invoice_pdf(invoice_id, force=False):
                     "error": f"Failed to get PDF: {str(e)}"
                 }
 
-
 @frappe.whitelist()
 def get_product_invoice_xml(invoice_id):
     """
@@ -563,52 +558,3 @@ def get_product_invoice_xml(invoice_id):
                     "success": False,
                     "error": str(e)
                 }
-
-
-@frappe.whitelist()
-def build_product_invoice_from_invoice(invoice_name):
-    """
-    API endpoint to build NFe.io payload from a Product Invoice document
-    
-    Converts a Frappe Product Invoice document to NFe.io API format.
-    
-    Args:
-        invoice_name: Name of the Product Invoice document
-        
-    Returns:
-        dict: Invoice data in NFe.io API format
-        
-    Example:
-        frappe.call({
-            method: "frappe_brazil_invoice.brazil_invoice.doctype.nfeio.nfeio.build_product_invoice_from_invoice",
-            args: { invoice_name: "INV-001" }
-        })
-    """
-    from . import product_invoice
-    
-    try:
-        # Get invoice document
-        invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
-        
-        # Build payload
-        payload = product_invoice.build_invoice_payload(invoice_doc)
-        
-        return {
-            "success": True,
-            "data": payload
-        }
-        
-    except frappe.DoesNotExistError:
-        return {
-            "success": False,
-            "error": f"Product Invoice '{invoice_name}' not found"
-        }
-    except Exception as e:
-        frappe.log_error(
-            f"Error building NFe payload: {str(e)}\n{frappe.get_traceback()}",
-            "Build NFe Payload Error"
-        )
-        return {
-            "success": False,
-            "error": str(e)
-        }

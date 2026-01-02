@@ -357,8 +357,8 @@ class TestNFeIOAPI(FrappeTestCase):
     def test_calculate_invoice_taxes_api_success(
         self, mock_get_doc, mock_calculate_taxes
     ):
-        """Test calculate_invoice_taxes API endpoint - success"""
-        test_logger.info("Testing calculate_invoice_taxes API endpoint - success")
+        """Test calculate_product_invoice_taxes API endpoint - success"""
+        test_logger.info("Testing calculate_product_invoice_taxes API endpoint - success")
 
         # Check if we should use real API
         use_real_api = should_use_real_api()
@@ -397,16 +397,16 @@ class TestNFeIOAPI(FrappeTestCase):
 
         mock_get_doc.side_effect = get_doc_side_effect
 
-        result = nfeio.calculate_invoice_taxes("TEST_INVOICE", "TEST_TAX_TEMPLATE")
+        result = nfeio.calculate_product_invoice_taxes("TEST_INVOICE", "TEST_TAX_TEMPLATE")
 
         self.assertTrue(result["success"])
         test_logger.info(
-            f"✓ calculate_invoice_taxes API succeeded with ICMS: {result['icms_value']}"
+            f"✓ calculate_product_invoice_taxes API succeeded with ICMS: {result['icms_value']}"
         )
 
     def test_calculate_invoice_taxes_api_no_config(self):
-        """Test calculate_invoice_taxes API endpoint - no configuration"""
-        test_logger.info("Testing calculate_invoice_taxes API with no configuration")
+        """Test calculate_product_invoice_taxes API endpoint - no configuration"""
+        test_logger.info("Testing calculate_product_invoice_taxes API with no configuration")
 
         # Skip if real API config exists (can't test 'no config' scenario)
         if should_use_real_api():
@@ -438,14 +438,14 @@ class TestNFeIOAPI(FrappeTestCase):
 
                     mock_get_doc.side_effect = get_doc_side_effect
 
-                    result = nfeio.calculate_invoice_taxes(
+                    result = nfeio.calculate_product_invoice_taxes(
                         "TEST_INVOICE", "TEST_TAX_TEMPLATE"
                     )
 
                     self.assertFalse(result["success"])
                     self.assertIn("error", result)
                     test_logger.info(
-                        "✓ calculate_invoice_taxes API correctly handles missing config"
+                        "✓ calculate_product_invoice_taxes API correctly handles missing config"
                     )
         finally:
             # Always restore the test config
@@ -458,8 +458,8 @@ class TestNFeIOAPI(FrappeTestCase):
     def test_calculate_invoice_taxes_with_fallback(
         self, mock_get_doc, mock_calculate_fallback
     ):
-        """Test calculate_invoice_taxes API endpoint with use_fallback=True"""
-        test_logger.info("Testing calculate_invoice_taxes API with use_fallback=True")
+        """Test calculate_product_invoice_taxes API endpoint with use_fallback=True"""
+        test_logger.info("Testing calculate_product_invoice_taxes API with use_fallback=True")
 
         # Ensure test config exists
         ensure_test_config_exists()
@@ -492,7 +492,7 @@ class TestNFeIOAPI(FrappeTestCase):
 
         mock_get_doc.side_effect = get_doc_side_effect
 
-        result = nfeio.calculate_invoice_taxes(
+        result = nfeio.calculate_product_invoice_taxes(
             "TEST_INVOICE", "TEST_TAX_TEMPLATE", use_fallback=True
         )
 
@@ -500,13 +500,13 @@ class TestNFeIOAPI(FrappeTestCase):
         self.assertEqual(result["icms_value"], 18.0)
         self.assertEqual(result["ipi_value"], 9.75)
         test_logger.info(
-            "✓ calculate_invoice_taxes with use_fallback=True works correctly"
+            "✓ calculate_product_invoice_taxes with use_fallback=True works correctly"
         )
 
     def test_calculate_invoice_taxes_no_valid_config_error(self):
-        """Test calculate_invoice_taxes throws error when no valid (non-test) config exists"""
+        """Test calculate_product_invoice_taxes throws error when no valid (non-test) config exists"""
         test_logger.info(
-            "Testing calculate_invoice_taxes throws error with no valid config"
+            "Testing calculate_product_invoice_taxes throws error with no valid config"
         )
         # Delete all test configs to ensure only test configs remain
         delete_all_test_configs()
@@ -527,7 +527,7 @@ class TestNFeIOAPI(FrappeTestCase):
 
         try:
             # Should throw error because no valid (non-test) config exists
-            result = nfeio.calculate_invoice_taxes(
+            result = nfeio.calculate_product_invoice_taxes(
                 "TEST_INVOICE", "TEST_TAX_TEMPLATE", use_fallback=False
             )
 
@@ -535,13 +535,13 @@ class TestNFeIOAPI(FrappeTestCase):
             self.assertFalse(result.get("success", False))
             self.assertIn("error", result)
             test_logger.info(
-                "✓ calculate_invoice_taxes correctly handles no valid config"
+                "✓ calculate_product_invoice_taxes correctly handles no valid config"
             )
         except Exception as e:
             # Expected - should throw an error
             self.assertIn("valid", str(e).lower())
             test_logger.info(
-                "✓ calculate_invoice_taxes correctly throws error with no valid config"
+                "✓ calculate_product_invoice_taxes correctly throws error with no valid config"
             )
         finally:
             # Clean up
@@ -662,7 +662,7 @@ class TestNFeIOIntegration(FrappeTestCase):
 
         mock_get_doc.side_effect = get_doc_side_effect
 
-        result = nfeio.calculate_invoice_taxes("TEST_INVOICE", "TEST_TAX_TEMPLATE")
+        result = nfeio.calculate_product_invoice_taxes("TEST_INVOICE", "TEST_TAX_TEMPLATE")
 
         # Verify success
         self.assertTrue(result["success"])
