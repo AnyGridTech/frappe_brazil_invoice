@@ -742,7 +742,6 @@ tax_array_test = [
     {
         "template_name": "Remessa para Conserto",
         "is_template": 1,
-        "operation_type": "Repair Shipment",
         "operation_nature": "Remessa para Conserto ou Reparo",
         "cfop_intrastate": 5915,
         "cfop_interstate": 6915,

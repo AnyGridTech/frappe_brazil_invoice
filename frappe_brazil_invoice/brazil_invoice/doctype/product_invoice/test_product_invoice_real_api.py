@@ -370,6 +370,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         Client Type: CNPJ
         ICMS Type: Non-Taxpayer
         Operation Type: Internal (SP to SP)
+        Operation Nature: Repair Shipment
         Expected Result: Invoice created and issued successfully
         """
         frappe.set_user("Administrator")

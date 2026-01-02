@@ -24,7 +24,7 @@
   "add_ipi_icms",
   "add_insurance_icms",
   "apply_auto_rate_icms",
-  "substitui\u00e7\u00e3o_tribut\u00e1ria_section",
+  "tax_substitution_section",
   "mod_base_calc_icms_trib",
   "cest_icms_trib",
   "base_icms_trib",
@@ -73,7 +73,6 @@
   "operation_nature",
   "cfop_interstate",
   "cfop_intrastate",
-  "operation_type",
   "amended_from"
  ],
  "fields": [
@@ -113,14 +112,6 @@
    "fieldname": "cfop_intrastate",
    "fieldtype": "Int",
    "label": "CFOP Intrastate",
-   "depends_on": "eval:doc.is_template == 1",
-   "mandatory_depends_on": "eval:doc.is_template == 1"
-  },
-  {
-   "fieldname": "operation_type",
-   "fieldtype": "Select",
-   "label": "Operation Type (Direction)",
-   "options": "\nIncoming\nOutgoing",
    "depends_on": "eval:doc.is_template == 1",
    "mandatory_depends_on": "eval:doc.is_template == 1"
   },
@@ -227,7 +218,7 @@
    "label": "Apply Automatic Rate"
   },
   {
-   "fieldname": "substitui\u00e7\u00e3o_tribut\u00e1ria_section",
+   "fieldname": "tax_substitution_section",
    "fieldtype": "Section Break",
    "label": "Tax Substitution"
   },
