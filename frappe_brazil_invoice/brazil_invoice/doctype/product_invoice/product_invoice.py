@@ -1482,6 +1482,16 @@ def _build_invoice_data_from_doc(invoice_doc):
         "Exempt": "Exempt",
     }
 
+    if invoice_doc.client_type not in client_type_map:
+        frappe.throw(
+            f"Invalid client type '{invoice_doc.client_type}' for invoice {invoice_doc.name}"
+        )
+    
+    if invoice_doc.icms_taxpayer and invoice_doc.icms_taxpayer not in state_tax_indicator_map:
+        frappe.throw(
+            f"Invalid ICMS taxpayer status '{invoice_doc.icms_taxpayer}' for invoice {invoice_doc.name}"
+        )
+
     # Build buyer information
     buyer = {
         "name": invoice_doc.client_name,
@@ -1497,51 +1507,69 @@ def _build_invoice_data_from_doc(invoice_doc):
             },
             "district": invoice_doc.delivery_neighborhood,
             "street": invoice_doc.delivery_address,
-            "number": (
-                invoice_doc.delivery_number_address
-                if invoice_doc.delivery_number_address
-                else "S/N"
-            ),
+            "number": invoice_doc.delivery_number_address,
             "postalCode": "".join(filter(str.isdigit, str(invoice_doc.delivery_cep))),
             "country": "Brasil",
+            "additionalInformation": invoice_doc.delivery_complement,
         },
     }
 
     # Add stateTaxNumberIndicator based on ICMS taxpayer status
     if invoice_doc.icms_taxpayer:
-        state_tax_indicator = state_tax_indicator_map.get(invoice_doc.icms_taxpayer)
-        if state_tax_indicator:
-            buyer["stateTaxNumberIndicator"] = state_tax_indicator
-
-        # Add stateTaxNumber (state registration) for TaxPayer
-        # According to NFe.io API docs, the field is "stateTaxNumber" for buyer
-        if invoice_doc.state_registration:
-            state_tax = (
-                str(invoice_doc.state_registration)
-                .replace(".", "")
-                .replace("-", "")
-                .replace("/", "")
-                .strip()
-            )
-            if state_tax and state_tax.upper() != "NONE":
-                buyer["stateTaxNumber"] = state_tax
-
-        buyer["address"]["additionalInformation"] = invoice_doc.delivery_complement
+        buyer["stateTaxNumberIndicator"] = state_tax_indicator_map.get(invoice_doc.icms_taxpayer)
+        buyer["stateTaxNumber"] = "".join(filter(str.isdigit, str(invoice_doc.state_registration or "")))      
 
     # Build items list
+    cfop = None
+    if invoice_doc.tax_template:
+        tax_doc = None
+        nfeio_config = None
+        try:
+            tax_doc = frappe.get_doc("Tax", invoice_doc.tax_template)
+        except Exception:
+            frappe.throw(
+                f"Failed to fetch tax template '{invoice_doc.tax_template}' for invoice {invoice_doc.name}"
+            )
+        try:
+            nfeio_configs = frappe.get_all(
+                "NFeIO",
+                fields=["name", "company_state"],
+                filters={"is_test_config": invoice_doc.is_test_invoice},
+                order_by="usage_priority DESC",
+                limit=1
+            )
+            if not nfeio_configs or len(nfeio_configs) == 0:
+                frappe.throw(
+                    f"No NFe.io configuration appears to be set at NFeIO doctype (with is_test_config={invoice_doc.is_test_invoice}) to issue invoice {invoice_doc.name}"
+                )
+            nfeio_config = nfeio_configs[0]
+        except Exception:
+            frappe.throw(
+                f"Failed to fetch NFe.io configuration for invoice {invoice_doc.name}"
+            )
+        
+        # Compare company state with delivery state to determine intrastate vs interstate
+        if nfeio_config.get("company_state") == invoice_doc.delivery_state:
+            cfop = tax_doc.cfop_intrastate
+        else:
+            cfop = tax_doc.cfop_interstate
+
+        
     items = []
     for item in invoice_doc.invoice_items_table:
         # Format NCM: remove dots/periods and any other formatting characters
         # NFe.io expects NCM without formatting (8 digits max)
-        ncm = item.ncm
-        if ncm:
-            ncm = ncm.replace(".", "").replace("-", "").strip()
-
+        item.ncm = "".join(filter(str.isdigit, str(item.ncm or "")))
+        calculated_cfop = cfop or item.cfop
+        if not calculated_cfop:
+            frappe.throw(
+                f"CFOP not defined for item '{item.item_code}' in invoice {invoice_doc.name}. Please, either: 1. set CFOP in the item or 2. ensure tax template has CFOP configured."
+            )
         item_data = {
             "code": item.item_code,
             "description": item.description,
-            "ncm": ncm,  # NCM without dots/formatting
-            "cfop": item.cfop,  # From item or fallback
+            "ncm": item.ncm,  # NCM without dots/formatting
+            "cfop": calculated_cfop,  # From item or fallback
             "unit": item.unit,  # From item field
             "quantity": float(item.quantity),
             "unitAmount": float(item.rate),
