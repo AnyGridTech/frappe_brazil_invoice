@@ -121,10 +121,19 @@ def get_nfeio_config():
 
 
 def _get_nfeio_config():
-    """Helper function to get NFe.io configuration"""
+    """Helper function to get NFe.io configuration
+    
+    Returns the production configuration (is_test_config=0) with the highest usage_priority.
+    """
     try:
-        # Get the first NFeIO document (assuming single configuration)
-        nfeio_list = frappe.get_all("NFeIO", limit=1)
+        # Get production NFeIO documents ordered by usage_priority
+        nfeio_list = frappe.get_all(
+            "NFeIO",
+            fields=["name", "usage_priority"],
+            filters={"is_test_config": 0},
+            order_by="usage_priority DESC",
+            limit=1
+        )
         if nfeio_list:
             return frappe.get_doc("NFeIO", nfeio_list[0].name)
         return None
@@ -148,11 +157,12 @@ def _get_valid_nfeio_config():
         NFeIO document or None if no configuration exists
     """
     try:
-        # Get all NFeIO documents with priority ordering
+        # Get all production NFeIO documents with priority ordering
         nfeio_list = frappe.get_all(
             "NFeIO",
             fields=["name", "usage_priority"],
-            order_by="usage_priority DESC, name ASC"
+            filters={"is_test_config": 0},
+            order_by="usage_priority DESC"
         )
         
         if not nfeio_list:
@@ -184,7 +194,7 @@ def _get_valid_nfeio_config():
 # ============================================================================
 
 @frappe.whitelist()
-def issue_product_invoice(invoice_data, document_name=None):
+def issue_product_invoice(invoice_data):
     """
     API endpoint to issue/emit a product invoice (NFe) via NFe.io
     

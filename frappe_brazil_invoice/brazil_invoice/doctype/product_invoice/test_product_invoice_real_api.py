@@ -23,7 +23,6 @@ import json
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from datetime import datetime
-from frappe_brazil_invoice.brazil_invoice.doctype.product_invoice import product_invoice
 
 # Import shared test helpers
 from .test_helpers import (
@@ -31,15 +30,13 @@ from .test_helpers import (
     create_test_invoice_with_token,
     create_test_item,
     create_test_serial_no,
-    generate_random_client,
-    generate_random_client_cpf,
     generate_random_client_cnpj,
     generate_random_totals,
     generate_random_address,
     items_array,
-    get_serial_no_array,
+    get_serial_no_array_test,
     move_invoice_to_processing,
-    test_carriers,
+    carriers_test,
 )
 
 
@@ -283,23 +280,28 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         """Set up test data once for all tests"""
         frappe.set_user("Administrator")
 
-        # Check if NFe.io configuration exists (including test configs)
+        # Check if NFe.io configuration exists (test configs only)
+        # Get test config with highest usage_priority
         nfeio_configs = frappe.get_all(
-            "NFeIO", fields=["name", "company_id", "is_test_config"]
+            "NFeIO",
+            fields=["name", "company_id", "is_test_config", "usage_priority"],
+            filters={"is_test_config": 1},
+            order_by="usage_priority DESC",
+            limit=1
         )
 
         if not nfeio_configs:
             cls.skip_tests = True
             print(
-                "\n⚠️ Skipping Product Invoice Real API tests: No NFe.io configuration found."
+                "\nSkipping Product Invoice Real API tests: No NFe.io test configuration found."
             )
-            print("   Please create an NFeIO document with api_token")
+            print("   Please create an NFeIO document with api_token and is_test_config=1")
             return
 
         cls.skip_tests = False
         cls.nfeio_config_name = nfeio_configs[0]["name"]
         print(
-            f"\n✓ Using NFe.io configuration: {cls.nfeio_config_name} (is_test_config={nfeio_configs[0]['is_test_config']})"
+            f"\n✓ Using NFe.io configuration: {cls.nfeio_config_name} (is_test_config={nfeio_configs[0]['is_test_config']}, usage_priority={nfeio_configs[0]['usage_priority']})"
         )
 
         # Create test items using shared helper
@@ -314,7 +316,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             )
 
         # Generate serial numbers ONCE and store in class variable for reuse
-        cls.test_serial_numbers = get_serial_no_array()
+        cls.test_serial_numbers = get_serial_no_array_test()
 
         # Create test serial numbers using the stored serial numbers
         for serial_data in cls.test_serial_numbers:
@@ -342,7 +344,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             frappe.db.commit()
 
         # Create test carriers using shared helper data
-        for carrier_data in test_carriers:
+        for carrier_data in carriers_test:
             if not frappe.db.exists(
                 "Carrier", {"fantasy_name": carrier_data["fantasy_name"]}
             ):
