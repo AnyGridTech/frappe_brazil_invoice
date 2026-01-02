@@ -11,11 +11,17 @@ def get_nfeio_config(is_test_config=0):
         # Include None/empty is_test_config for backward compatibility
         nfeio_configs = frappe.get_all(
             "NFeIO",
-            fields=["name", "usage_priority", "is_test_config"],
+            fields=["name", "config_name", "usage_priority", "is_test_config", "company_id"],
             order_by="usage_priority DESC",
             filters={"is_test_config": is_test_config},
             limit=1
         )
+
+        print(f"\n🔍 get_nfeio_config() query results:")
+        print(f"   Requested is_test_config={is_test_config}")
+        print(f"   Found {len(nfeio_configs)} config(s)")
+        if nfeio_configs:
+            print(f"   Selected: {nfeio_configs[0]}")
 
         if len(nfeio_configs) == 0:
             frappe.throw(f"No NFe.io configuration found (with is_test_config={is_test_config}). Please create an NFeIO document with API credentials.")

@@ -38,6 +38,7 @@ def create_test_invoice_with_token(*args, **kwargs):
     """
     Wrapper around create_invoice that automatically adds TEST_RUN_TOKEN
     to additional_information for tracking test run invoices.
+    Sets is_test_invoice=1 to use test NFe.io config for testing.
     """
     test_token = get_test_run_token()
 
@@ -51,6 +52,9 @@ def create_test_invoice_with_token(*args, **kwargs):
             kwargs["additional_information"] = f"{additional_info} {token_marker}"
         else:
             kwargs["additional_information"] = token_marker
+    
+    # Set is_test_invoice=1 to use test NFe.io configuration
+    kwargs["is_test_invoice"] = 1
 
     # Call the original create_invoice function
     result = create_invoice(*args, **kwargs)

@@ -51,6 +51,13 @@ def _make_api_request(method, endpoint, nfeio_config, data=None, params=None):
     
     url = f"{NFEIO_API_BASE_URL}{endpoint}"
     
+    # Debug: Print authentication details (mask token for security)
+    token_preview = nfeio_config.api_token[:10] + "..." if len(nfeio_config.api_token) > 10 else "***"
+    print(f"\n🔐 API Request Authentication:")
+    print(f"   Config: {nfeio_config.name}")
+    print(f"   Token (preview): {token_preview}")
+    print(f"   URL: {url}")
+    
     headers = {
         "Authorization": nfeio_config.api_token,
         "Content-Type": "application/json",

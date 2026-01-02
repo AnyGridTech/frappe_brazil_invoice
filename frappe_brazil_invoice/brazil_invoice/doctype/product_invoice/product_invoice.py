@@ -1094,9 +1094,12 @@ def move_to_processing(invoice_name):
 
         # Build invoice data from Product Invoice document
         invoice_data = _build_invoice_data_from_doc(invoice_doc)
+        
+        # Get the is_test_invoice flag to pass to nfeio
+        is_test_invoice = getattr(invoice_doc, 'is_test_invoice', 0)
 
         # Call Layer 2: nfeio whitelisted endpoint (without document_name to avoid duplicate scheduling)
-        result = nfeio.issue_product_invoice(invoice_data)
+        result = nfeio.issue_product_invoice(invoice_data, is_test_invoice=is_test_invoice)
 
         # Handle error cases first (fail fast)
         if not result or not isinstance(result, dict) or not result.get("success"):
@@ -1640,6 +1643,7 @@ def create_invoice(
     invoice_ref_number=None,
     invoice_ref_access_key=None,
     is_return_invoice=None,
+    is_test_invoice=None,
 ):
     """
     API endpoint for creating invoices from automation systems.
@@ -1828,6 +1832,10 @@ def create_invoice(
             invoice_doc.invoice_ref_access_key = invoice_ref_access_key
         if is_return_invoice is not None:
             invoice_doc.is_return_invoice = is_return_invoice
+        
+        # Set test invoice flag (defaults to 0 if not provided)
+        if is_test_invoice is not None:
+            invoice_doc.is_test_invoice = is_test_invoice
 
         # Add invoice items (child table)
         for item in parsed_items:

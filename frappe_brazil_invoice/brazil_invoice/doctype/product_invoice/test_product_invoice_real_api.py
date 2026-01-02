@@ -176,7 +176,7 @@ def cancel_invoice_with_retries(invoice, reason, max_retries=3, retry_delay=5):
     return {"success": False, "error": f"Failed after {max_retries} attempts"}
 
 
-def wait_for_sefaz_processing(seconds=20):
+def wait_for_sefaz_processing(seconds=10):
     """
     Wait for SEFAZ to process the invoice.
 
@@ -205,7 +205,7 @@ def check_invoice_processing(invoice_doc):
     print(f"  Status before check: {invoice_doc.invoice_status}")
 
     # Wait for SEFAZ processing
-    wait_for_sefaz_processing(10)
+    wait_for_sefaz_processing()
 
     # Call the background job function directly
     try:
@@ -258,7 +258,9 @@ def check_invoice_processing(invoice_doc):
     try:
         from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
 
-        invoice_data = nfeio.get_product_invoice_by_id(invoice_doc.invoice_id)
+        # Pass is_test_invoice flag to get the right config
+        is_test_invoice = getattr(invoice_doc, 'is_test_invoice', 0)
+        invoice_data = nfeio.get_product_invoice_by_id(invoice_doc.invoice_id, is_test_invoice=is_test_invoice)
         print("\nFull invoice data from NFe.io API for debugging:")
         print(json.dumps(invoice_data, indent=2, ensure_ascii=False))
     except Exception as e:
