@@ -174,6 +174,56 @@ def create_test_serial_no(item_code, serial_no=None):
     frappe.db.commit()
     return serial
 
+def create_test_carrier(
+    fantasy_name,
+    company_name,
+    cnpj,
+    cep,
+    address,
+    address_number,
+    state,
+    city,
+    neighborhood,
+    ibge,
+):    
+    """Helper function to create a test carrier"""
+    if frappe.db.exists("Carrier", company_name):
+        return frappe.get_doc("Carrier", company_name)
+
+    carrier = frappe.get_doc(
+        {
+            "doctype": "Carrier",
+            "fantasy_name": fantasy_name,
+            "company_name": company_name,
+            "cnpj": cnpj,
+            "cep": cep,
+            "address": address,
+            "address_number": address_number,
+            "state": state,
+            "city": city,
+            "neighborhood": neighborhood,
+            "ibge": ibge,
+        }
+    )
+    carrier.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return carrier
+
+def create_test_tax_template(template_name, tax_data):
+    """Helper function to create a test tax template"""
+    if frappe.db.exists("Product Invoice Tax Template", template_name):
+        return frappe.get_doc("Product Invoice Tax Template", template_name)
+
+    tax_template = frappe.get_doc(
+        {
+            "doctype": "Tax",
+            "template_name": template_name,
+            **tax_data,
+        }
+    )
+    tax_template.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return tax_template
 
 # =============================================================================
 # Random Data Generators

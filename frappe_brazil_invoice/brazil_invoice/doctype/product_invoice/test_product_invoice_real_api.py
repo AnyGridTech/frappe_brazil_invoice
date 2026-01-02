@@ -26,6 +26,8 @@ from datetime import datetime
 
 # Import shared test helpers
 from .test_helpers import (
+    create_test_carrier,
+    create_test_tax_template,
     get_test_run_token,
     create_test_invoice_with_token,
     create_test_item,
@@ -37,6 +39,7 @@ from .test_helpers import (
     get_serial_no_array_test,
     move_invoice_to_processing,
     carriers_test,
+    tax_array_test,
 )
 
 
@@ -305,71 +308,23 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         )
 
         # Create test items using shared helper
-        item_data = items_array[0]  # Use first item from shared array
-        if not frappe.db.exists("Item", item_data["item_code"]):
-            create_test_item(
-                item_code=item_data["item_code"],
-                item_name=item_data["item_name"],
-                rate=item_data["rate"],
-                ncm_code=item_data["ncm_code"],
-                description=item_data["description"],
-            )
-
-        # Generate serial numbers ONCE and store in class variable for reuse
-        cls.test_serial_numbers = get_serial_no_array_test()
+        for item_data in items_array:
+            create_test_item(**item_data)
 
         # Create test serial numbers using the stored serial numbers
         for serial_data in cls.test_serial_numbers:
-            create_test_serial_no(
-                item_code=serial_data["item_code"], serial_no=serial_data["serial_no"]
-            )
-
-        # Also create the legacy item code for backward compatibility
-        if not frappe.db.exists("Item", "TEST_REAL_API_001"):
-            item = frappe.get_doc(
-                {
-                    "doctype": "Item",
-                    "item_code": "TEST_REAL_API_001",
-                    "item_name": "Test Item Real API 001",
-                    "item_group": "Products",
-                    "stock_uom": "Unit",
-                    "is_stock_item": 1,
-                    "valuation_rate": 1500.00,
-                    "standard_rate": 1500.00,
-                    "description": "Test item for real API integration",
-                    "ncm": "85044090",
-                }
-            )
-            item.insert(ignore_permissions=True)
-            frappe.db.commit()
+            create_test_serial_no(**serial_data)
 
         # Create test carriers using shared helper data
         for carrier_data in carriers_test:
-            if not frappe.db.exists(
-                "Carrier", {"fantasy_name": carrier_data["fantasy_name"]}
-            ):
-                carrier_doc = frappe.get_doc({"doctype": "Carrier", **carrier_data})
-                carrier_doc.insert(ignore_permissions=True)
+            create_test_carrier(**carrier_data)
+        
+        # Create test tax templates in case they're not present
+        for tax_template in tax_array_test:
+            create_test_tax_template(**tax_template)
 
-        # Also create the legacy carrier for backward compatibility
-        if not frappe.db.exists("Carrier", {"fantasy_name": "Transportadora API Test"}):
-            carrier = frappe.get_doc(
-                {
-                    "doctype": "Carrier",
-                    "fantasy_name": "Transportadora API Test",
-                    "company_name": "Transportadora API Test Ltda",
-                    "cnpj": "12.345.678/0001-90",
-                    "cep": "01310-100",
-                    "address": "Avenida Paulista",
-                    "address_number": "1000",
-                    "state": "SP",
-                    "city": "São Paulo",
-                    "neighborhood": "Bela Vista",
-                    "ibge": "3550308",
-                }
-            )
-            carrier.insert(ignore_permissions=True)
-            frappe.db.commit()
+        # Generate serial numbers ONCE and store in class variable for reuse
+        cls.test_serial_numbers = get_serial_no_array_test()
 
     def setUp(self):
         """Set up each test and track execution"""
