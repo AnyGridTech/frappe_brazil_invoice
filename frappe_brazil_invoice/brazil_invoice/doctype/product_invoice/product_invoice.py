@@ -118,8 +118,6 @@ class ProductInvoice(Document):
         that occur during API processing (when status is Processing).
         """
         try:
-            # Set operation_type from tax template if tax_template is selected
-            self.set_operation_type_from_template()
             # Calculate taxes from template or automatically
             self.calculate_taxes_from_template()
             # Calculate total and product fields
@@ -622,21 +620,6 @@ class ProductInvoice(Document):
                         "The following fields are mandatory when moving to Issued status: {0}"
                     ).format(", ".join(missing_fields))
                 )
-
-    def set_operation_type_from_template(self):
-        """Set operation_nature automatically from tax template
-
-        When a tax_template is selected, fetch its operation_nature and set it
-        on the invoice. This makes operation_nature read-only when template is selected.
-        """
-        if self.tax_template:
-            try:
-                tax_doc = frappe.get_doc("Tax", self.tax_template)
-                if tax_doc.get("operation_nature"):
-                    self.operation_nature = tax_doc.operation_nature
-            except Exception:
-                # If tax template doesn't exist or has no operation_nature, continue
-                pass
 
     def calculate_total(self):
         """Calculate invoice total and product summary automatically
@@ -2330,16 +2313,22 @@ def _build_invoice_data_from_doc(invoice_doc):
         # Format NCM: remove dots/periods and any other formatting characters
         # NFe.io expects NCM without formatting (8 digits max)
         item.ncm = "".join(filter(str.isdigit, str(item.ncm or "")))
-        calculated_cfop = cfop or item.cfop
+        
+        # CFOP priority: 1) Item-level CFOP (if no tax template), 2) Tax template CFOP
+        item_cfop = getattr(item, 'cfop', None)
+        calculated_cfop = item_cfop if item_cfop and not invoice_doc.tax_template else cfop
+        
         if not calculated_cfop:
             frappe.throw(
-                f"CFOP not defined for item '{item.item_code}' in invoice {invoice_doc.name}. Please, either: 1. set CFOP in the item or 2. ensure tax template has CFOP configured."
+                f"CFOP not defined for item '{item.item_code}' in invoice {invoice_doc.name}. "
+                "Please either: 1) set a tax template with CFOP, or 2) set CFOP directly on the item (when no tax template is used)."
             )
+        
         item_data = {
             "code": item.item_code,
             "description": item.description,
             "ncm": item.ncm,  # NCM without dots/formatting
-            "cfop": calculated_cfop,  # From item or fallback
+            "cfop": calculated_cfop,  # From item or tax template
             "unit": item.unit,  # From item field
             "quantity": float(item.quantity),
             "unitAmount": float(item.rate),

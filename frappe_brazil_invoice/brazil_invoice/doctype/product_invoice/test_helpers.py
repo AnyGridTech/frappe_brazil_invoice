@@ -211,8 +211,8 @@ def create_test_carrier(
 
 def create_test_tax_template(template_name, tax_data):
     """Helper function to create a test tax template"""
-    if frappe.db.exists("Product Invoice Tax Template", template_name):
-        return frappe.get_doc("Product Invoice Tax Template", template_name)
+    if frappe.db.exists("Tax", template_name):
+        return frappe.get_doc("Tax", template_name)
 
     tax_template = frappe.get_doc(
         {
@@ -715,7 +715,6 @@ tax_array_test = [
     {
         "template_name": "Remessa em Garantia",
         "is_template": 1,
-        "operation_type": "Warranty Exchange",
         "operation_nature": "Remessa para Troca em Garantia",
         "cfop_intrastate": 5949,
         "cfop_interstate": 6949,
@@ -755,13 +754,13 @@ tax_array_test = [
         "add_ipi_icms": 0,
         "add_insurance_icms": 0,
         "apply_auto_rate_icms": 0,
-        "cst_ipi": "53 - Not taxed",
+        "cst_ipi": "53 - Exit non-taxed",
         "ipi_rate": 0.00,
         "calculate_automatically_ipi": 0,
-        "cst_cofins": "49 - Other outbound operations",
+        "cst_cofins": "49 - Other Exit Operations",
         "cofins_rate": 0.00,
         "calculate_automatically_cofins": 0,
-        "cst_pis": "49 - Other outbound operations",
+        "cst_pis": "49 - Other Exit Operations",
         "pis_rate": 0.00,
         "calculate_automatically_pis": 0,
     },

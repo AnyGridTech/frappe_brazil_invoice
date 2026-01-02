@@ -16,6 +16,7 @@
   "unit",
   "amount",
   "ncm",
+  "cfop",
   "description",
   "tax_section",
   "invoice_taxes",
@@ -114,6 +115,13 @@
    "in_standard_filter": 1,
    "label": "NCM",
    "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
+  },
+  {
+   "fieldname": "cfop",
+   "fieldtype": "Int",
+   "label": "CFOP",
+   "description": "Fiscal Operation Code (only editable when no tax template is set)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
   },
   {
    "fetch_from": "item_code.description",

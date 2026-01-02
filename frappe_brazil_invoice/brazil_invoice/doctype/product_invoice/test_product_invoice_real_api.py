@@ -307,6 +307,9 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             f"\n✓ Using NFe.io configuration: {cls.nfeio_config_name} (is_test_config={nfeio_configs[0]['is_test_config']}, usage_priority={nfeio_configs[0]['usage_priority']})"
         )
 
+        # Generate serial numbers ONCE and store in class variable for reuse
+        cls.test_serial_numbers = get_serial_no_array_test()
+
         # Create test items using shared helper
         for item_data in items_array:
             create_test_item(**item_data)
@@ -321,10 +324,9 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         
         # Create test tax templates in case they're not present
         for tax_template in tax_array_test:
-            create_test_tax_template(**tax_template)
-
-        # Generate serial numbers ONCE and store in class variable for reuse
-        cls.test_serial_numbers = get_serial_no_array_test()
+            template_name = tax_template["template_name"]
+            tax_data = {k: v for k, v in tax_template.items() if k != "template_name"}
+            create_test_tax_template(template_name, tax_data)
 
     def setUp(self):
         """Set up each test and track execution"""
@@ -364,8 +366,9 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
             else:
                 test_results["passed"] += 1
 
-    def test_001_create_and_issue_invoice_cnpj_nontaxpayer(self):
-        """Create and Issue
+    def test_001_create_and_issue(self):
+        """
+        Workflow: Create and Issue
         Invoice Type: Product Invoice
         Client Type: CNPJ
         ICMS Type: Non-Taxpayer
@@ -390,13 +393,17 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         # Get serial number for invoice items from stored class variable
         serial = self.test_serial_numbers[0]
         invoice_items = [{"serial_number": serial["serial_no"]}]
+        
+        # Use a tax template to automatically fill operation_nature and CFOP
+        tax_template = frappe.db.get_value("Tax", {"template_name": "Remessa em Garantia"}, "name")
+        
         try:
             # Create invoice
             result = create_test_invoice_with_token(
                 client_type=client_data["client_type"],
                 freight_modality="0 - Freight Contracted by Sender (CIF)",
                 operation_type="Outgoing",
-                operation_nature="VENDA DE MERCADORIA",
+                tax_template=tax_template,
                 client_name=client_data["client_name"],
                 client_email=client_data["email"],
                 client_phone=client_data["phone"],
