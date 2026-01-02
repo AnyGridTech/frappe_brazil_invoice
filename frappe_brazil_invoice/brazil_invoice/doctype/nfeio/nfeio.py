@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from . import utils
 from frappe.model.document import Document
 from . import tax
 
@@ -35,7 +36,7 @@ class NFeIO(Document):
 
 
 @frappe.whitelist()
-def calculate_invoice_taxes(invoice_name, tax_template_name, use_fallback=False):
+def calculate_invoice_taxes(invoice_name, use_fallback=False):
     """
     API endpoint to calculate taxes for an invoice using NFe.io
 
@@ -50,26 +51,20 @@ def calculate_invoice_taxes(invoice_name, tax_template_name, use_fallback=False)
     try:
         # Get invoice and tax template documents
         invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
-        tax_template = frappe.get_doc("Tax", tax_template_name)
 
-        # Check for valid (non-test) NFe.io configuration
-        nfeio_config = _get_valid_nfeio_config()
-
-        if not nfeio_config:
-            frappe.throw(
-                "No valid NFe.io configuration found. Please create an NFeIO document with API credentials (is_test_config must be 0)."
-            )
+        if not invoice_doc:
+            frappe.throw(f"Invoice '{invoice_name}' not found")
 
         # Calculate taxes
-        tax.calculate_taxes(invoice_doc, tax_template, nfeio_config, use_fallback=use_fallback)
+        tax.calculate_taxes(invoice_doc, use_fallback=use_fallback)
 
         # Return calculated values
         return {
             "success": True,
-            "icms_value": invoice_doc.icms_value or 0,
-            "ipi_value": invoice_doc.ipi_value or 0,
-            "pis_value": invoice_doc.pis_value or 0,
-            "cofins_value": invoice_doc.cofins_value or 0,
+            "icms_value": invoice_doc.icms_value,
+            "ipi_value": invoice_doc.ipi_value,
+            "pis_value": invoice_doc.pis_value,
+            "cofins_value": invoice_doc.cofins_value,
         }
 
     except Exception as e:
@@ -81,129 +76,6 @@ def calculate_invoice_taxes(invoice_name, tax_template_name, use_fallback=False)
             "success": False,
             "error": str(e),
         }
-
-
-@frappe.whitelist()
-def get_nfeio_config():
-    """
-    API endpoint to get NFe.io configuration
-
-    Returns:
-        dict: NFe.io configuration (company_id, company_name, has_api_token)
-    """
-    try:
-        nfeio_config = _get_nfeio_config()
-
-        if not nfeio_config:
-            return {
-                "success": False,
-                "configured": False,
-                "message": "NFe.io configuration not found",
-            }
-
-        return {
-            "success": True,
-            "configured": True,
-            "company_id": nfeio_config.company_id,
-            "company_name": nfeio_config.company_name,
-            "has_api_token": bool(nfeio_config.api_token),
-        }
-
-    except Exception as e:
-        frappe.log_error(
-            f"Error getting NFe.io configuration: {str(e)}\n{frappe.get_traceback()}",
-            "NFe.io Configuration Error",
-        )
-        return {
-            "success": False,
-            "error": str(e),
-        }
-
-
-def _get_nfeio_config():
-    """Helper function to get NFe.io configuration
-    
-    Returns the production configuration (is_test_config=0) with the highest usage_priority.
-    Also includes configs where is_test_config is None/empty for backward compatibility.
-    """
-    try:
-        # Get production NFeIO documents ordered by usage_priority
-        # Include None/empty is_test_config for backward compatibility
-        nfeio_list = frappe.get_all(
-            "NFeIO",
-            fields=["name", "usage_priority", "is_test_config"],
-            order_by="usage_priority DESC",
-            limit=1
-        )
-        
-        if nfeio_list:
-            # Filter for production configs (is_test_config = 0 or None/empty)
-            for config in nfeio_list:
-                if not config.get("is_test_config"):  # 0, None, or empty
-                    return frappe.get_doc("NFeIO", config["name"])
-        
-        return None
-    except Exception:
-        return None
-
-
-def _get_valid_nfeio_config():
-    """Helper function to get valid NFe.io configuration (including test configs)
-    
-    This function now accepts both production and test configurations to support
-    testing scenarios. It returns the configuration with the highest usage_priority.
-    Also includes configs where is_test_config is None/empty for backward compatibility.
-    
-    Priority system:
-    - Higher usage_priority numbers are chosen first
-    - Default priority is 0 when field is empty
-    - If multiple configs have same priority, chooses randomly
-    - This allows users to control which config is used
-    
-    Returns:
-        NFeIO document or None if no configuration exists
-    """
-    try:
-        # Get all production NFeIO documents with priority ordering
-        # Include None/empty is_test_config for backward compatibility
-        nfeio_list = frappe.get_all(
-            "NFeIO",
-            fields=["name", "usage_priority", "is_test_config"],
-            order_by="usage_priority DESC"
-        )
-        
-        if not nfeio_list:
-            return None
-        
-        # Filter for production configs (is_test_config = 0 or None/empty)
-        production_configs = [
-            cfg for cfg in nfeio_list 
-            if not cfg.get("is_test_config")  # 0, None, or empty
-        ]
-        
-        if not production_configs:
-            return None
-        
-        # Get highest priority value (considering 0 as default for None)
-        highest_priority = production_configs[0].get("usage_priority") or 0
-        
-        # Get all configs with the highest priority
-        top_priority_configs = [
-            cfg for cfg in production_configs
-            if (cfg.get("usage_priority") or 0) == highest_priority
-        ]
-        
-        # If multiple configs have same priority, choose randomly
-        if len(top_priority_configs) > 1:
-            import random
-            selected_config = random.choice(top_priority_configs)
-        else:
-            selected_config = top_priority_configs[0]
-        
-        return frappe.get_doc("NFeIO", selected_config["name"])
-    except Exception:
-        return None
-
 
 # ============================================================================
 # Product Invoice Operations - Whitelisted API Endpoints
@@ -240,7 +112,7 @@ def issue_product_invoice(invoice_data):
             invoice_data = json.loads(invoice_data)
         
         # Get valid NFe.io configuration
-        nfeio_config = _get_valid_nfeio_config()
+        nfeio_config = utils.get_nfeio_config()
         if not nfeio_config:
             return {
                 "success": False,
@@ -317,7 +189,7 @@ def cancel_product_invoice(invoice_id, reason):
             }
         
         # Get valid NFe.io configuration
-        nfeio_config = _get_valid_nfeio_config()
+        nfeio_config = utils.get_nfeio_config()
         if not nfeio_config:
             return {
                 "success": False,
@@ -389,7 +261,7 @@ def query_product_invoice_events(invoice_id, limit=10, starting_after=0):
             }
         
         # Get valid NFe.io configuration
-        nfeio_config = _get_valid_nfeio_config()
+        nfeio_config = utils.get_nfeio_config()
         if not nfeio_config:
             return {
                 "success": False,
@@ -469,7 +341,7 @@ def get_product_invoice_by_id(invoice_id):
                 }
             
             # Get valid NFe.io configuration
-            nfeio_config = _get_valid_nfeio_config()
+            nfeio_config = utils.get_nfeio_config()
             if not nfeio_config:
                 return {
                     "success": False,
@@ -557,7 +429,7 @@ def get_product_invoice_pdf(invoice_id, force=False):
                 }
             
             # Get valid NFe.io configuration
-            nfeio_config = _get_valid_nfeio_config()
+            nfeio_config = utils.get_nfeio_config()
             if not nfeio_config:
                 return {
                     "success": False,
@@ -646,7 +518,7 @@ def get_product_invoice_xml(invoice_id):
                 }
             
             # Get valid NFe.io configuration
-            nfeio_config = _get_valid_nfeio_config()
+            nfeio_config = utils.get_nfeio_config()
             if not nfeio_config:
                 return {
                     "success": False,

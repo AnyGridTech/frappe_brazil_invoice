@@ -460,7 +460,7 @@ class TestTaxCalculation(FrappeTestCase):
         tax_template.add_insurance_icms = False
         tax_template.add_other_expenses_icms = False
 
-        tax.calculate_taxes(invoice_doc, tax_template)
+        tax.calculate_taxes(invoice_doc)
 
         self.assertEqual(invoice_doc.icms_value, 18.0)
         self.assertEqual(invoice_doc.ipi_value, 9.75)
@@ -497,7 +497,7 @@ class TestTaxCalculation(FrappeTestCase):
         tax_template.add_other_expenses_icms = False
 
         # Should fall back to hardcoded calculation when use_fallback=True
-        tax.calculate_taxes(invoice_doc, tax_template, None, use_fallback=True)
+        tax.calculate_taxes(invoice_doc, use_fallback=True)
 
         # Verify fallback was used (IPI: 100 * 0.0975 = 9.75)
         self.assertEqual(invoice_doc.ipi_value, 9.75)

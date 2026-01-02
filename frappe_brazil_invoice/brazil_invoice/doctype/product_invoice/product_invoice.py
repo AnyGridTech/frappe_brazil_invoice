@@ -840,7 +840,7 @@ class ProductInvoice(Document):
         if needs_auto_calculation:
             # Call NFe.io API for automatic calculation
             try:
-                nfeio_tax.calculate_taxes(self, tax_template)
+                nfeio_tax.calculate_taxes(self)
             except Exception as e:
                 # If error occurs during Processing, change status to Processing Error
                 if self.invoice_status == "Processing":
@@ -902,7 +902,7 @@ class ProductInvoice(Document):
             tax_template.calculate_automatically_icms
             or tax_template.calculate_automatically_ipi
         ):
-            nfeio_tax.calculate_taxes(self, tax_template)
+            nfeio_tax.calculate_taxes(self)
 
     def on_update(self):
         frappe.log_error(f"Invoice document updated: {self.name}")

@@ -12,6 +12,7 @@ Configuration:
 """
 
 import frappe
+from . import utils
 import requests
 from datetime import datetime
 
@@ -51,7 +52,7 @@ def _append_invoice_log(invoice_doc, log_type, message, details=None):
         invoice_doc.process_events = log_entry
 
 
-def calculate_taxes(invoice_doc, tax_template, nfeio_config=None, use_fallback=False):
+def calculate_taxes(invoice_doc, use_fallback=False):
     """
     Calculate ICMS and IPI using NFe.io Tax Calculation API
 
@@ -71,32 +72,19 @@ def calculate_taxes(invoice_doc, tax_template, nfeio_config=None, use_fallback=F
     - Operation type (CFOP)
     """
     if not invoice_doc.invoice_items_table:
-        return
-
-    # Get NFe.io configuration
-    if not nfeio_config:
-        nfeio_config = _get_nfeio_config()
-
-    if not nfeio_config:
-        error_msg = "NFe.io configuration not found. Please create an NFeIO document with API credentials."
-        _append_invoice_log(invoice_doc, "ERROR", "Tax Calculation Failed", error_msg)
-        if use_fallback:
-            _append_invoice_log(
-                invoice_doc,
-                "WARNING",
-                "Using fallback tax calculation",
-                "NFe.io API unavailable - using hardcoded rates",
-            )
-            frappe.log_error(
-                "NFe.io configuration not found. Using fallback calculation.",
-                "Tax Calculation Error",
-            )
-            calculate_taxes_fallback(invoice_doc, tax_template)
-            return
-        else:
-            frappe.throw(error_msg)
+        frappe.throw("Invoice has no items to calculate taxes.")
 
     try:
+        # Fetch NFe.io configuration
+        nfeio_config = utils.get_nfeio_config()
+
+        # Fetch tax template
+        tax_template_name = invoice_doc.tax_template
+        if not tax_template_name:
+            frappe.throw(f"Invoice '{invoice_doc.name}' does not have a Tax Template assigned")
+
+        tax_template = frappe.get_doc("Tax", tax_template_name)
+
         # Get company state for origin
         company_state = _get_company_state()
 
@@ -270,38 +258,6 @@ def calculate_taxes_fallback(invoice_doc, tax_template):
 
 
 # Private helper functions
-
-
-def _get_nfeio_config():
-    """Get NFe.io configuration from NFeIO doctype
-    
-    Returns the production configuration (is_test_config=0) with the highest usage_priority.
-    Also includes configs where is_test_config is None/empty for backward compatibility.
-    """
-    try:
-        # Get production NFeIO documents ordered by usage_priority
-        # Include None/empty is_test_config for backward compatibility
-        nfeio_list = frappe.get_all(
-            "NFeIO",
-            fields=["name", "usage_priority", "is_test_config"],
-            order_by="usage_priority DESC",
-            limit=1
-        )
-        
-        if nfeio_list:
-            # Filter for production configs (is_test_config = 0 or None/empty)
-            for config in nfeio_list:
-                if not config.get("is_test_config"):  # 0, None, or empty
-                    return frappe.get_doc("NFeIO", config["name"])
-        
-        return None
-    except Exception as e:
-        frappe.log_error(
-            f"Error fetching NFeIO configuration: {str(e)}",
-            "Tax Calculation Configuration Error",
-        )
-        return None
-
 
 def _get_company_state():
     """Get company state from default company settings"""
