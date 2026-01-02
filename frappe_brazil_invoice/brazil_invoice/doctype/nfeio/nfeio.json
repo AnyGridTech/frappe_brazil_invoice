@@ -7,6 +7,7 @@
  "field_order": [
   "config_name",
   "company_name",
+  "company_state",
   "company_id",
   "api_token",
   "is_test_config",
@@ -24,6 +25,12 @@
    "fieldname": "company_name",
    "fieldtype": "Data",
    "label": "Company Name"
+  },
+  {
+   "fieldname": "company_state",
+   "fieldtype": "Select",
+   "label": "Company State",
+   "options": "AC\nAL\nAP\nAM\nBA\nCE\nDF\nES\nGO\nMA\nMT\nMS\nMG\nPA\nPB\nPR\nPE\nPI\nRJ\nRN\nRS\nRO\nRR\nSC\nSP\nSE\nTO"
   },
   {
    "fieldname": "company_id",
