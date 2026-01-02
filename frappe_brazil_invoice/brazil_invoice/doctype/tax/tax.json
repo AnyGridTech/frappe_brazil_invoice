@@ -71,6 +71,8 @@
   "is_template",
   "template_name",
   "operation_nature",
+  "cfop_interstate",
+  "cfop_intrastate",
   "operation_type",
   "amended_from"
  ],
@@ -78,7 +80,7 @@
   {
    "fieldname": "section_break_aprs",
    "fieldtype": "Section Break",
-   "label": " Own ICMS"
+   "label": "Own ICMS"
   },
   {
    "fieldname": "is_template",
@@ -90,7 +92,8 @@
    "fieldname": "template_name",
    "fieldtype": "Data",
    "label": "Template Name",
-   "depends_on": "eval:doc.is_template == 1"
+   "depends_on": "eval:doc.is_template == 1",
+   "mandatory_depends_on": "eval:doc.is_template == 1"
   },
   {
    "fieldname": "operation_nature",
@@ -100,27 +103,32 @@
    "mandatory_depends_on": "eval:doc.is_template == 1"
   },
   {
+   "fieldname": "cfop_interstate",
+   "fieldtype": "Int",
+   "label": "CFOP Interstate",
+   "depends_on": "eval:doc.is_template == 1",
+   "mandatory_depends_on": "eval:doc.is_template == 1"
+  },
+  {
+   "fieldname": "cfop_intrastate",
+   "fieldtype": "Int",
+   "label": "CFOP Intrastate",
+   "depends_on": "eval:doc.is_template == 1",
+   "mandatory_depends_on": "eval:doc.is_template == 1"
+  },
+  {
    "fieldname": "operation_type",
    "fieldtype": "Select",
    "label": "Operation Type (Direction)",
    "options": "\nIncoming\nOutgoing",
-   "depends_on": "eval:doc.is_template == 1"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Tax",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
+   "depends_on": "eval:doc.is_template == 1",
+   "mandatory_depends_on": "eval:doc.is_template == 1"
   },
   {
    "fieldname": "origin_icms",
    "fieldtype": "Select",
    "label": "Origin",
-   "options": "0 - National, except those indicated in codes 3, 4, 5 and 8;\n1 - Foreign - Direct import, except the one indicated in code 6;\n2 - Foreign - Acquired in the domestic market, except the one indicated in code 7;\n3 - National, merchandise or goods with Import Content greater than 40% and less than or equal to 70%;\n4 - National, whose production was made in accordance with the basic productive processes dealt with in the legislation cited in the Adjustments;\n5 - National, merchandise or goods with Import Content less than or equal to 40%;\n6 - Foreign - Direct import, without national equivalent, listed in CAMEX and natural gas;\n7 - Foreign - Acquired in the domestic market, without national equivalent, listed in CAMEX and natural gas;\n8 - National, merchandise or goods with Import Content greater than 70%."
+   "options": "0 - National, except those indicated in codes 3, 4, 5 and 8\n1 - Foreign - Direct import, except the one indicated in code 6\n2 - Foreign - Acquired in the domestic market, except the one indicated in code 7\n3 - National, merchandise or goods with Import Content greater than 40% and less than or equal to 70%\n4 - National, whose production was made in accordance with the basic productive processes dealt with in the legislation cited in the Adjustments\n5 - National, merchandise or goods with Import Content less than or equal to 40%\n6 - Foreign - Direct import, without national equivalent, listed in CAMEX and natural gas\n7 - Foreign - Acquired in the domestic market, without national equivalent, listed in CAMEX and natural gas\n8 - National, merchandise or goods with Import Content greater than 70%."
   },
   {
    "fieldname": "mod_determ_bc",
@@ -453,6 +461,16 @@
    "fieldname": "calculate_automatically_pis",
    "fieldtype": "Check",
    "label": "Calculate Automatically"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Tax",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,
