@@ -31,9 +31,9 @@ from . import (
     generate_random_totals,
     generate_random_address,
     items_array,
-    get_serial_no_array,
-    tax_array,
-    test_carriers,
+    get_serial_no_array_test,
+    tax_array_test,
+    carriers_test,
     print_invoice_details,
 )
 
@@ -212,13 +212,13 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
             )
 
         # Create test serial numbers using fresh generated serial numbers
-        for serial_data in get_serial_no_array():
+        for serial_data in get_serial_no_array_test():
             create_test_serial_no(
                 item_code=serial_data["item_code"], serial_no=serial_data["serial_no"]
             )
 
         # Create tax templates
-        for tax_data in tax_array:
+        for tax_data in tax_array_test:
             if not frappe.db.exists(
                 "Tax", {"template_name": tax_data["template_name"]}
             ):
@@ -226,7 +226,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
                 tax_doc.insert(ignore_permissions=True)
 
         # Create test carriers
-        for carrier_data in test_carriers:
+        for carrier_data in carriers_test:
             if not frappe.db.exists(
                 "Carrier", {"fantasy_name": carrier_data["fantasy_name"]}
             ):
@@ -271,7 +271,7 @@ class TestInvoiceCreationWithTaxCalculation(FrappeTestCase):
 
         # Get test item and serial number
         item = items_array[0]
-        serial = get_serial_no_array()[0]
+        serial = get_serial_no_array_test()[0]
 
         # Prepare invoice items
         invoice_items = [{"serial_number": serial["serial_no"]}]
