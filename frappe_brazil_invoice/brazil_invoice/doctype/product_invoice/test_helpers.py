@@ -365,7 +365,7 @@ def generate_random_client_cnpj(icms_taxpayer_type="NonTaxpayer", state="SP"):
     elif icms_taxpayer_type == "Exempt":
         icms_contributor = "Exempt"
         state_registration = generate_ie(state)
-    else: 
+    else:
         icms_contributor = "NonTaxpayer"
         state_registration = ""
 
@@ -639,7 +639,7 @@ items_array = [
 ]
 
 
-def get_serial_no_array():
+def get_serial_no_array_test():
     """Generate serial number array with random serial numbers
 
     Note: Returns a function to generate fresh serial numbers on each call
@@ -661,12 +661,15 @@ def get_serial_no_array():
     ]
 
 
-tax_array = [
+tax_array_test = [
     {
         "template_name": "Remessa em Garantia",
         "is_template": 1,
         "operation_type": "Warranty Exchange",
-        "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8;",
+        "operation_nature": "Remessa para Troca em Garantia",
+        "cfop_intrastate": 5949,
+        "cfop_interstate": 6949,
+        "origin_icms": "1 - Foreign - Direct import, except the one indicated in code 6",
         "cst_icms": "00 - Fully taxed",
         "icms_rate": 0.00,
         "fcp_rate": 0.00,
@@ -686,9 +689,36 @@ tax_array = [
         "pis_rate": 1.65,
         "calculate_automatically_pis": 0,
     },
+    {
+        "template_name": "Remessa para Conserto",
+        "is_template": 1,
+        "operation_type": "Repair Shipment",
+        "operation_nature": "Remessa para Conserto ou Reparo",
+        "cfop_intrastate": 5915,
+        "cfop_interstate": 6915,
+        "origin_icms": "0 - National, except those indicated in codes 3, 4, 5 and 8",
+        "cst_icms": "41 - Not taxed",
+        "icms_rate": 0.00,
+        "fcp_rate": 0.00,
+        "calculate_automatically_icms": 0,
+        "add_other_expenses_icms": 0,
+        "add_freight_icms": 0,
+        "add_ipi_icms": 0,
+        "add_insurance_icms": 0,
+        "apply_auto_rate_icms": 0,
+        "cst_ipi": "53 - Not taxed",
+        "ipi_rate": 0.00,
+        "calculate_automatically_ipi": 0,
+        "cst_cofins": "49 - Other outbound operations",
+        "cofins_rate": 0.00,
+        "calculate_automatically_cofins": 0,
+        "cst_pis": "49 - Other outbound operations",
+        "pis_rate": 0.00,
+        "calculate_automatically_pis": 0,
+    },
 ]
 
-test_carriers = [
+carriers_test = [
     {
         "fantasy_name": "Transportadora Teste",
         "company_name": "Transportadora Teste Ltda",
@@ -703,7 +733,7 @@ test_carriers = [
     },
 ]
 
-serial_no_array = [
+serial_no_array_test = [
     {
         "item_code": "TEST_INVERTER_001",
         "serial_no": generate_random_serial_number(),
