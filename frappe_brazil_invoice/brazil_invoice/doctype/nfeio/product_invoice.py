@@ -407,7 +407,7 @@ def build_invoice_payload(invoice_doc):
     """
     # Basic payload structure - extend based on your Product Invoice doctype
     payload = {
-        "operationNature": invoice_doc.get("operation_nature") or "VENDA",
+        "operationNature": invoice_doc.get("operation_nature"),
         "operationType": "Outgoing",  # or "Incoming"
         "consumerType": "FinalConsumer",  # or "Normal"
         "items": [],
