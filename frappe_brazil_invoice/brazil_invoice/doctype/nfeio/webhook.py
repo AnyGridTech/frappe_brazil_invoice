@@ -10,10 +10,15 @@ def _not_in_processing_status(invoice_doc):
     return invoice_doc.invoice_status != "Processing"
 
 
-def _get_events_from_invoice(invoice_doc, is_test_invoice=0):
+def _get_events_from_invoice(invoice_doc, is_test_invoice=0, nfeio_config_name=None):
     from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
 
-    resp = nfeio.query_product_invoice_events(invoice_doc.invoice_id, limit=15, is_test_invoice=is_test_invoice)
+    resp = nfeio.query_product_invoice_events(
+        invoice_doc.invoice_id, 
+        limit=15, 
+        is_test_invoice=is_test_invoice,
+        nfeio_config_name=nfeio_config_name
+    )
     if not resp.get("success"):
         frappe.logger().error(
             "Failed to query events for NFe.io invoice ID ({}) with error: {}".format(
@@ -23,9 +28,10 @@ def _get_events_from_invoice(invoice_doc, is_test_invoice=0):
         return resp.get("error")
     return resp.get("data")
 
-def _get_error_from_events(invoice_doc, data=None):
+def _get_error_from_events(invoice_doc, data=None, nfeio_config_name=None):
     if not data:
-        data = _get_events_from_invoice(invoice_doc)
+        is_test_invoice = getattr(invoice_doc, 'is_test_invoice', 0)
+        data = _get_events_from_invoice(invoice_doc, is_test_invoice, nfeio_config_name)
     if not data:
         return f"Could not retrieve events for invoice {invoice_doc.invoice_id}. Error: {data}"
     if not data.get("events"):
@@ -63,21 +69,27 @@ def handle_invoice_status_update(data):
 
         from frappe_brazil_invoice.brazil_invoice.doctype.nfeio import nfeio
 
-        # Find the Product Invoice document by invoice_id to get is_test_invoice flag
+        # Find the Product Invoice document by invoice_id to get is_test_invoice and nfeio_config
         is_test_invoice = 0
+        nfeio_config_name = None
         try:
             invoice_docs = frappe.get_all(
                 "Product Invoice",
                 filters={"invoice_id": invoice_id},
-                fields=["name", "is_test_invoice"],
+                fields=["name", "is_test_invoice", "nfeio_config"],
                 limit=1
             )
             if invoice_docs:
                 is_test_invoice = invoice_docs[0].get("is_test_invoice", 0)
+                nfeio_config_name = invoice_docs[0].get("nfeio_config")
         except Exception as e:
             frappe.logger().warning(f"Could not find Product Invoice for invoice_id {invoice_id}: {str(e)}")
         
-        resp = nfeio.get_product_invoice_by_id(invoice_id, is_test_invoice=is_test_invoice)
+        resp = nfeio.get_product_invoice_by_id(
+            invoice_id, 
+            is_test_invoice=is_test_invoice,
+            nfeio_config_name=nfeio_config_name
+        )
 
         if not resp.get("success"):
             frappe.logger().error(
@@ -146,17 +158,27 @@ def handle_invoice_issued_status(data):
 
         invoice_id = data.get("id")
         
-        # Get is_test_invoice flag from the Product Invoice document
+        # Get is_test_invoice flag and nfeio_config from the Product Invoice document
         is_test_invoice = getattr(invoice_doc, 'is_test_invoice', 0)
+        nfeio_config_name = getattr(invoice_doc, 'nfeio_config', None)
 
-        def get_pdf_url(invoice_id, is_test_invoice):
-            pdf_result = nfeio.get_product_invoice_pdf(invoice_id, force=True, is_test_invoice=is_test_invoice)
+        def get_pdf_url(invoice_id, is_test_invoice, nfeio_config_name):
+            pdf_result = nfeio.get_product_invoice_pdf(
+                invoice_id, 
+                force=True, 
+                is_test_invoice=is_test_invoice,
+                nfeio_config_name=nfeio_config_name
+            )
             if pdf_result.get("success"):
                 return pdf_result.get("pdf_url")
             return None
 
-        def get_xml_url(invoice_id, is_test_invoice):
-            xml_result = nfeio.get_product_invoice_xml(invoice_id, is_test_invoice=is_test_invoice)
+        def get_xml_url(invoice_id, is_test_invoice, nfeio_config_name):
+            xml_result = nfeio.get_product_invoice_xml(
+                invoice_id, 
+                is_test_invoice=is_test_invoice,
+                nfeio_config_name=nfeio_config_name
+            )
             if xml_result.get("success"):
                 return xml_result.get("xml_url")
             return None
@@ -168,8 +190,8 @@ def handle_invoice_issued_status(data):
         print(f"   🔄 Starting PDF/XML retrieval loop (max {retries} retries)")
         for i in range(retries):
             print(f"   📥 Attempt {i+1}/{retries} to get PDF and XML")
-            pdf_url = get_pdf_url(invoice_id, is_test_invoice)
-            xml_url = get_xml_url(invoice_id, is_test_invoice)
+            pdf_url = get_pdf_url(invoice_id, is_test_invoice, nfeio_config_name)
+            xml_url = get_xml_url(invoice_id, is_test_invoice, nfeio_config_name)
             print(f"      PDF URL: {'✓' if pdf_url else '✗'}")
             print(f"      XML URL: {'✓' if xml_url else '✗'}")
             if pdf_url and xml_url:
@@ -190,8 +212,12 @@ def handle_invoice_issued_status(data):
             )
 
         # Get full invoice data to extract access key, number, serie
-        # is_test_invoice already retrieved above
-        invoice_data_result = nfeio.get_product_invoice_by_id(invoice_id, is_test_invoice=is_test_invoice)
+        # is_test_invoice and nfeio_config_name already retrieved above
+        invoice_data_result = nfeio.get_product_invoice_by_id(
+            invoice_id, 
+            is_test_invoice=is_test_invoice,
+            nfeio_config_name=nfeio_config_name
+        )
         if invoice_data_result.get("success"):
             invoice_data = invoice_data_result.get("data", {})
             invoice_doc.invoice_access_key = invoice_data.get("authorization", {}).get(
@@ -205,7 +231,7 @@ def handle_invoice_issued_status(data):
         invoice_doc.invoice_status = "Issued"
         invoice_doc.flags.ignore_processing_lock = True
 
-        process_events = _get_events_from_invoice(invoice_doc, is_test_invoice)
+        process_events = _get_events_from_invoice(invoice_doc, is_test_invoice, nfeio_config_name)
         invoice_doc.process_events = _make_json_prettier(process_events)
 
         invoice_doc.save(ignore_permissions=True)
@@ -249,13 +275,17 @@ def handle_invoice_error_status(data):
             return
 
         error_message = data.get("error_message", "Unknown error")
+        
+        # Get is_test_invoice and nfeio_config from the document
+        is_test_invoice = getattr(invoice_doc, 'is_test_invoice', 0)
+        nfeio_config_name = getattr(invoice_doc, 'nfeio_config', None)
 
         invoice_doc.invoice_status = "Error"
-        process_events = _get_events_from_invoice(invoice_doc)
+        process_events = _get_events_from_invoice(invoice_doc, is_test_invoice, nfeio_config_name)
         invoice_doc.process_events = _make_json_prettier(process_events)
 
         invoice_doc.status_reason = (
-            _get_error_from_events(invoice_doc, process_events)
+            _get_error_from_events(invoice_doc, process_events, nfeio_config_name)
             or f"Could not retrieve error message. Defaulting to: {error_message}"
         )
 
