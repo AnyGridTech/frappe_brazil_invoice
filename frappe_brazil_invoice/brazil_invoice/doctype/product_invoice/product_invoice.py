@@ -110,6 +110,23 @@ class ProductInvoice(Document):
                     frappe.ValidationError,
                 )
 
+    def validate_state_registration(self):
+        """Validate State Registration (IE) based on ICMS Taxpayer status
+        
+        Business rules:
+        - Exempt (Isento): Must NOT have State Registration (IE)
+        - Taxpayer (Contribuinte): Must have State Registration (IE) - enforced by mandatory_depends_on
+        - NonTaxpayer (Não Contribuinte): Optional - may or may not have IE
+        """
+        if self.icms_taxpayer == "Exempt" and self.state_registration:
+            frappe.throw(
+                _(
+                    "State Registration (IE) cannot be filled when ICMS Taxpayer is 'Exempt'. "
+                    "Exempt taxpayers are dispensed from state registration by SEFAZ."
+                ),
+                frappe.ValidationError,
+            )
+
     def before_save(self):
         """Actions before saving the document
 
@@ -164,6 +181,9 @@ class ProductInvoice(Document):
 
         # Validate CPF/CNPJ format
         self.validate_client_id_number()
+
+        # Validate State Registration (IE) based on ICMS Taxpayer status
+        self.validate_state_registration()
 
         # Validate Invoice ID is mandatory when transitioning to Processing
         self.validate_invoice_id()
@@ -1661,6 +1681,28 @@ def get_nfeio_config_query(doctype, txt, searchfield, start, page_len, filters):
         """,
         {
             "is_test_invoice": is_test_invoice,
+            "txt": "%" + txt + "%",
+            "start": start,
+            "page_len": page_len,
+        }
+    )
+
+@frappe.whitelist()
+def get_tax_template_query(doctype, txt, searchfield, start, page_len, filters):
+    """
+    Dynamic query to filter Tax documents to only show Submitted (docstatus=1) documents.
+    Draft documents (docstatus=0) are excluded.
+    """
+    return frappe.db.sql(
+        """
+        SELECT name
+        FROM `tabTax`
+        WHERE docstatus = 1
+        AND name LIKE %(txt)s
+        ORDER BY name
+        LIMIT %(start)s, %(page_len)s
+        """,
+        {
             "txt": "%" + txt + "%",
             "start": start,
             "page_len": page_len,
