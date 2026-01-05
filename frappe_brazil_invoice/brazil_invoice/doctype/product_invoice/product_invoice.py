@@ -168,6 +168,9 @@ class ProductInvoice(Document):
         # Validate Invoice ID is mandatory when transitioning to Processing
         self.validate_invoice_id()
 
+        # Validate NFe.io Configuration is mandatory after Non Processed status
+        self.validate_nfeio_config()
+
         # Validate tax fields are calculated before Processing
         self.validate_tax_calculation()
 
@@ -489,6 +492,29 @@ class ProductInvoice(Document):
             if not self.invoice_id or not self.invoice_id.strip():
                 frappe.throw(
                     _("Invoice ID is mandatory. Please provide the Invoice ID.")
+                )
+
+    def validate_nfeio_config(self):
+        """Validate that NFe.io Configuration is mandatory after Non Processed status
+
+        When an invoice is in Non Processed status or beyond, the NFe.io Configuration field
+        must be selected. This ensures the correct API configuration is used for issuing the invoice.
+        """
+        statuses_requiring_nfeio_config = [
+            "Non Processed",
+            "Processing",
+            "Issued",
+            "Rejected",
+            "Contingency",
+            "Processing Error",
+        ]
+        if self.invoice_status in statuses_requiring_nfeio_config:
+            if not self.nfeio_config or not self.nfeio_config.strip():
+                frappe.throw(
+                    _(
+                        "NFe.io Configuration is mandatory for invoice status '{0}'. "
+                        "Please select an NFe.io configuration before proceeding."
+                    ).format(self.invoice_status)
                 )
 
     def validate_tax_calculation(self):
@@ -1092,14 +1118,23 @@ def move_to_processing(invoice_name):
         # Get invoice document
         invoice_doc = frappe.get_doc("Product Invoice", invoice_name)
 
+        # Ensure nfeio_config is set before proceeding
+        if not invoice_doc.nfeio_config:
+            frappe.throw("NFe.io Configuration must be selected before moving to Processing status")
+
         # Build invoice data from Product Invoice document
         invoice_data = _build_invoice_data_from_doc(invoice_doc)
         
-        # Get the is_test_invoice flag to pass to nfeio
+        # Get the is_test_invoice flag and nfeio_config_name to pass to nfeio
         is_test_invoice = getattr(invoice_doc, 'is_test_invoice', 0)
+        nfeio_config_name = invoice_doc.nfeio_config
 
-        # Call Layer 2: nfeio whitelisted endpoint (without document_name to avoid duplicate scheduling)
-        result = nfeio.issue_product_invoice(invoice_data, is_test_invoice=is_test_invoice)
+        # Call Layer 2: nfeio whitelisted endpoint
+        result = nfeio.issue_product_invoice(
+            invoice_data, 
+            is_test_invoice=is_test_invoice,
+            nfeio_config_name=nfeio_config_name
+        )
 
         # Handle error cases first (fail fast)
         if not result or not isinstance(result, dict) or not result.get("success"):
@@ -1606,6 +1641,32 @@ def get_invoice_status(invoice_name):
         frappe.log_error(frappe.get_traceback(), "NFe Status Check Error")
         return {"success": False, "message": str(e)}
 
+@frappe.whitelist()
+def get_nfeio_config_query(doctype, txt, searchfield, start, page_len, filters):
+    """
+    Dynamic query to filter NFe.io configurations based on is_test_invoice field.
+    Orders results by usage_priority DESC to show highest priority configs first.
+    """
+    # Get the is_test_invoice value from filters
+    is_test_invoice = filters.get("is_test_invoice", 0)
+    
+    return frappe.db.sql(
+        """
+        SELECT name, config_name, usage_priority
+        FROM `tabNFeIO`
+        WHERE is_test_config = %(is_test_invoice)s
+        AND (name LIKE %(txt)s OR config_name LIKE %(txt)s)
+        ORDER BY usage_priority DESC
+        LIMIT %(start)s, %(page_len)s
+        """,
+        {
+            "is_test_invoice": is_test_invoice,
+            "txt": "%" + txt + "%",
+            "start": start,
+            "page_len": page_len,
+        }
+    )
+
 @frappe.whitelist(allow_guest=False)
 def create_invoice(
     operation_type=None,
@@ -1644,6 +1705,7 @@ def create_invoice(
     invoice_ref_access_key=None,
     is_return_invoice=None,
     is_test_invoice=None,
+    nfeio_config=None,
 ):
     """
     API endpoint for creating invoices from automation systems.
@@ -1836,6 +1898,10 @@ def create_invoice(
         # Set test invoice flag (defaults to 0 if not provided)
         if is_test_invoice is not None:
             invoice_doc.is_test_invoice = is_test_invoice
+        
+        # Set NFe.io configuration
+        if nfeio_config:
+            invoice_doc.nfeio_config = nfeio_config
 
         # Add invoice items (child table)
         for item in parsed_items:
