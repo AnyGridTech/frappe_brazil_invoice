@@ -55,6 +55,21 @@ def create_test_invoice_with_token(*args, **kwargs):
     
     # Set is_test_invoice=1 to use test NFe.io configuration
     kwargs["is_test_invoice"] = 1
+    
+    # If nfeio_config not provided, try to get the first available test config
+    if "nfeio_config" not in kwargs or not kwargs.get("nfeio_config"):
+        try:
+            nfeio_configs = frappe.get_all(
+                "NFeIO",
+                fields=["name"],
+                filters={"is_test_config": 1},
+                order_by="usage_priority DESC",
+                limit=1
+            )
+            if nfeio_configs:
+                kwargs["nfeio_config"] = nfeio_configs[0]["name"]
+        except Exception as e:
+            print(f"Warning: Could not auto-fetch nfeio_config: {str(e)}")
 
     # Call the original create_invoice function
     result = create_invoice(*args, **kwargs)

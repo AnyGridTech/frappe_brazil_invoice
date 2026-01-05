@@ -8,9 +8,8 @@ Real API Integration Tests for Product Invoice
 1. A valid NFe.io configuration in the NFeIO doctype with:
    - company_id
    - api_token
-   - can have is_test_config = 0 or 1
+   - can have is_test_config = 1
 
-**NOTE**: Some tests may fail if invoices haven't been fully processed by SEFAZ:
 - PDF/XML retrieval requires invoice to be in "Issued" status
 - Cancellation requires invoice to be in "Issued" status
 - In homologation environment, invoices may take time to process or may not complete
@@ -432,6 +431,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                 total_insurance=totals_data["total_insurance"],
                 other_expenses=totals_data["other_expenses"],
                 invoice_items_table=invoice_items,
+                nfeio_config=self.nfeio_config_name,  # Pass the nfeio_config
             )
 
             self.assertTrue(
