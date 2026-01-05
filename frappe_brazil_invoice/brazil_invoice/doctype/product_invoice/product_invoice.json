@@ -83,6 +83,7 @@
   "process_events",
   "internal_tab",
   "is_test_invoice",
+  "nfeio_config",
   "amended_from"
  ],
  "fields": [
@@ -497,6 +498,14 @@
    "fieldname": "is_test_invoice",
    "fieldtype": "Check",
    "label": "Is Test Invoice"
+  },
+  {
+   "fieldname": "nfeio_config",
+   "fieldtype": "Link",
+   "label": "NFe.io Configuration",
+   "options": "NFeIO",
+   "get_query": "frappe_brazil_invoice.brazil_invoice.doctype.product_invoice.product_invoice.get_nfeio_config_query",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
   },
   {
    "fieldname": "amended_from",
