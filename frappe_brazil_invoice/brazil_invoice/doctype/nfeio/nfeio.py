@@ -82,7 +82,7 @@ def calculate_product_invoice_taxes(issuer, recipient, operation_type, items, co
         }
 
 @frappe.whitelist()
-def issue_product_invoice(invoice_data, is_test_invoice=0):
+def issue_product_invoice(invoice_data, is_test_invoice=0, nfeio_config_name=None):
     """
     API endpoint to issue/emit a product invoice (NFe) via NFe.io
     
@@ -93,6 +93,7 @@ def issue_product_invoice(invoice_data, is_test_invoice=0):
     Args:
         invoice_data: JSON string or dict with invoice data in NFe.io format
         is_test_invoice: Flag to indicate if this is a test invoice (0 or 1)
+        nfeio_config_name: Name of the NFeIO document to use (optional, will auto-fetch if not provided)
         
     Returns:
         dict: Response with success status and invoice details
@@ -100,7 +101,7 @@ def issue_product_invoice(invoice_data, is_test_invoice=0):
     Example:
         frappe.call({
             method: "frappe_brazil_invoice.brazil_invoice.doctype.nfeio.nfeio.issue_product_invoice",
-            args: { invoice_data: {...}, is_test_invoice: 1 }
+            args: { invoice_data: {...}, is_test_invoice: 1, nfeio_config_name: "My Config" }
         })
     """
     from . import product_invoice
@@ -117,13 +118,14 @@ def issue_product_invoice(invoice_data, is_test_invoice=0):
         else:
             is_test_invoice = int(is_test_invoice or 0)
         
-        # Get valid NFe.io configuration based on is_test_invoice flag
-        nfeio_config = utils.get_nfeio_config(is_test_config=is_test_invoice)
-        if not nfeio_config:
+        # Get NFe.io configuration
+        if not nfeio_config_name:
             return {
                 "success": False,
-                "error": f"No valid NFe.io configuration found (with is_test_config={is_test_invoice}). Please create an NFeIO document with API credentials."
+                "error": "nfeio_config_name is required. Please provide the NFe.io configuration name."
             }
+        
+        nfeio_config = frappe.get_doc("NFeIO", nfeio_config_name)
         
         # Issue the invoice
         response = product_invoice.issue_product_invoice(invoice_data, nfeio_config)
@@ -230,13 +232,14 @@ def cancel_product_invoice(invoice_id, reason):
         }
 
 @frappe.whitelist()
-def get_product_invoice_by_id(invoice_id, is_test_invoice=0):
+def get_product_invoice_by_id(invoice_id, is_test_invoice=0, nfeio_config_name=None):
     """
     API endpoint to get a product invoice (NFe) by ID
     
     Args:
         invoice_id: NFe.io invoice ID
         is_test_invoice: Flag to indicate if this is a test invoice (0 or 1)
+        nfeio_config_name: Name of the NFeIO document to use (optional)
         
     Returns:
         dict: Complete invoice data
@@ -257,13 +260,14 @@ def get_product_invoice_by_id(invoice_id, is_test_invoice=0):
         else:
             is_test_invoice = int(is_test_invoice or 0)
         
-        # Get valid NFe.io configuration based on is_test_invoice flag
-        nfeio_config = utils.get_nfeio_config(is_test_config=is_test_invoice)
-        if not nfeio_config:
+        # Get NFe.io configuration
+        if not nfeio_config_name:
             return {
                 "success": False,
-                "error": f"No valid NFe.io configuration found (with is_test_config={is_test_invoice})"
+                "error": "nfeio_config_name is required. Please provide the NFe.io configuration name."
             }
+        
+        nfeio_config = frappe.get_doc("NFeIO", nfeio_config_name)
         
         print(f"\n🔍 get_product_invoice_by_id using config: {nfeio_config.name}")
         print(f"   Company ID: {nfeio_config.company_id}")
@@ -297,7 +301,7 @@ def get_product_invoice_by_id(invoice_id, is_test_invoice=0):
         }
 
 @frappe.whitelist()
-def query_product_invoice_events(invoice_id, limit=10, starting_after=0, is_test_invoice=0):
+def query_product_invoice_events(invoice_id, limit=10, starting_after=0, is_test_invoice=0, nfeio_config_name=None):
     """
     API endpoint to query events for a product invoice (NFe)
     
@@ -309,6 +313,7 @@ def query_product_invoice_events(invoice_id, limit=10, starting_after=0, is_test
         limit: Maximum number of events to retrieve (default: 10)
         starting_after: Pagination starting index (default: 0)
         is_test_invoice: Flag to indicate if this is a test invoice (0 or 1)
+        nfeio_config_name: Name of the NFeIO document to use (optional)
         
     Returns:
         dict: Response with events array and pagination info
@@ -339,13 +344,14 @@ def query_product_invoice_events(invoice_id, limit=10, starting_after=0, is_test
         else:
             is_test_invoice = int(is_test_invoice or 0)
         
-        # Get valid NFe.io configuration based on is_test_invoice flag
-        nfeio_config = utils.get_nfeio_config(is_test_config=is_test_invoice)
-        if not nfeio_config:
+        # Get NFe.io configuration
+        if not nfeio_config_name:
             return {
                 "success": False,
-                "error": f"No valid NFe.io configuration found (with is_test_config={is_test_invoice})"
+                "error": "nfeio_config_name is required. Please provide the NFe.io configuration name."
             }
+        
+        nfeio_config = frappe.get_doc("NFeIO", nfeio_config_name)
         
         # Get events
         response = product_invoice.get_invoice_events(
@@ -380,7 +386,7 @@ def query_product_invoice_events(invoice_id, limit=10, starting_after=0, is_test
         }
 
 @frappe.whitelist()
-def get_product_invoice_pdf(invoice_id, force=False, is_test_invoice=0):
+def get_product_invoice_pdf(invoice_id, force=False, is_test_invoice=0, nfeio_config_name=None):
     """
     API endpoint to get PDF URL for invoice auxiliary document (DANFE)
     
@@ -392,6 +398,7 @@ def get_product_invoice_pdf(invoice_id, force=False, is_test_invoice=0):
         invoice_id: NFe.io invoice ID
         force: Force PDF generation regardless of FlowStatus (default: False)
         is_test_invoice: Flag to select test (1) or production (0) config (default: 0)
+        nfeio_config_name: Name of the NFeIO document to use (optional)
         
     Returns:
         dict: Response with PDF URI
@@ -421,14 +428,14 @@ def get_product_invoice_pdf(invoice_id, force=False, is_test_invoice=0):
                     "error": "Invoice ID is required"
                 }
             
-            # Get valid NFe.io configuration
-            is_test_invoice = int(is_test_invoice)  # Ensure it's an integer
-            nfeio_config = utils.get_nfeio_config(is_test_config=is_test_invoice)
-            if not nfeio_config:
+            # Get NFe.io configuration
+            if not nfeio_config_name:
                 return {
                     "success": False,
-                    "error": "No valid NFe.io configuration found"
+                    "error": "nfeio_config_name is required. Please provide the NFe.io configuration name."
                 }
+            
+            nfeio_config = frappe.get_doc("NFeIO", nfeio_config_name)
             
             # Get PDF URL
             response = product_invoice.get_invoice_pdf(
@@ -475,7 +482,7 @@ def get_product_invoice_pdf(invoice_id, force=False, is_test_invoice=0):
                 }
 
 @frappe.whitelist()
-def get_product_invoice_xml(invoice_id, is_test_invoice=0):
+def get_product_invoice_xml(invoice_id, is_test_invoice=0, nfeio_config_name=None):
     """
     API endpoint to get XML URL for product invoice (NFe)
     
@@ -486,6 +493,7 @@ def get_product_invoice_xml(invoice_id, is_test_invoice=0):
     Args:
         invoice_id: NFe.io invoice ID
         is_test_invoice: Flag to select test (1) or production (0) config (default: 0)
+        nfeio_config_name: Name of the NFeIO document to use (optional)
         
     Returns:
         dict: Response with XML URI
@@ -511,14 +519,14 @@ def get_product_invoice_xml(invoice_id, is_test_invoice=0):
                     "error": "Invoice ID is required"
                 }
             
-            # Get valid NFe.io configuration
-            is_test_invoice = int(is_test_invoice)  # Ensure it's an integer
-            nfeio_config = utils.get_nfeio_config(is_test_config=is_test_invoice)
-            if not nfeio_config:
+            # Get NFe.io configuration
+            if not nfeio_config_name:
                 return {
                     "success": False,
-                    "error": "No valid NFe.io configuration found"
+                    "error": "nfeio_config_name is required. Please provide the NFe.io configuration name."
                 }
+            
+            nfeio_config = frappe.get_doc("NFeIO", nfeio_config_name)
             
             # Get XML URL
             response = product_invoice.get_invoice_xml(invoice_id, nfeio_config)
