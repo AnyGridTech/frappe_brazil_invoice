@@ -13,15 +13,25 @@
   "column_break_fatv",
   "rate",
   "quantity",
+  "unit",
+  "amount",
   "ncm",
+  "cfop",
+  "description",
   "tax_section",
   "invoice_taxes",
   "icms_rate",
+  "icms_value",
   "ipi_rate",
+  "ipi_value",
+  "ii_rate",
+  "ii_value",
   "column_break_ptnc",
   "rate_taxes",
   "pis_rate",
-  "cofins_rate"
+  "pis_value",
+  "cofins_rate",
+  "cofins_value"
  ],
  "fields": [
   {
@@ -35,7 +45,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Serial No",
-   "options": "Serial No"
+   "options": "Serial No",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fetch_from": "serial_number.item_code",
@@ -43,7 +54,8 @@
    "fieldname": "item_code",
    "fieldtype": "Link",
    "label": "Item",
-   "options": "Item"
+   "options": "Item",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "columns": 2,
@@ -54,7 +66,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Item Name",
-   "options": "Item"
+   "options": "Item",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "column_break_fatv",
@@ -67,14 +80,56 @@
    "fieldtype": "Currency",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Rate"
+   "label": "Rate",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "quantity",
    "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Quantity"
+   "label": "Quantity",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
+  },
+  {
+   "fetch_from": "item_code.stock_uom",
+   "fetch_if_empty": 1,
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "Unit",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "item_code.ncm",
+   "fetch_if_empty": 1,
+   "fieldname": "ncm",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "NCM",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
+  },
+  {
+   "fieldname": "cfop",
+   "fieldtype": "Int",
+   "label": "CFOP",
+   "description": "Fiscal Operation Code (only editable when no tax template is set)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fetch_from": "item_code.description",
+   "fetch_if_empty": 1,
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Description",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "tax_section",
@@ -85,7 +140,8 @@
    "fieldname": "invoice_taxes",
    "fieldtype": "Link",
    "label": "Invoice Taxes",
-   "options": "Tax"
+   "options": "Tax",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "column_break_ptnc",
@@ -93,8 +149,9 @@
   },
   {
    "fieldname": "rate_taxes",
-   "fieldtype": "Data",
-   "label": "Rate with Taxes"
+   "fieldtype": "Currency",
+   "label": "Rate with Taxes",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "ncm",
@@ -102,34 +159,75 @@
    "in_list_view": 1,
    "in_preview": 1,
    "in_standard_filter": 1,
-   "label": "ncm"
+   "label": "ncm",
+   "read_only_depends_on": "eval:parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status)"
   },
   {
    "fieldname": "icms_rate",
-   "fieldtype": "Data",
-   "label": "ICMS"
+   "fieldtype": "Percent",
+   "label": "ICMS Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "icms_value",
+   "fieldtype": "Currency",
+   "label": "ICMS Value",
+   "read_only": 1
   },
   {
    "fieldname": "ipi_rate",
-   "fieldtype": "Data",
-   "label": "IPI"
+   "fieldtype": "Percent",
+   "label": "IPI Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "ipi_value",
+   "fieldtype": "Currency",
+   "label": "IPI Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ii_rate",
+   "fieldtype": "Percent",
+   "label": "II Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "ii_value",
+   "fieldtype": "Currency",
+   "label": "II Value",
+   "read_only": 1
   },
   {
    "fieldname": "pis_rate",
-   "fieldtype": "Data",
-   "label": "PIS"
+   "fieldtype": "Percent",
+   "label": "PIS Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "pis_value",
+   "fieldtype": "Currency",
+   "label": "PIS Value",
+   "read_only": 1
   },
   {
    "fieldname": "cofins_rate",
-   "fieldtype": "Data",
-   "label": "COFINS"
+   "fieldtype": "Percent",
+   "label": "COFINS Rate (%)",
+   "read_only_depends_on": "eval:parent.tax_template || (parent.invoice_status && !['Draft', 'Non Processed'].includes(parent.invoice_status))"
+  },
+  {
+   "fieldname": "cofins_value",
+   "fieldtype": "Currency",
+   "label": "COFINS Value",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-11-19 17:42:11.108748",
+ "modified": "2025-11-26 17:55:05.960541",
  "modified_by": "Administrator",
  "module": "Brazil Invoice",
  "name": "Item Invoice",

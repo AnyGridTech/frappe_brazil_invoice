@@ -1,0 +1,613 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:INV-{YYYY}-{MM}-{DD}-{####}",
+ "creation": "2025-10-17 18:20:18.734937",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_xrur",
+  "invoice_status",
+  "status_reason",
+  "emitter_info_section",
+  "is_test_invoice",
+  "nfeio_config",
+  "emitter_state",
+  "section_break_goab",
+  "client_name",
+  "client_email",
+  "icms_taxpayer",
+  "column_break_wxky",
+  "client_phone",
+  "client_id_number",
+  "state_registration",
+  "process_information_section",
+  "operation_type",
+  "operation_nature",
+  "client_type",
+  "freight_modality",
+  "column_break_olve",
+  "invoice_ref_number",
+  "invoice_ref_series",
+  "invoice_ref_access_key",
+  "is_return_invoice",
+  "product_section",
+  "tax_template",
+  "invoice_items_table",
+  "product_quantity",
+  "product_type",
+  "product_brand",
+  "additional_data_section",
+  "additional_information",
+  "taxes_section",
+  "icms_value",
+  "ipi_value",
+  "ii_value",
+  "column_break_taxes",
+  "pis_value",
+  "cofins_value",
+  "difal_value",
+  "totals_section",
+  "total_freight",
+  "total_discount",
+  "column_break_zeka",
+  "total_insurance",
+  "other_expenses",
+  "section_break_ycvd",
+  "total",
+  "column_break_bjbb",
+  "total_of_taxes",
+  "total_with_taxes",
+  "sefaz_events_section",
+  "invoice_id",
+  "invoice_serie",
+  "invoice_access_key",
+  "column_break_pbac",
+  "invoice_pdf_url",
+  "invoice_xml_url",
+  "invoice_number",
+  "section_break_fpdy",
+  "process_events",
+  "delivery_tab",
+  "section_break_jxvl",
+  "column_break_gkdb",
+  "carrier",
+  "product_gross_weight",
+  "product_net_weight",
+  "address_section",
+  "delivery_supervisor",
+  "delivery_cep",
+  "delivery_address",
+  "delivery_neighborhood",
+  "delivery_ibge",
+  "column_break_iwze",
+  "delivery_phone",
+  "delivery_state",
+  "city",
+  "delivery_number_address",
+  "delivery_complement",
+  "internal_tab",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_xrur",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "fieldname": "invoice_status",
+   "fieldtype": "Link",
+   "label": "Status",
+   "options": "Workflow State",
+   "read_only": 1
+  },
+  {
+   "description": "Reason for current status (e.g., rejection reason, contingency details)",
+   "fieldname": "status_reason",
+   "fieldtype": "Small Text",
+   "label": "Status Reason",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "tax_template.operation_nature",
+   "fetch_if_empty": 1,
+   "fieldname": "operation_nature",
+   "fieldtype": "Data",
+   "label": "Operation Nature",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
+   "reqd": 1
+  },
+  {
+   "fieldname": "operation_type",
+   "fieldtype": "Select",
+   "label": "Operation Type",
+   "options": "\nIncoming\nOutgoing",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
+   "reqd": 1
+  },
+  {
+   "fieldname": "freight_modality",
+   "fieldtype": "Select",
+   "label": "Freight Modality",
+   "options": "0 - Freight Contracted by Sender (CIF)\n1 - Freight Contracted by Recipient (FOB)\n2 - Freight Contracted by Third Party\n3 - Own Transport by Sender\n4 - Own Transport by Recipient\n9 - No Transport Occurrence",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
+   "reqd": 1
+  },
+  {
+   "fieldname": "invoice_ref_series",
+   "fieldtype": "Data",
+   "label": "Invoice Ref. Series",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_ref_number",
+   "fieldtype": "Data",
+   "label": "Invoice Ref. Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_ref_access_key",
+   "fieldtype": "Data",
+   "label": "Invoice Ref. Access Key",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_return_invoice",
+   "fieldtype": "Check",
+   "label": "Is Return Invoice",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "section_break_goab",
+   "fieldtype": "Section Break",
+   "label": "Client Register Information"
+  },
+  {
+   "fieldname": "client_name",
+   "fieldtype": "Data",
+   "label": "Name / Company Name",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
+   "reqd": 1
+  },
+  {
+   "fieldname": "client_email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_wxky",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "client_phone",
+   "fieldtype": "Phone",
+   "label": "Contact Phone",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_id_number",
+   "fieldtype": "Data",
+   "label": "CPF / CNPJ",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_jxvl",
+   "fieldtype": "Section Break",
+   "label": "Logistics"
+  },
+  {
+   "fieldname": "product_brand",
+   "fieldtype": "Data",
+   "label": "Brand",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "product_quantity",
+   "fieldtype": "Data",
+   "label": "Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "product_type",
+   "fieldtype": "Data",
+   "label": "Type",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "column_break_gkdb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "carrier",
+   "fieldtype": "Link",
+   "label": "Carrier",
+   "options": "Carrier",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "product_gross_weight",
+   "fieldtype": "Data",
+   "label": "Gross Weight",
+   "read_only": 1
+  },
+  {
+   "fieldname": "product_net_weight",
+   "fieldtype": "Data",
+   "label": "Net Weight",
+   "read_only": 1
+  },
+  {
+   "fieldname": "additional_data_section",
+   "fieldtype": "Section Break",
+   "label": "Additional Data"
+  },
+  {
+   "fieldname": "additional_information",
+   "fieldtype": "Small Text",
+   "label": "Additional Information",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "taxes_section",
+   "fieldtype": "Section Break",
+   "label": "Individual Taxes"
+  },
+  {
+   "fieldname": "icms_value",
+   "fieldtype": "Currency",
+   "label": "ICMS Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ipi_value",
+   "fieldtype": "Currency",
+   "label": "IPI Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ii_value",
+   "fieldtype": "Currency",
+   "label": "II Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_taxes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pis_value",
+   "fieldtype": "Currency",
+   "label": "PIS Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cofins_value",
+   "fieldtype": "Currency",
+   "label": "COFINS Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "difal_value",
+   "fieldtype": "Currency",
+   "label": "DIFAL Value",
+   "read_only": 1
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
+   "fieldname": "total_freight",
+   "fieldtype": "Data",
+   "label": "Freight",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "total_discount",
+   "fieldtype": "Data",
+   "label": "Discount",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "column_break_zeka",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_insurance",
+   "fieldtype": "Data",
+   "label": "Insurance",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "other_expenses",
+   "fieldtype": "Data",
+   "label": "Other Expenses",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "section_break_ycvd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_bjbb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_of_taxes",
+   "fieldtype": "Currency",
+   "label": "Total of Taxes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_with_taxes",
+   "fieldtype": "Currency",
+   "label": "Total + Taxes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "product_section",
+   "fieldtype": "Section Break",
+   "label": "Product"
+  },
+  {
+   "fieldname": "invoice_items_table",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Item Invoice"
+  },
+  {
+   "fieldname": "address_section",
+   "fieldtype": "Section Break",
+   "label": "Address"
+  },
+  {
+   "fieldname": "delivery_supervisor",
+   "fieldtype": "Data",
+   "label": "Responsible",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "delivery_cep",
+   "fieldtype": "Data",
+   "label": "Postal Code",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "delivery_address",
+   "fieldtype": "Data",
+   "label": "Address",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "delivery_neighborhood",
+   "fieldtype": "Data",
+   "label": "Neighborhood",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "delivery_ibge",
+   "fieldtype": "Data",
+   "label": "IBGE",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "column_break_iwze",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "delivery_phone",
+   "fieldtype": "Phone",
+   "label": "Contact Phone",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "delivery_state",
+   "fieldtype": "Select",
+   "label": "State",
+   "options": "\nAC\nAL\nAM\nAP\nBA\nCE\nDF\nES\nGO\nMA\nMG\nMS\nMT\nPA\nPB\nPE\nPI\nPR\nRJ\nRN\nRO\nRR\nRS\nSC\nSE\nSP\nTO",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "delivery_number_address",
+   "fieldtype": "Data",
+   "label": "Address Number",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "delivery_complement",
+   "fieldtype": "Data",
+   "label": "Complement",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "sefaz_events_section",
+   "fieldtype": "Section Break",
+   "label": "Sefaz Events"
+  },
+  {
+   "fieldname": "invoice_id",
+   "fieldtype": "Data",
+   "label": "Invoice ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_serie",
+   "fieldtype": "Data",
+   "label": "Invoice Serie",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_access_key",
+   "fieldtype": "Data",
+   "label": "Invoice Access Key",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pbac",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invoice_pdf_url",
+   "fieldtype": "Small Text",
+   "label": "Invoice PDF URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_xml_url",
+   "fieldtype": "Small Text",
+   "label": "Invoice XML URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_number",
+   "fieldtype": "Data",
+   "label": "Invoice Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_fpdy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "process_events",
+   "fieldtype": "JSON",
+   "label": "Process Events",
+   "read_only": 1
+  },
+  {
+   "fieldname": "internal_tab",
+   "fieldtype": "Tab Break",
+   "label": "Internal"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_test_invoice",
+   "fieldtype": "Check",
+   "label": "Is Test Invoice"
+  },
+  {
+   "fieldname": "nfeio_config",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Emitter NFeIO Config",
+   "options": "NFeIO",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Product Invoice",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "icms_taxpayer",
+   "fieldtype": "Select",
+   "label": "ICMS Taxpayer",
+   "options": "NonTaxpayer\nTaxpayer\nExempt",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "state_registration",
+   "fieldtype": "Data",
+   "label": "State Registration (IE)",
+   "mandatory_depends_on": "eval:doc.icms_taxpayer == 'Taxpayer'",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_type",
+   "fieldtype": "Select",
+   "label": "Client Type",
+   "options": "\nIndividual\nCompany",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tax_template",
+   "fieldtype": "Link",
+   "label": "Tax Template",
+   "link_filters": "[[\"Tax\",\"docstatus\",\"=\",\"1\"]]",
+   "options": "Tax",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "process_information_section",
+   "fieldtype": "Section Break",
+   "label": "Process Information"
+  },
+  {
+   "fieldname": "column_break_olve",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "delivery_tab",
+   "fieldtype": "Tab Break",
+   "label": "Delivery"
+  },
+  {
+   "fieldname": "emitter_info_section",
+   "fieldtype": "Section Break",
+   "label": "Emitter Information"
+  },
+  {
+   "fetch_from": "nfeio_config.company_state",
+   "fieldname": "emitter_state",
+   "fieldtype": "Data",
+   "label": "Emitter State",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-01-06 07:36:48.708093",
+ "modified_by": "Administrator",
+ "module": "Brazil Invoice",
+ "name": "Product Invoice",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

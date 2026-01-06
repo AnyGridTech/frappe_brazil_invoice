@@ -1,0 +1,65 @@
+[
+  {
+    "doctype": "Workflow State",
+    "name": "Non Processed",
+    "workflow_state_name": "Non Processed",
+    "icon": "file",
+    "style": "Info"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Tax Calculation Error",
+    "workflow_state_name": "Tax Calculation Error",
+    "icon": "alert",
+    "style": "Danger"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Processing",
+    "workflow_state_name": "Processing",
+    "icon": "cog",
+    "style": "Warning"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Processing Error",
+    "workflow_state_name": "Processing Error",
+    "icon": "exclamation-triangle",
+    "style": "Danger"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Contingency",
+    "workflow_state_name": "Contingency",
+    "icon": "exclamation-sign",
+    "style": "Warning"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Issued",
+    "workflow_state_name": "Issued",
+    "icon": "ok-sign",
+    "style": "Success"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Rejected",
+    "workflow_state_name": "Rejected",
+    "icon": "ban-circle",
+    "style": "Danger"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Cancelled",
+    "workflow_state_name": "Cancelled",
+    "icon": "remove",
+    "style": "Danger"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Unused",
+    "workflow_state_name": "Unused",
+    "icon": "trash",
+    "style": "Inverse"
+  }
+]

@@ -2,41 +2,68 @@ import { FrappeDoc } from "@anygridtech/frappe-types/client/frappe/core";
 import { Item } from "@anygridtech/frappe-types/doctype/erpnext/Item";
 
 export interface InvoicesDoc extends FrappeDoc {
-  operation_nature?: string;
-  carrier?: string;
-  modalidade_de_frete?: string;
-  client_type?: string;
-  contribuinte_icms?: string;
-  state_tax_number?: string;
-  tax_template?: string;
-  nf_de_retorno?: string;
-  nf_ref_serie?: string;
-  nf_ref_numero?: string;
-  nf_chave_de_acesso?: string;
-  nome?: string;
-  email?: string;
-  telefone?: string;
-  client_id_number?: string; // CPF/CNPJ
-  items_section?: string;
-  invoices_table: InvoiceItem[];
-  scan_barcode?: string;
-  invoice_id?: string;
-  invoice_link?: string;
-  total?: string;
-  total_impostos?: string;
-  collectguy?: string;
-  cep?: string;
-  address?: string;
-  neighborhood?: string;
-  ibge?: string;
-  deliveryphone?: string;
-  state?: string;
-  city?: string;
-  number_address?: string;
-  complement?: string;
-  small_text_cyhn?: string;
-  errors_field?: string;
-  internal_tab?: string;
+  // Section Break XRUR
+  operation_type?: string; // Natureza de Operação
+  client_type?: string; // Tipo de Cliente (PF/PJ)
+  freight_modality?: string; // Modalidade de Frete
+  nf_ref_serie?: string; // NF Ref. Série
+  nf_ref_num?: string; // NF Ref. Número
+  nf_ref_access_key?: string; // NF Ref. Chave de Acesso
+  nf_de_retorno?: number; // NF de Retorno? (Check)
+
+  // Section Break GOAB - Client Info
+  client_name?: string; // Nome / Razão Social
+  client_email?: string; // Email
+  contribuinte_icms?: string; // Contribuinte ICMS
+  client_phone?: string; // Telefone de Contato
+  client_id_number?: string; // CPF / CNPJ
+  inscricao_estadual?: string; // Inscrição Estadual (IE)
+
+  // Produto Section
+  tax_template?: string; // Tax Template
+  invoices_table: InvoiceItem[]; // Table of items
+
+  // Section Break JXVL - Transport Info
+  product_brand?: string; // Marca
+  product_quantity?: string; // Quantidade
+  product_type?: string; // Espécie
+  carrier?: string; // Transportadora
+  product_gross_weight?: string; // Peso Bruto
+  product_net_weight?: string; // Peso Líquido
+
+  // Dados Adicionais Section
+  additional_information?: string; // Informações Complementares
+
+  // Totais Section
+  total_freight?: string; // Frete
+  total_discount?: string; // Desconto
+  total_insurance?: string; // Seguro
+  other_expenses?: string; // Outras Despesas
+  total?: string; // Total
+  total_tax?: string; // Total + Impostos
+
+  // Endereço Section - Delivery Address
+  delivery_supervisor?: string; // Responsável
+  delivery_cep?: string; // CEP
+  delivery_address?: string; // Endereço
+  delivery_neighborhood?: string; // Bairro
+  delivery_ibge?: string; // IBGE
+  delivery_phone?: string; // Telefone de Contato
+  delivery_state?: string; // Estado
+  city?: string; // Cidade
+  delivery_number_address?: string; // Nº do Endereço
+  delivery_complement?: string; // Complemento
+
+  // Eventos Sefaz Section
+  invoice_id?: string; // Invoice ID
+  invoice_serie?: string; // Invoice Serie
+  invoice_link?: string; // Invoice Link
+  invoice_number?: string; // Invoice Number
+
+  // Section Break FPDY
+  process_events?: string; // Logs
+
+  // Internal Tab
   amended_from?: string;
 }
 export interface Inverter extends Item {

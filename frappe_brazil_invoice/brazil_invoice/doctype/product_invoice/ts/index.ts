@@ -1,9 +1,10 @@
 import { Inverter, InvoiceItem, InvoicesDoc } from "../../../../types/invoice";
 import { handleInvoiceTaxesChange, sumTotalItems, applyTaxTemplateToItems } from "./tax";
+import { setupCEPField, processCEPLookup } from "./cep";
 
 
 
-frappe.ui.form.on<InvoicesDoc>("Invoices", "before_save", async (form) => {
+frappe.ui.form.on<InvoicesDoc>("Product Invoice", "before_save", async (form) => {
   var clientType = form.doc.client_type;
   if (clientType === "PF") {
     if (!cpfValid(form.doc.client_id_number || "")) {
@@ -20,9 +21,85 @@ frappe.ui.form.on<InvoicesDoc>("Invoices", "before_save", async (form) => {
 
 });
 
-frappe.ui.form.on<InvoicesDoc>("Invoices", {
+frappe.ui.form.on<InvoicesDoc>("Product Invoice", {
+  onload: function (frm) {
+    setupCEPField(frm);
+  },
+  
+  refresh: function(frm) {
+    // Add "Create NFe Invoice" button
+    if (frm.doc.docstatus === 1 && !frm.doc.invoice_id) {
+      // Only show button if document is submitted and invoice not yet created
+      frm.add_custom_button(__('Create NFe Invoice'), function() {
+        frappe.call({
+          method: 'frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.process_invoice',
+          args: {
+            invoice_name: frm.doc.name
+          },
+          freeze: true,
+          callback: function(r) {
+            if (r.message && r.message.success) {
+              frm.reload_doc();
+            }
+          }
+        });
+      }, __('Actions'));
+    }
+    
+    // Add "Check Status" button if invoice was already created
+    if (frm.doc.invoice_id) {
+      frm.add_custom_button(__('Check NFe Status'), function() {
+        frappe.call({
+          method: 'frappe_brazil_invoice.brazil_invoice.doctype.invoices.invoices.get_invoice_status',
+          args: {
+            invoice_name: frm.doc.name
+          },
+          callback: function(r) {
+            if (r.message && r.message.success) {
+              const data = r.message.data;
+              frappe.msgprint({
+                title: __('Invoice Status'),
+                indicator: 'blue',
+                message: `
+                  <p><strong>ID:</strong> ${data.id || 'N/A'}</p>
+                  <p><strong>Status:</strong> ${data.status || 'N/A'}</p>
+                  <p><strong>Environment:</strong> ${data.environment || 'N/A'}</p>
+                  <p><strong>Flow Status:</strong> ${data.flowStatus || 'N/A'}</p>
+                `
+              });
+            } else {
+              frappe.msgprint({
+                title: __('Error'),
+                indicator: 'red',
+                message: r.message.message || __('Failed to get invoice status')
+              });
+            }
+          }
+        });
+      }, __('Actions'));
+      
+      // Add "View PDF" button
+      if (frm.doc.invoice_pdf_url) {
+        frm.add_custom_button(__('View NFe PDF'), function() {
+          window.open(frm.doc.invoice_pdf_url, '_blank');
+        }, __('Actions'));
+      }
+      
+      // Add "View XML" button
+      if (frm.doc.invoice_xml_url) {
+        frm.add_custom_button(__('View NFe XML'), function() {
+          window.open(frm.doc.invoice_xml_url, '_blank');
+        }, __('Actions'));
+      }
+    }
+  },
+  
   tax_template: async function (frm) {
     await applyTaxTemplateToItems(frm);
+  },
+  
+  delivery_cep: async function (frm) {
+    await processCEPLookup(frm);
   },
 });
 
@@ -74,7 +151,7 @@ frappe.ui.form.on<InvoicesDoc>("Item Invoice", {
             row.rate_taxes = item.valuation_rate ?? 0;
             row.ncm = item.ncm;
             row.description = item.description || "";
-            frm.refresh_field("items");
+            frm.refresh_field("invoices_table");
             sumTotalItems(frm);
           }
         });
@@ -92,7 +169,7 @@ frappe.ui.form.on<InvoicesDoc>("Item Invoice", {
     if (!row) {
       return;
     }
-    frm.refresh_field("items");
+    frm.refresh_field("invoices_table");
     sumTotalItems(frm);
   },
   

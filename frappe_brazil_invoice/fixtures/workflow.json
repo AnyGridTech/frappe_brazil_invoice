@@ -1,0 +1,150 @@
+[
+  {
+    "doctype": "Workflow",
+    "name": "Invoice Workflow",
+    "workflow_name": "Invoice Workflow",
+    "document_type": "Product Invoice",
+    "is_active": 1,
+    "override_status": 0,
+    "send_email_alert": 0,
+    "workflow_state_field": "invoice_status",
+    "states": [
+      {
+        "doctype": "Workflow Document State",
+        "state": "Non Processed",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Tax Calculation Error",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Processing",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Processing Error",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Contingency",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Issued",
+        "doc_status": "1",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Rejected",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Cancelled",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Unused",
+        "doc_status": "0",
+        "allow_edit": "System Manager"
+      }
+    ],
+    "transitions": [
+      {
+        "doctype": "Workflow Transition",
+        "state": "Non Processed",
+        "action": "Process",
+        "next_state": "Processing",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Tax Calculation Error",
+        "action": "Process",
+        "next_state": "Processing",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Submit",
+        "next_state": "Issued",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Mark as Processing Error",
+        "next_state": "Processing Error",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing Error",
+        "action": "Submit",
+        "next_state": "Issued",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Move to Contingency",
+        "next_state": "Contingency",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Contingency",
+        "action": "Submit",
+        "next_state": "Issued",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Non Processed",
+        "action": "Mark as Unused",
+        "next_state": "Unused",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Reject",
+        "next_state": "Rejected",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Processing",
+        "action": "Mark as Unused",
+        "next_state": "Unused",
+        "allowed": "System Manager",
+        "allow_self_approval": 1
+      }
+    ]
+  }
+]

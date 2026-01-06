@@ -60,17 +60,16 @@ export async function calculateItemTaxes(
  */
 export function sumTotalItems(frm: FrappeForm<InvoicesDoc>) {
   const totalRate = frm.doc.invoices_table.reduce(function (sum: number, item: InvoiceItem) {
-    return sum + (item.rate * item.quantity || 0);
+    return sum + ((item.rate || 0) * (item.quantity || 0));
   }, 0);
 
-  const totalTax = frm.doc.invoices_table.reduce(function (sum: number, item: InvoiceItem) {
-    const itemTotal = item.rate * item.quantity || 0;
-    const itemTotalWithTax = item.rate_taxes * item.quantity || 0;
-    return sum + (itemTotalWithTax - itemTotal);
+  const totalWithTax = frm.doc.invoices_table.reduce(function (sum: number, item: InvoiceItem) {
+    const itemTotalWithTax = (item.rate_taxes || 0) * (item.quantity || 0);
+    return sum + itemTotalWithTax;
   }, 0);
 
   frm.set_value("total", totalRate);
-  frm.set_value("total_tax", totalTax);
+  frm.set_value("total_tax", totalWithTax);
 }
 
 /**
