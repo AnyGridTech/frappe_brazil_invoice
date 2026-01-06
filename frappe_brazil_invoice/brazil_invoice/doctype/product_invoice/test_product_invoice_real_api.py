@@ -375,6 +375,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         ICMS Type: Non-Taxpayer
         Operation Type: Internal (SP to SP)
         Operation Nature: Repair Shipment
+        Operation Type: Outgoing
         Expected Result: Invoice created and issued successfully
         """
         frappe.set_user("Administrator")
@@ -387,9 +388,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
         address_data = generate_random_address(only_sort_from_states=["SP"])
 
         # Generate random client data (Company/PJ) - Use NonTaxpayer to avoid IE validation issues
-        client_data = generate_random_client_cnpj(
-            icms_taxpayer_type="NonTaxpayer", state=address_data["state"]
-        )
+        client_data = generate_random_client_cnpj(icms_taxpayer_type="NonTaxpayer", state=address_data["state"])
 
         # Get serial number for invoice items from stored class variable
         serial = self.test_serial_numbers[0]
@@ -422,9 +421,7 @@ class TestProductInvoiceRealAPI(FrappeTestCase):
                 delivery_phone=address_data["phone"],
                 product_brand="Growatt",
                 product_type="Inversor Solar",
-                carrier=frappe.db.get_value(
-                    "Carrier", {"fantasy_name": "Transportadora API Test"}, "name"
-                ),
+                carrier=frappe.db.get_value("Carrier", {"fantasy_name": "Transportadora API Test"}, "name"),
                 additional_information="Real API Test Invoice 1 - Internal SP operation - Will remain as Issued",
                 total_freight=totals_data["total_freight"],
                 total_discount=totals_data["total_discount"],
