@@ -1,6 +1,13 @@
 import frappe
 
 
+def _strip_query_params(url):
+    """Remove query parameters from URL, keeping only the base URL"""
+    if not url:
+        return url
+    return url.split('?')[0]
+
+
 def _not_in_processing_status(invoice_doc):
     frappe.logger().info(
         "Product Invoice {} is not in Processing status. Current status: {}".format(
@@ -226,8 +233,8 @@ def handle_invoice_issued_status(data):
             invoice_doc.invoice_number = invoice_data.get("number")
             invoice_doc.invoice_serie = invoice_data.get("serie")
 
-        invoice_doc.invoice_pdf_url = pdf_url
-        invoice_doc.invoice_xml_url = xml_url
+        invoice_doc.invoice_pdf_url = _strip_query_params(pdf_url)
+        invoice_doc.invoice_xml_url = _strip_query_params(xml_url)
         invoice_doc.invoice_status = "Issued"
         invoice_doc.flags.ignore_processing_lock = True
 
