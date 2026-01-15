@@ -16,11 +16,15 @@
   "section_break_goab",
   "client_name",
   "client_email",
-  "icms_taxpayer",
+  "client_icms_tax_option",
   "column_break_wxky",
   "client_phone",
-  "client_id_number",
-  "state_registration",
+  "client_tax_id_number",
+  "client_state_registration",
+  "client_register_address_section",
+  "client_address_postal_code",
+  "client_address_ibge",
+  "column_break_kroi",
   "process_information_section",
   "operation_type",
   "operation_nature",
@@ -75,15 +79,16 @@
   "product_gross_weight",
   "product_net_weight",
   "address_section",
+  "has_delivery_address",
   "delivery_supervisor",
+  "delivery_phone",
   "delivery_cep",
-  "delivery_address",
-  "delivery_neighborhood",
   "delivery_ibge",
   "column_break_iwze",
-  "delivery_phone",
   "delivery_state",
   "city",
+  "delivery_neighborhood",
+  "delivery_address",
   "delivery_number_address",
   "delivery_complement",
   "internal_tab",
@@ -187,13 +192,6 @@
    "fieldtype": "Phone",
    "label": "Contact Phone",
    "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
-  },
-  {
-   "fieldname": "client_id_number",
-   "fieldtype": "Data",
-   "label": "CPF / CNPJ",
-   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
-   "reqd": 1
   },
   {
    "fieldname": "section_break_jxvl",
@@ -523,20 +521,6 @@
    "search_index": 1
   },
   {
-   "fieldname": "icms_taxpayer",
-   "fieldtype": "Select",
-   "label": "ICMS Taxpayer",
-   "options": "NonTaxpayer\nTaxpayer\nExempt",
-   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
-  },
-  {
-   "fieldname": "state_registration",
-   "fieldtype": "Data",
-   "label": "State Registration (IE)",
-   "mandatory_depends_on": "eval:doc.icms_taxpayer == 'Taxpayer'",
-   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
-  },
-  {
    "fieldname": "client_type",
    "fieldtype": "Select",
    "label": "Client Type",
@@ -577,13 +561,60 @@
    "fieldtype": "Data",
    "label": "Emitter State",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Mark this option in case the goods will be delivered in a different address than the customer register address.",
+   "fieldname": "has_delivery_address",
+   "fieldtype": "Check",
+   "label": "Delivery Address Differs from Register Address"
+  },
+  {
+   "fieldname": "client_icms_tax_option",
+   "fieldtype": "Select",
+   "label": "ICMS Taxpayer",
+   "options": "NonTaxpayer\nTaxpayer\nExempt",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_tax_id_number",
+   "fieldtype": "Data",
+   "label": "CPF / CNPJ",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))",
+   "reqd": 1
+  },
+  {
+   "fieldname": "client_state_registration",
+   "fieldtype": "Data",
+   "label": "State Registration (IE)",
+   "mandatory_depends_on": "eval:doc.icms_taxpayer == 'Taxpayer'",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_register_address_section",
+   "fieldtype": "Section Break",
+   "label": "Client Register Address"
+  },
+  {
+   "fieldname": "client_address_postal_code",
+   "fieldtype": "Data",
+   "label": "Postal Code"
+  },
+  {
+   "fieldname": "client_address_ibge",
+   "fieldtype": "Data",
+   "label": "IBGE"
+  },
+  {
+   "fieldname": "column_break_kroi",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-06 07:36:48.708093",
+ "modified": "2026-01-07 08:33:39.763607",
  "modified_by": "Administrator",
  "module": "Brazil Invoice",
  "name": "Product Invoice",
