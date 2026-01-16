@@ -24,6 +24,16 @@
   "client_register_address_section",
   "client_address_postal_code",
   "client_address_ibge",
+  "client_supervisor",
+  "client_phone",
+  "client_cep",
+  "column_break_iwze",
+  "client_state",
+  "client_city",
+  "client_neighborhood",
+  "client_address",
+  "client_number_address",
+  "client_complement",
   "column_break_kroi",
   "process_information_section",
   "operation_type",
@@ -604,6 +614,71 @@
    "fieldname": "client_address_ibge",
    "fieldtype": "Data",
    "label": "IBGE"
+  },
+    {
+   "fieldname": "client_supervisor",
+   "fieldtype": "Data",
+   "label": "Responsible",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_cep",
+   "fieldtype": "Data",
+   "label": "Postal Code",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_address",
+   "fieldtype": "Data",
+   "label": "Address",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_neighborhood",
+   "fieldtype": "Data",
+   "label": "Neighborhood",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_ibge",
+   "fieldtype": "Data",
+   "label": "IBGE",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "column_break_ixwe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "client_phone",
+   "fieldtype": "Phone",
+   "label": "Contact Phone",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_state",
+   "fieldtype": "Select",
+   "label": "State",
+   "options": "\nAC\nAL\nAM\nAP\nBA\nCE\nDF\nES\nGO\nMA\nMG\nMS\nMT\nPA\nPB\nPE\nPI\nPR\nRJ\nRN\nRO\nRR\nRS\nSC\nSE\nSP\nTO",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_city",
+   "fieldtype": "Data",
+   "label": "City",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_number_address",
+   "fieldtype": "Data",
+   "label": "Address Number",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
+  },
+  {
+   "fieldname": "client_complement",
+   "fieldtype": "Data",
+   "label": "Complement",
+   "read_only_depends_on": "eval:!(['Draft', 'Non Processed'].includes(doc.invoice_status))"
   },
   {
    "fieldname": "column_break_kroi",

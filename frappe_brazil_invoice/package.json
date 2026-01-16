@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@anygridtech/frappe-agt-types": "^2.2.1",
+    "@anygridtech/frappe-agt-types": "^2.7.0",
     "@anygridtech/frappe-ts-tools": "^0.2.0",
     "typescript": "^5.9.3"
   }
