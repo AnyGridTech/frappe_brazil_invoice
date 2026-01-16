@@ -2,8 +2,6 @@ import { Inverter, InvoiceItem, InvoicesDoc } from "../../../../types/invoice";
 import { handleInvoiceTaxesChange, sumTotalItems, applyTaxTemplateToItems } from "./tax";
 import { setupCEPField, processCEPLookup } from "./cep";
 
-
-
 frappe.ui.form.on<InvoicesDoc>("Product Invoice", "before_save", async (form) => {
   var clientType = form.doc.client_type;
   if (clientType === "PF") {
@@ -18,7 +16,6 @@ frappe.ui.form.on<InvoicesDoc>("Product Invoice", "before_save", async (form) =>
       frappe.validated = false;
     }
   }
-
 });
 
 frappe.ui.form.on<InvoicesDoc>("Product Invoice", {

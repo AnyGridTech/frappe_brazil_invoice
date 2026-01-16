@@ -2341,7 +2341,7 @@ def _build_invoice_data_from_doc(invoice_doc):
             f"Invalid ICMS taxpayer status '{invoice_doc.icms_taxpayer}' for invoice {invoice_doc.name}"
         )
 
-    # Build buyer information
+    # Build buyer information using client address fields, not delivery fields
     buyer = {
         "name": invoice_doc.client_name,
         "federalTaxNumber": int(
@@ -2349,24 +2349,24 @@ def _build_invoice_data_from_doc(invoice_doc):
         ),
         "type": client_type_map.get(invoice_doc.client_type, 1),
         "address": {
-            "state": invoice_doc.delivery_state,
+            "state": invoice_doc.client_state,
             "city": {
-                "code": invoice_doc.delivery_ibge,
-                "name": invoice_doc.city,
+                "code": invoice_doc.client_address_ibge,
+                "name": invoice_doc.client_city,
             },
-            "district": invoice_doc.delivery_neighborhood,
-            "street": invoice_doc.delivery_address,
-            "number": invoice_doc.delivery_number_address,
-            "postalCode": "".join(filter(str.isdigit, str(invoice_doc.delivery_cep))),
+            "district": invoice_doc.client_neighborhood,
+            "street": invoice_doc.client_address,
+            "number": invoice_doc.client_number_address,
+            "postalCode": "".join(filter(str.isdigit, str(invoice_doc.client_cep))),
             "country": "Brasil",
-            "additionalInformation": invoice_doc.delivery_complement,
+            "additionalInformation": getattr(invoice_doc, "client_complement", ""),
         },
     }
 
     # Add stateTaxNumberIndicator based on ICMS taxpayer status
     if invoice_doc.icms_taxpayer:
         buyer["stateTaxNumberIndicator"] = state_tax_indicator_map.get(invoice_doc.icms_taxpayer)
-        buyer["stateTaxNumber"] = "".join(filter(str.isdigit, str(invoice_doc.state_registration or "")))      
+        buyer["stateTaxNumber"] = "".join(filter(str.isdigit, str(invoice_doc.client_state_registration or "")))      
 
     # Build items list
     cfop = None
@@ -2417,8 +2417,8 @@ def _build_invoice_data_from_doc(invoice_doc):
                 f"Please update the tax template to include CFOP values for interstate operations."
             )
         
-        # Compare company state with delivery state to determine intrastate vs interstate
-        if nfeio_config.get("company_state") == invoice_doc.delivery_state:
+        # Compare company state with client state to determine intrastate vs interstate
+        if nfeio_config.get("company_state") == invoice_doc.client_state:
             cfop = tax_doc.cfop_intrastate
         else:
             cfop = tax_doc.cfop_interstate
@@ -2488,11 +2488,37 @@ def _build_invoice_data_from_doc(invoice_doc):
         elif invoice_doc.operation_type == "Outgoing":
             operation_type_value = "Outgoing"
 
+    # Build additional information including delivery address if present
+    additional_info = invoice_doc.additional_information or ""
+    
+    # Add delivery address information if has_delivery_address is checked
+    if invoice_doc.has_delivery_address and invoice_doc.delivery_address:
+        # Format delivery address information
+        delivery_addr_parts = [
+            invoice_doc.delivery_address,
+            invoice_doc.delivery_number_address,
+            invoice_doc.delivery_complement,
+            invoice_doc.delivery_neighborhood,
+            invoice_doc.delivery_state,
+            invoice_doc.city,
+            invoice_doc.delivery_cep
+        ]
+        # Filter out empty parts
+        delivery_addr_parts = [p for p in delivery_addr_parts if p]
+        delivery_addr_formatted = ", ".join(str(p) for p in delivery_addr_parts)
+        
+        delivery_info = f"A entrega ou coleta deve ser realizada no endereço a seguir: {delivery_addr_formatted}"
+        
+        if additional_info:
+            additional_info = additional_info + "\n\n" + delivery_info
+        else:
+            additional_info = delivery_info
+
     invoice_data = {
         "operationNature": invoice_doc.operation_nature,
         "operationType": operation_type_value,
         "consumerType": "FinalConsumer",
-        "body": invoice_doc.additional_information,
+        "body": additional_info,
         "buyer": buyer,
         "items": items,
         "totals": {

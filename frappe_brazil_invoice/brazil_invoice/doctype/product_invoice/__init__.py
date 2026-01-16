@@ -1,18 +1,38 @@
 # Re-export test helpers for easier imports
 from .test_helpers import (
+    get_test_run_token,
     create_test_invoice_with_token,
+    cleanup_test_invoices,
+    create_test_item,
+    create_test_serial_no,
+    create_test_carrier,
     generate_random_client,
     generate_random_client_cpf,
     generate_random_client_cnpj,
     generate_random_address,
+    generate_random_totals,
     items_array,
+    get_serial_no_array_test,
+    tax_array_test,
+    carriers_test,
+    print_invoice_details,
 )
 
 __all__ = [
+    "get_test_run_token",
     "create_test_invoice_with_token",
+    "cleanup_test_invoices",
+    "create_test_item",
+    "create_test_serial_no",
+    "create_test_carrier",
     "generate_random_client",
     "generate_random_client_cpf",
     "generate_random_client_cnpj",
     "generate_random_address",
+    "generate_random_totals",
     "items_array",
+    "get_serial_no_array_test",
+    "tax_array_test",
+    "carriers_test",
+    "print_invoice_details",
 ]

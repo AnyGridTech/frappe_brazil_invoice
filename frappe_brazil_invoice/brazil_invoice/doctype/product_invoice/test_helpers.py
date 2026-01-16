@@ -751,10 +751,10 @@ tax_array_test = [
         "ipi_rate": 0.00,
         "calculate_automatically_ipi": 1,
         "cst_cofins": "01 - Taxable Operation with Basic Rate",
-        "cofins_rate": 7.6,
+        "cofins_rate": 0.00,  # Must be 0 when calculate_automatically is 1
         "calculate_automatically_cofins": 1,
         "cst_pis": "01 - Taxable Operation with Basic Rate",
-        "pis_rate": 1.65,
+        "pis_rate": 0.00,  # Must be 0 when calculate_automatically is 1
         "calculate_automatically_pis": 1,
     },
     {
